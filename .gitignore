@@ -1,0 +1,29 @@
+# Dependencies & build
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Secrets — لا ترفع أبداً
+.env
+**/.env
+*.pem
+
+# Logs & OS
+*.log
+.DS_Store
+__MACOSX/
+
+# Firebase credentials (لا ترفع إلى Git)
+*-firebase-adminsdk-*.json
+
+# IDE & local Cursor
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.cursor/
+**/.cursor/
+
+# Uploads على الخادم المحلي
+**/uploads/
+!**/uploads/.gitkeep

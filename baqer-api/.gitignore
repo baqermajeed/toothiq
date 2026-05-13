@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.log
+.DS_Store
+coverage/
+.nyc_output/
+uploads/# Firebase Admin SDK - لا ترفع ملفات اعتماد Firebase إلى Git
+*-firebase-adminsdk-*.json
+/uploads
