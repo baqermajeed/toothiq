@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
+import '../../controller/cart_controller.dart';
 import '../../controller/home_controller.dart';
 import '../../model/product_model.dart';
 import '../../utils/app_colors.dart';
@@ -102,7 +103,10 @@ class ProductCardWidget extends StatelessWidget {
             child: _ProductPriceBar(
               price: product.formattedPrice,
               onAddToCart: () {
-                ProductDetailsPage.open(product);
+                final cart = Get.isRegistered<CartController>()
+                    ? Get.find<CartController>()
+                    : Get.put(CartController(), permanent: true);
+                cart.addProduct(product);
               },
             ),
           ),

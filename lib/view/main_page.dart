@@ -6,8 +6,9 @@ import '../utils/app_colors.dart';
 import '../widget/app_bottom_navigation.dart';
 import 'categories/categories_page.dart';
 import 'home/home_page.dart';
+import 'orders/orders_page.dart';
+import 'settings/settings_page.dart';
 import 'stores/stores_page.dart';
-import 'tabs/coming_soon_tab_page.dart';
 
 class MainPage extends StatelessWidget {
   const MainPage({super.key});
@@ -27,8 +28,8 @@ class MainPage extends StatelessWidget {
               HomePage(),
               StoresPage(),
               CategoriesPage(),
-              ComingSoonTabPage(title: 'طلباتك'),
-              ComingSoonTabPage(title: 'الأعدادات'),
+              OrdersPage(),
+              SettingsPage(),
             ],
           ),
         ),

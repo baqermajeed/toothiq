@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import 'bindings/home_binding.dart';
+import 'controller/cart_controller.dart';
 import 'controller/main_controller.dart';
 import 'controller/session_controller.dart';
 import 'service_layer/services/get_storage_service.dart';
@@ -58,6 +59,9 @@ class DentalApp extends StatelessWidget {
           initialBinding: BindingsBuilder(() {
             Get.put(SessionController(), permanent: true);
             Get.put(MainController(), permanent: true);
+            if (!Get.isRegistered<CartController>()) {
+              Get.put(CartController(), permanent: true);
+            }
             HomeBinding().dependencies();
           }),
           defaultTransition: Transition.fadeIn,

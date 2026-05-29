@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../model/category_model.dart';
+import '../view/section/section_detail_page.dart';
 
 class CategoriesController extends GetxController {
   final searchController = TextEditingController();
@@ -81,6 +82,6 @@ class CategoriesController extends GetxController {
   }
 
   void onCategoryTap(CategoryModel category) {
-    // TODO: عرض منتجات القسم عند جاهزية التصميم والـ API
+    SectionDetailPage.open(category);
   }
 }

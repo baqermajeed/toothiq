@@ -176,6 +176,8 @@ class _CircleIconButton extends StatelessWidget {
 }
 
 class _ProductGallerySection extends StatelessWidget {
+  static const double _galleryHeight = 280;
+
   final ProductDetailsController controller;
 
   const _ProductGallerySection({required this.controller});
@@ -183,11 +185,12 @@ class _ProductGallerySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final images = controller.product.images;
+    final galleryHeight = _galleryHeight.h;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: SizedBox(
-        height: 220.h,
+        height: galleryHeight,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -240,7 +243,7 @@ class _ProductGallerySection extends StatelessWidget {
                 final thumbCount = images.length.clamp(0, 4);
                 return SizedBox(
                   width: 56.w,
-                  height: 220.h,
+                  height: galleryHeight,
                   child: Column(
                     children: List.generate(thumbCount, (index) {
                       final isSelected =

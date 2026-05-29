@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 
 import '../controller/home_controller.dart';
 import '../utils/app_colors.dart';
+import '../view/cart/cart_page.dart';
+import '../view/notifications/notifications_page.dart';
 import 'my_text.dart';
 
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -31,7 +33,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         color: AppColors.textPrimary,
       ),
       leading: IconButton(
-        onPressed: () {},
+        onPressed: () => CartPage.open(),
         icon: Icon(
           Icons.shopping_cart_outlined,
           color: AppColors.primary,
@@ -44,7 +46,12 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  if (Get.isRegistered<HomeController>()) {
+                    Get.find<HomeController>().hasNotification.value = false;
+                  }
+                  NotificationsPage.open();
+                },
                 icon: Icon(
                   Icons.notifications_none_rounded,
                   color: AppColors.primary,

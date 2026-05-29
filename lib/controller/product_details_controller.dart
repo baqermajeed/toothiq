@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../model/product_model.dart';
+import 'cart_controller.dart';
 
 class ProductDetailsController extends GetxController {
   final ProductModel product;
@@ -34,7 +35,10 @@ class ProductDetailsController extends GetxController {
   }
 
   void addToCart() {
-    // TODO: ربط السلة عند جاهزية الـ API
+    final cart = Get.isRegistered<CartController>()
+        ? Get.find<CartController>()
+        : Get.put(CartController(), permanent: true);
+    cart.addProduct(product, quantity: quantity.value);
   }
 
   void buyNow() {
