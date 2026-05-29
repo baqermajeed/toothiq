@@ -1,0 +1,39 @@
+name: dental_app_baqer
+description: "Dental products e-commerce app."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  get: ^4.6.6
+  get_storage: ^2.1.1
+  flutter_screenutil: ^5.9.0
+  smooth_page_indicator: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/onboarding/
+    - assets/images/
+    - assets/images/banners/
+    - assets/images/products/
+    - assets/images/stores/
+
+  fonts:
+    - family: Expo Arabic
+      fonts:
+        - asset: assets/fonts/ExpoArabic-Book.ttf
