@@ -15,12 +15,19 @@ class EditProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    final name = settings.userName.value;
     usernameController = TextEditingController(
-      text: name.startsWith('د. ') ? name.substring(3) : name,
+      text: settings.displayNameForForms,
     );
-    phoneController = TextEditingController(text: '0700 000 000');
-    clinicController = TextEditingController(text: 'العيادة');
+    phoneController = TextEditingController(text: settings.userPhone.value);
+    clinicController = TextEditingController(
+      text: _clinicFromAddress(settings.userAddress.value),
+    );
+  }
+
+  String _clinicFromAddress(String address) {
+    final parts = address.split('،');
+    if (parts.isEmpty) return '';
+    return parts.first.trim();
   }
 
   @override
@@ -35,15 +42,25 @@ class EditProfileController extends GetxController {
     // TODO: اختيار صورة من المعرض أو الكاميرا
   }
 
-  void save() {
+  Future<void> save() async {
     final name = usernameController.text.trim();
-    if (name.isNotEmpty) {
-      settings.userName.value = name.startsWith('د.') ? name : 'د. $name';
-    }
+    final phone = phoneController.text.trim();
     final clinic = clinicController.text.trim();
-    if (clinic.isNotEmpty) {
-      settings.userAddress.value = '$clinic ، بابل ، شارع 40';
-    }
+
+    final displayName = name.isEmpty
+        ? settings.userName.value
+        : (name.startsWith('د.') ? name : 'د. $name');
+
+    final address = clinic.isEmpty
+        ? settings.userAddress.value
+        : '$clinic ، بابل ، شارع 40';
+
+    await settings.saveProfile(
+      name: displayName,
+      phone: phone.isEmpty ? null : phone,
+      address: address,
+    );
+
     Get.back();
   }
 

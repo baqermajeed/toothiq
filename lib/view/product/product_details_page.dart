@@ -111,9 +111,17 @@ class _ProductDetailsAppBar extends StatelessWidget
       backgroundColor: AppColors.background,
       elevation: 0,
       centerTitle: true,
-      leading: _CircleIconButton(
-        icon: Icons.chevron_right,
-        onTap: () => Get.back(),
+      automaticallyImplyLeading: false,
+      leading: Obx(
+        () => _CircleIconButton(
+          icon: controller.isFavorite.value
+              ? Icons.favorite
+              : Icons.favorite_border,
+          iconColor: controller.isFavorite.value
+              ? AppColors.favoriteRed
+              : Colors.white,
+          onTap: controller.toggleFavorite,
+        ),
       ),
       title: MyText(
         'صفحة المنتج',
@@ -122,16 +130,9 @@ class _ProductDetailsAppBar extends StatelessWidget
         color: AppColors.productTitle,
       ),
       actions: [
-        Obx(
-          () => _CircleIconButton(
-            icon: controller.isFavorite.value
-                ? Icons.favorite
-                : Icons.favorite_border,
-            iconColor: controller.isFavorite.value
-                ? AppColors.favoriteRed
-                : Colors.white,
-            onTap: controller.toggleFavorite,
-          ),
+        _CircleIconButton(
+          icon: Icons.chevron_right,
+          onTap: () => Get.back(),
         ),
         SizedBox(width: 8.w),
       ],

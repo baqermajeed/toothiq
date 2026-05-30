@@ -62,6 +62,7 @@ class CartController extends GetxController {
   }
 
   void completePurchase() {
-    // TODO: إكمال الشراء عبر API
+    if (isEmpty) return;
+    // يُستدعى من BasketPage عبر CheckoutController.startCheckout()
   }
 }

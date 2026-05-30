@@ -23,6 +23,8 @@ class HomeBinding extends Bindings {
     Get.lazyPut<StoresController>(() => StoresController());
     Get.lazyPut<CategoriesController>(() => CategoriesController());
     Get.lazyPut<OrdersController>(() => OrdersController());
-    Get.lazyPut<SettingsController>(() => SettingsController());
+    if (!Get.isRegistered<SettingsController>()) {
+      Get.put(SettingsController(), permanent: true);
+    }
   }
 }

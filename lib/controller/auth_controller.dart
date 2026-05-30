@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../service_layer/services/get_storage_service.dart';
 import '../utils/phone_validator.dart';
+import '../utils/storage_keys.dart';
 import '../view/main_page.dart';
 import 'session_controller.dart';
+import 'settings_controller.dart';
 
 class AuthController extends GetxController {
   final SessionController _session = Get.find<SessionController>();
@@ -91,6 +94,29 @@ class AuthController extends GetxController {
     isLoading.value = true;
     await Future.delayed(const Duration(milliseconds: 800));
     isLoading.value = false;
+
+    final name = nameCtrl.text.trim();
+    final phone = registerPhoneCtrl.text.trim();
+    final clinic = clinicNameCtrl.text.trim();
+    final address = clinic.isNotEmpty
+        ? '$clinic ، ${selectedGovernorate.value}'
+        : selectedGovernorate.value;
+
+    if (Get.isRegistered<SettingsController>()) {
+      await Get.find<SettingsController>().saveProfile(
+        name: name.startsWith('د.') ? name : 'د. $name',
+        phone: phone,
+        address: address,
+      );
+    } else {
+      final storage = GetStorageService();
+      await storage.write(
+        StorageKeys.profileName,
+        name.startsWith('د.') ? name : 'د. $name',
+      );
+      await storage.write(StorageKeys.profilePhone, phone);
+      await storage.write(StorageKeys.profileAddress, address);
+    }
 
     // TODO: ربط API إنشاء الحساب عند التوفر
     Get.snackbar(

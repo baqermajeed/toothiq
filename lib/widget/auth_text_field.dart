@@ -69,20 +69,20 @@ class AuthTextField extends StatelessWidget {
                 horizontal: 20.w,
                 vertical: 16.h,
               ),
-              prefixIcon: trailing != null
-                  ? Padding(
-                      padding: EdgeInsets.only(left: 8.w),
-                      child: trailing,
-                    )
-                  : null,
-              suffixIcon: Padding(
-                padding: EdgeInsets.only(right: 4.w),
+              prefixIcon: Padding(
+                padding: EdgeInsetsDirectional.only(end: 4.w),
                 child: Icon(
                   icon,
                   color: AppColors.textSecondary,
                   size: 22.sp,
                 ),
               ),
+              suffixIcon: trailing != null
+                  ? Padding(
+                      padding: EdgeInsetsDirectional.only(start: 8.w),
+                      child: trailing,
+                    )
+                  : null,
             ),
           ),
         ),
