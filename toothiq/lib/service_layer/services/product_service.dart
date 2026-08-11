@@ -1,0 +1,79 @@
+import '../../core/api/api_client.dart';
+import '../../model/paginated_result.dart';
+import '../../model/product_model.dart';
+import '../../model/search_filter_options_model.dart';
+
+class ProductService {
+  final ApiClient _api;
+
+  ProductService(this._api);
+
+  Future<List<ProductModel>> fetchRandomProducts({
+    String? productCategoryId,
+    int shopCount = 6,
+    int perShop = 2,
+  }) {
+    return _api.getRandomProducts(
+      productCategoryId: productCategoryId,
+      shopCount: shopCount,
+      perShop: perShop,
+    );
+  }
+
+  Future<PaginatedResult<ProductModel>> fetchProductsPaginated({
+    int page = 1,
+    int limit = 12,
+    String? productCategoryId,
+    String? brandId,
+  }) {
+    return _api.getProducts(
+      page: page,
+      limit: limit,
+      productCategoryId: productCategoryId,
+      brandId: brandId,
+    );
+  }
+
+  Future<PaginatedResult<ProductModel>> searchProductsPaginated(
+    String query, {
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.searchProducts(query, page: page, limit: limit);
+  }
+
+  /// أقل وأعلى سعر بين كل المنتجات المتاحة في التطبيق.
+  Future<({double min, double max})> fetchPriceBounds({
+    int pageSize = 100,
+  }) async {
+    double? min;
+    double? max;
+    var page = 1;
+
+    while (true) {
+      final result = await fetchProductsPaginated(page: page, limit: pageSize);
+      for (final product in result.items) {
+        final price = product.price.toDouble();
+        min = min == null ? price : (price < min ? price : min);
+        max = max == null ? price : (price > max ? price : max);
+      }
+      if (!result.hasNextPage) break;
+      page++;
+    }
+
+    return (
+      min: (min ?? SearchFilterOptionsModel.fallbackMinPrice).toDouble(),
+      max: (max ?? SearchFilterOptionsModel.fallbackMaxPrice).toDouble(),
+    );
+  }
+
+  List<ProductModel> filterByCategoryId(
+    List<ProductModel> items,
+    String? categoryId,
+  ) {
+    if (categoryId == null || categoryId.isEmpty) return items;
+    return items
+        .where((product) => product.productCategoryId == categoryId)
+        .toList(growable: false);
+  }
+}

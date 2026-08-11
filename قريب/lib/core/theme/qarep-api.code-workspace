@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../nodejs_apps/qarep-api"
+		},
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../qarep_shop"
+		},
+		{
+			"path": "../../../../qarep_driver"
+		},
+		{
+			"path": "../../../../qarep_dashbord"
+		}
+	],
+	"settings": {}
+}
