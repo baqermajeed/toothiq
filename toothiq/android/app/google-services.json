@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "860789524798",
+    "project_id": "toothiq-notification",
+    "storage_bucket": "toothiq-notification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860789524798:android:b67a192a2cb0cb33a7046f",
+        "android_client_info": {
+          "package_name": "com.example.dental_app_baqer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOtrQFvJWwJOE9TKhP1nsWcyu7g8wdkYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

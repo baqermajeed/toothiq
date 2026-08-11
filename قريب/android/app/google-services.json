@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "775128512500",
+    "project_id": "qarep-1827d",
+    "storage_bucket": "qarep-1827d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:775128512500:android:0a3d6f782a4e4f81962ba1",
+        "android_client_info": {
+          "package_name": "com.infinty.qareep"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkm28zwZBnYG1GW2lzUNnbp9NF-yHakps"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,291 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../service_layer/services/preferences_storage.dart';
+import '../utils/storage_keys.dart';
+import '../core/api/api_exception.dart';
+import '../model/brand_model.dart';
+import '../model/category_model.dart';
+import '../model/product_model.dart';
+import '../model/shop_category_model.dart';
+import '../model/store_model.dart';
+import '../model/store_review_model.dart';
+import '../service_layer/services/shop_service.dart';
+import '../widget/common/app_toast.dart';
+import '../view/section/brand_products_page.dart';
+import '../view/section/section_detail_page.dart';
+
+class StoreDetailController extends GetxController {
+  final ShopService _shopService = Get.find<ShopService>();
+  final StoreModel store;
+
+  StoreDetailController({required this.store});
+
+  final currentStore = Rxn<StoreModel>();
+  final searchController = TextEditingController();
+  final reviewController = TextEditingController();
+  final selectedTabIndex = 0.obs;
+  final searchQuery = ''.obs;
+  final products = <ProductModel>[].obs;
+  final categories = <CategoryModel>[].obs;
+  final filteredCategories = <CategoryModel>[].obs;
+  final filteredBrands = <BrandModel>[].obs;
+  final brands = <BrandModel>[].obs;
+  final reviews = <StoreReviewModel>[].obs;
+  final aboutDescription = ''.obs;
+  final isLoading = false.obs;
+  final loadingMoreProducts = false.obs;
+  final hasNextProductsPage = false.obs;
+  final currentProductsPage = 1.obs;
+  final loadError = RxnString();
+  final isSubmittingReview = false.obs;
+  static const int _productsPageSize = 20;
+
+  static const tabs = [
+    'المنتجات',
+    'الأقسام',
+    'البراندات',
+    'تقييم المتجر',
+    'عن المتجر',
+  ];
+
+  static const _icons = <IconData>[
+    Icons.brush_outlined,
+    Icons.grid_view_rounded,
+    Icons.healing_outlined,
+    Icons.medical_services_outlined,
+    Icons.construction_outlined,
+    Icons.water_drop_outlined,
+  ];
+  static const _iconColors = <Color>[
+    Color(0xFF26A69A),
+    Color(0xFF00897B),
+    Color(0xFF00796B),
+    Color(0xFF00695C),
+    Color(0xFF26A69A),
+    Color(0xFF00897B),
+  ];
+
+  StoreModel get viewStore => currentStore.value ?? store;
+
+  @override
+  void onInit() {
+    super.onInit();
+    currentStore.value = store;
+    loadStoreData();
+    searchController.addListener(_onSearchChanged);
+  }
+
+  void _loadAboutInfo([StoreModel? source]) {
+    final target = source ?? viewStore;
+    final storage = PreferencesStorage.instance;
+    aboutDescription.value =
+        storage.getString(StorageKeys.storeAbout(target.id)) ??
+        target.aboutDescription;
+  }
+
+  void _onSearchChanged() {
+    searchQuery.value = searchController.text;
+    final query = searchQuery.value.trim();
+
+    switch (selectedTabIndex.value) {
+      case 1:
+        if (query.isEmpty) {
+          filteredCategories.assignAll(categories);
+        } else {
+          filteredCategories.assignAll(
+            categories.where((c) => c.name.contains(query)).toList(),
+          );
+        }
+        break;
+      case 2:
+        if (query.isEmpty) {
+          filteredBrands.assignAll(brands);
+        } else {
+          filteredBrands.assignAll(
+            brands.where((b) => b.name.contains(query)).toList(),
+          );
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  List<ProductModel> get filteredProducts {
+    final query = searchQuery.value.trim().toLowerCase();
+    if (query.isEmpty) return products;
+    return products
+        .where(
+          (p) =>
+              p.name.toLowerCase().contains(query) ||
+              p.description.toLowerCase().contains(query) ||
+              p.storeName.toLowerCase().contains(query),
+        )
+        .toList();
+  }
+
+  List<ProductModel> get popularProducts => filteredProducts.take(4).toList();
+
+  @override
+  void onClose() {
+    searchController.dispose();
+    reviewController.dispose();
+    super.onClose();
+  }
+
+  void selectTab(int index) {
+    selectedTabIndex.value = index;
+    _onSearchChanged();
+  }
+
+  void onCategoryTap(CategoryModel category) {
+    SectionDetailPage.open(category);
+  }
+
+  void onBrandTap(BrandModel brand) {
+    BrandProductsPage.open(brand: brand, initialProducts: filteredProducts);
+  }
+
+  Future<void> loadStoreData() async {
+    isLoading.value = true;
+    loadError.value = null;
+    try {
+      final storeId = store.id;
+      final results = await Future.wait([
+        _shopService.getShopById(storeId),
+        _shopService.fetchShopProductCategories(storeId),
+        _shopService.fetchShopReviews(storeId),
+      ]);
+
+      final updatedStore = results[0] as StoreModel;
+      currentStore.value = updatedStore;
+      await _loadProductsFirstPage();
+
+      final categoryCards = _mapCategories(
+        results[1] as List<ShopCategoryModel>,
+      );
+      categories.assignAll(categoryCards);
+      filteredCategories.assignAll(categoryCards);
+
+      final mappedBrands = categoryCards
+          .map((c) => BrandModel(id: c.id, name: c.name))
+          .toList(growable: false);
+      brands.assignAll(mappedBrands);
+      filteredBrands.assignAll(mappedBrands);
+
+      reviews.assignAll(results[2] as List<StoreReviewModel>);
+      _loadAboutInfo(updatedStore);
+    } on ApiException catch (error) {
+      loadError.value = error.message;
+      products.clear();
+      categories.clear();
+      filteredCategories.clear();
+      brands.clear();
+      filteredBrands.clear();
+      reviews.clear();
+      hasNextProductsPage.value = false;
+    } catch (_) {
+      loadError.value = 'تعذر تحميل بيانات المتجر';
+      products.clear();
+      categories.clear();
+      filteredCategories.clear();
+      brands.clear();
+      filteredBrands.clear();
+      reviews.clear();
+      hasNextProductsPage.value = false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> _loadProductsFirstPage() async {
+    currentProductsPage.value = 1;
+    final result = await _shopService.fetchShopProductsPaginated(
+      shopId: store.id,
+      shopName: store.name,
+      page: 1,
+      limit: _productsPageSize,
+    );
+    products.assignAll(result.items);
+    hasNextProductsPage.value = result.hasNextPage;
+    currentProductsPage.value = result.page;
+  }
+
+  Future<void> loadMoreProducts() async {
+    if (loadingMoreProducts.value || !hasNextProductsPage.value) return;
+    loadingMoreProducts.value = true;
+    try {
+      final nextPage = currentProductsPage.value + 1;
+      final result = await _shopService.fetchShopProductsPaginated(
+        shopId: store.id,
+        shopName: store.name,
+        page: nextPage,
+        limit: _productsPageSize,
+      );
+      products.addAll(result.items);
+      hasNextProductsPage.value = result.hasNextPage;
+      currentProductsPage.value = result.page;
+    } catch (_) {
+      // لا نعرض خطأ لجلب المزيد.
+    } finally {
+      loadingMoreProducts.value = false;
+    }
+  }
+
+  @override
+  Future<void> refresh() async {
+    await loadStoreData();
+  }
+
+  List<CategoryModel> _mapCategories(List<ShopCategoryModel> apiCategories) {
+    return apiCategories
+        .asMap()
+        .entries
+        .map((entry) {
+          final idx = entry.key;
+          final item = entry.value;
+          return CategoryModel(
+            id: item.id,
+            name: item.nameAr,
+            icon: _icons[idx % _icons.length],
+            iconColor: _iconColors[idx % _iconColors.length],
+          );
+        })
+        .toList(growable: false);
+  }
+
+  Future<void> submitReview() async {
+    final text = reviewController.text.trim();
+    if (text.isEmpty) return;
+    if (isSubmittingReview.value) return;
+
+    isSubmittingReview.value = true;
+    try {
+      await _shopService.submitShopReview(
+        shopId: viewStore.id,
+        rating: 5,
+        comment: text,
+      );
+      reviewController.clear();
+      final latest = await _shopService.fetchShopReviews(viewStore.id);
+      reviews.assignAll(latest);
+    } catch (_) {
+      AppToast.show(
+        'تعذر الإرسال',
+        'لم نتمكن من إرسال تقييمك حالياً',
+        type: ToastType.error,
+      );
+    } finally {
+      isSubmittingReview.value = false;
+    }
+  }
+
+  void toggleFavorite(String productId) {
+    final idx = products.indexWhere((p) => p.id == productId);
+    if (idx == -1) return;
+    products[idx] = products[idx].copyWith(
+      isFavorite: !products[idx].isFavorite,
+    );
+    products.refresh();
+  }
+}
