@@ -13,7 +13,7 @@ class LocalNotificationsService {
   late FlutterLocalNotificationsPlugin _plugin;
 
   static const _channelId = 'toothiq_notifications';
-  static const _channelName = 'إشعارات التطبيق';
+  static const _channelName = 'ToothIQ';
 
   int _notificationId = 0;
 

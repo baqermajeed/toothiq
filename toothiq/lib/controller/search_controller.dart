@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../core/api/api_exception.dart';
+import '../model/paginated_result.dart';
 import '../model/product_model.dart';
 import '../model/search_filter_model.dart';
 import '../model/store_model.dart';
 import '../service_layer/services/product_service.dart';
+import '../service_layer/services/shop_service.dart';
 
 class SearchProductsController extends GetxController {
   final ProductService _productService = Get.find<ProductService>();
+  final ShopService _shopService = Get.find<ShopService>();
 
   final searchFieldController = TextEditingController();
   final scrollController = ScrollController();
@@ -95,91 +98,48 @@ class SearchProductsController extends GetxController {
     currentPage.value = 1;
 
     try {
-      final paginated = q.isNotEmpty
-          ? await _productService.searchProductsPaginated(
+      final includeStores = activeFilter.resultType != SearchResultType.products;
+      final includeProducts = activeFilter.resultType != SearchResultType.stores;
+
+      final paginatedFuture = q.isNotEmpty
+          ? _productService.searchProductsPaginated(
               q,
               page: 1,
               limit: _pageSize,
             )
-          : await _productService.fetchProductsPaginated(
+          : _productService.fetchProductsPaginated(
               page: 1,
               limit: _pageSize,
             );
-      final allProducts = paginated.items;
-      final allStores = <StoreModel>[];
+      final storesFuture = q.isNotEmpty && includeStores
+          ? _shopService.searchStoresByQuery(q)
+          : Future<List<StoreModel>>.value(const []);
 
-      var matchedProducts = allProducts.where((product) {
-        final matchesQuery =
-            q.isEmpty ||
-            _matchesQuery(q, [
-              product.name,
-              product.storeName,
-              product.description,
-            ]);
-        final matchesCategory = _matchesCategory(
-          product,
-          activeFilter.department ?? activeFilter.category,
-        );
-        final matchesBrand = _matchesBrand(product, activeFilter.brand);
-        final matchesPrice =
-            product.price >= activeFilter.minPrice &&
-            product.price <= activeFilter.maxPrice;
-        final matchesExpiry = _matchesExpiry(product, activeFilter.expiryDate);
-        return matchesQuery &&
-            matchesCategory &&
-            matchesBrand &&
-            matchesPrice &&
-            matchesExpiry;
-      }).toList();
+      final results = await Future.wait([
+        paginatedFuture,
+        storesFuture,
+      ]);
+      final paginated = results[0] as PaginatedResult<ProductModel>;
+      final allStores = results[1] as List<StoreModel>;
 
-      var matchedStores = allStores.where((store) {
-        final matchesQuery =
-            q.isEmpty ||
-            _matchesQuery(q, [store.name, store.description, store.address]);
-        final matchesRating =
-            activeFilter.minStoreRating == null ||
-            store.rating >= activeFilter.minStoreRating!;
-        return matchesQuery && matchesRating;
-      }).toList();
+      var matchedProducts =
+          includeProducts ? paginated.items : <ProductModel>[];
+      var matchedStores = allStores;
+
+      if (activeFilter.hasActiveFilters) {
+        matchedProducts = matchedProducts
+            .where((product) => _matchesProductFilters(product, activeFilter, q))
+            .toList();
+        matchedStores = matchedStores
+            .where((store) => _matchesStoreFilters(store, activeFilter, q))
+            .toList();
+      }
 
       matchedProducts = _sortProducts(matchedProducts, activeFilter.sort);
 
-      if (matchedProducts.isEmpty && q.isNotEmpty) {
-        matchedProducts = _sortProducts(
-          allProducts.where((product) {
-            final matchesCategory = _matchesCategory(
-              product,
-              activeFilter.department ?? activeFilter.category,
-            );
-            final matchesBrand = _matchesBrand(product, activeFilter.brand);
-            final matchesPrice =
-                product.price >= activeFilter.minPrice &&
-                product.price <= activeFilter.maxPrice;
-            final matchesExpiry = _matchesExpiry(
-              product,
-              activeFilter.expiryDate,
-            );
-            return matchesCategory &&
-                matchesBrand &&
-                matchesPrice &&
-                matchesExpiry;
-          }).toList(),
-          activeFilter.sort,
-        );
-      }
-
-      switch (activeFilter.resultType) {
-        case SearchResultType.products:
-          matchedStores = [];
-        case SearchResultType.stores:
-          matchedProducts = [];
-        case SearchResultType.all:
-          break;
-      }
-
       products.assignAll(matchedProducts);
       stores.assignAll(matchedStores);
-      hasNextPage.value = paginated.hasNextPage;
+      hasNextPage.value = includeProducts ? paginated.hasNextPage : false;
       currentPage.value = paginated.page;
     } on ApiException catch (error) {
       loadError.value = error.message;
@@ -214,18 +174,12 @@ class SearchProductsController extends GetxController {
               limit: _pageSize,
             );
       final activeFilter = filter.value;
-      var incoming = paginated.items.where((product) {
-        final matchesCategory = _matchesCategory(
-          product,
-          activeFilter.department ?? activeFilter.category,
-        );
-        final matchesBrand = _matchesBrand(product, activeFilter.brand);
-        final matchesPrice =
-            product.price >= activeFilter.minPrice &&
-            product.price <= activeFilter.maxPrice;
-        final matchesExpiry = _matchesExpiry(product, activeFilter.expiryDate);
-        return matchesCategory && matchesBrand && matchesPrice && matchesExpiry;
-      }).toList();
+      var incoming = paginated.items;
+      if (activeFilter.hasActiveFilters) {
+        incoming = incoming
+            .where((product) => _matchesProductFilters(product, activeFilter, q))
+            .toList();
+      }
       incoming = _sortProducts(incoming, activeFilter.sort);
       products.addAll(incoming);
       hasNextPage.value = paginated.hasNextPage;
@@ -288,6 +242,58 @@ class SearchProductsController extends GetxController {
   bool _matchesQuery(String q, List<String> fields) {
     final normalized = q.toLowerCase();
     return fields.any((field) => field.toLowerCase().contains(normalized));
+  }
+
+  bool _matchesProductFilters(
+    ProductModel product,
+    SearchFilterModel activeFilter,
+    String q,
+  ) {
+    if (q.isNotEmpty &&
+        !_matchesQuery(q, [
+          product.name,
+          product.storeName,
+          product.description,
+        ])) {
+      return false;
+    }
+    if (activeFilter.categoryId != null &&
+        activeFilter.categoryId!.isNotEmpty) {
+      if (product.productCategoryId != activeFilter.categoryId) return false;
+    } else if (!_matchesCategory(
+      product,
+      activeFilter.department ?? activeFilter.category,
+    )) {
+      return false;
+    }
+    if (activeFilter.brandId != null && activeFilter.brandId!.isNotEmpty) {
+      if (product.brandId != activeFilter.brandId) return false;
+    } else if (!_matchesBrand(product, activeFilter.brand)) {
+      return false;
+    }
+    if (activeFilter.hasPriceFilter &&
+        (product.price < activeFilter.minPrice ||
+            product.price > activeFilter.maxPrice)) {
+      return false;
+    }
+    if (!_matchesExpiry(product, activeFilter.expiryDate)) return false;
+    return true;
+  }
+
+  bool _matchesStoreFilters(
+    StoreModel store,
+    SearchFilterModel activeFilter,
+    String q,
+  ) {
+    if (q.isNotEmpty &&
+        !_matchesQuery(q, [store.name, store.description, store.address])) {
+      return false;
+    }
+    if (activeFilter.minStoreRating != null &&
+        store.rating < activeFilter.minStoreRating!) {
+      return false;
+    }
+    return true;
   }
 
   bool _matchesCategory(ProductModel product, String? category) {

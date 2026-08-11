@@ -19,12 +19,12 @@ class UpdateAvailableDialog extends StatelessWidget {
   final bool forceUpdate;
   final String? minimumVersion;
 
-  static void show({
+  static Future<T?> show<T>({
     required String storeUrl,
     required bool forceUpdate,
     String? minimumVersion,
   }) {
-    Get.dialog(
+    return Get.dialog<T>(
       UpdateAvailableDialog(
         storeUrl: storeUrl,
         forceUpdate: forceUpdate,

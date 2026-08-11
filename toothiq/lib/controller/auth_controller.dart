@@ -4,16 +4,12 @@ import 'package:get/get.dart';
 import '../core/api/api_exception.dart';
 import '../model/auth_session_model.dart';
 import '../model/governorate_model.dart';
-import '../model/user_model.dart';
 import '../service_layer/services/auth_service.dart';
 import '../service_layer/services/governorate_service.dart';
-import '../service_layer/services/preferences_storage.dart';
 import '../utils/phone_validator.dart';
-import '../utils/storage_keys.dart';
 import '../widget/dialogs/login_error_dialog.dart';
 import '../view/main_page.dart';
 import 'session_controller.dart';
-import 'settings_controller.dart';
 
 class AuthController extends GetxController {
   final SessionController _session = Get.find<SessionController>();
@@ -112,6 +108,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> login() async {
+    if (isLoading.value) return;
     clearLoginErrors();
     final phone = loginPhoneCtrl.text.trim();
     final password = loginPasswordCtrl.text;
@@ -135,6 +132,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> register() async {
+    if (isLoading.value) return;
     clearRegisterErrors();
     var valid = true;
 
@@ -182,34 +180,13 @@ class AuthController extends GetxController {
 
   Future<void> _completeAuth(AuthSessionModel session) async {
     await _session.setSession(session);
-    await _saveUserProfile(session.user);
     MainPage.open();
   }
 
-  Future<void> _saveUserProfile(UserModel user) async {
-    final governorateName = governorates
-        .firstWhereOrNull((g) => g.id == user.governorateId)
-        ?.nameAr;
-    final location = governorateName ?? user.governorateId;
-    final clinic = (user.clinicName ?? '').trim();
-    final address = clinic.isNotEmpty ? '$clinic ، $location' : location;
-
-    if (Get.isRegistered<SettingsController>()) {
-      await Get.find<SettingsController>().saveProfile(
-        name: user.name,
-        phone: user.phone,
-        address: address,
-      );
-    } else {
-      final prefs = PreferencesStorage.instance;
-      await prefs.setString(StorageKeys.profileName, user.name);
-      await prefs.setString(StorageKeys.profilePhone, user.phone);
-      await prefs.setString(StorageKeys.profileAddress, address);
-    }
-  }
-
   void _showAuthError(ApiException error, {required bool isLogin}) {
-    final message = error.message;
+    final message = error.statusCode == 429
+        ? 'تم تجاوز عدد محاولات تسجيل الدخول المسموحة مؤقتاً. انتظر دقيقة ثم حاول مرة أخرى.'
+        : error.message;
 
     if (isLogin && error.statusCode == 401) {
       loginPasswordError.value = '! $message';

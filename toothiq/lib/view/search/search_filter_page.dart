@@ -3,8 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../model/search_filter_model.dart';
+import '../../model/search_filter_options_model.dart';
+import '../../service_layer/services/search_filter_options_service.dart';
 import '../../utils/app_colors.dart';
 import '../../view/search/search_results_page.dart';
+import '../../widget/common/async_state_widgets.dart';
 import '../../widget/my_text.dart';
 
 class SearchFilterPage extends StatefulWidget {
@@ -41,33 +44,103 @@ class SearchFilterPage extends StatefulWidget {
 }
 
 class _SearchFilterPageState extends State<SearchFilterPage> {
+  final _optionsService = Get.find<SearchFilterOptionsService>();
+
+  SearchFilterOptionsModel? _options;
+  String? _loadError;
+  bool _loading = true;
+
   late RangeValues _priceRange;
-  late String? _selectedBrand;
-  late String? _selectedDepartment;
-  late DateTime? _expiryDate;
+  String? _selectedBrandId;
+  String? _selectedBrandName;
+  String? _selectedCategoryId;
+  String? _selectedCategoryName;
+  DateTime? _expiryDate;
   bool _brandExpanded = true;
   bool _departmentExpanded = true;
 
   @override
   void initState() {
     super.initState();
-    final filter = widget.initialFilter;
-    _priceRange = RangeValues(filter.minPrice, filter.maxPrice);
-    _selectedBrand = filter.brand;
-    _selectedDepartment = filter.department ?? filter.category;
+    _initFromFilter(widget.initialFilter);
+    _loadOptions();
+  }
+
+  void _initFromFilter(SearchFilterModel filter) {
+    _selectedBrandId = filter.brandId;
+    _selectedBrandName = filter.brand;
+    _selectedCategoryId = filter.categoryId;
+    _selectedCategoryName = filter.department ?? filter.category;
     _expiryDate = filter.expiryDate;
+    _priceRange = RangeValues(filter.minPrice, filter.maxPrice);
+  }
+
+  Future<void> _loadOptions() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+
+    try {
+      final options = await _optionsService.fetch();
+      if (!mounted) return;
+
+      final filter = widget.initialFilter;
+      final min = options.priceMin;
+      final max = options.priceMax;
+
+      setState(() {
+        _options = options;
+        _priceRange = RangeValues(
+          _clampPrice(filter.minPrice, min, max),
+          _clampPrice(filter.maxPrice, min, max),
+        );
+
+        if (_selectedCategoryId != null &&
+            !options.categories.any((c) => c.id == _selectedCategoryId)) {
+          _selectedCategoryId = null;
+          _selectedCategoryName = null;
+        }
+        if (_selectedBrandId != null &&
+            !options.brands.any((b) => b.id == _selectedBrandId)) {
+          _selectedBrandId = null;
+          _selectedBrandName = null;
+        }
+
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _options = SearchFilterOptionsModel.fallback();
+        _loadError = 'تعذر تحميل خيارات الفلترة';
+        _loading = false;
+      });
+    }
+  }
+
+  double _clampPrice(double value, double min, double max) {
+    if (max <= min) return min;
+    return value.clamp(min, max);
   }
 
   SearchFilterModel _buildResult() {
+    final options = _options ?? SearchFilterOptionsModel.fallback();
     return widget.initialFilter.copyWith(
       minPrice: _priceRange.start,
       maxPrice: _priceRange.end,
-      brand: _selectedBrand,
-      clearBrand: _selectedBrand == null,
-      department: _selectedDepartment,
-      clearDepartment: _selectedDepartment == null,
-      category: _selectedDepartment,
-      clearCategory: _selectedDepartment == null,
+      catalogMinPrice: options.priceMin,
+      catalogMaxPrice: options.priceMax,
+      brandId: _selectedBrandId,
+      brand: _selectedBrandName,
+      clearBrand: _selectedBrandId == null,
+      clearBrandId: _selectedBrandId == null,
+      categoryId: _selectedCategoryId,
+      category: _selectedCategoryName,
+      department: _selectedCategoryName,
+      clearCategory: _selectedCategoryId == null,
+      clearCategoryId: _selectedCategoryId == null,
+      clearDepartment: _selectedCategoryId == null,
       expiryDate: _expiryDate,
       clearExpiryDate: _expiryDate == null,
     );
@@ -116,8 +189,18 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
     return widget.initialFilter.formatPrice(value);
   }
 
+  int? _priceDivisions(SearchFilterOptionsModel options) {
+    final span = (options.priceMax - options.priceMin).round();
+    if (span <= 0) return null;
+    if (span <= 20) return span;
+    if (span <= 200) return (span / 10).round();
+    return (span / 1000).round().clamp(10, 100);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final options = _options ?? SearchFilterOptionsModel.fallback();
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -127,58 +210,95 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _FilterHeader(onClose: () => Get.back()),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 24.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _PriceSection(
-                        priceRange: _priceRange,
-                        formatPrice: _formatPrice,
-                        onChanged: (values) =>
-                            setState(() => _priceRange = values),
-                      ),
-                      SizedBox(height: 28.h),
-                      _CollapsibleChipSection(
-                        title: 'حسب البراند',
-                        expanded: _brandExpanded,
-                        options: SearchFilterModel.brandOptions,
-                        selected: _selectedBrand,
-                        onToggle: () =>
-                            setState(() => _brandExpanded = !_brandExpanded),
-                        onSelect: (value) =>
-                            setState(() => _selectedBrand = value),
-                      ),
-                      SizedBox(height: 24.h),
-                      _CollapsibleChipSection(
-                        title: 'حسب القسم',
-                        expanded: _departmentExpanded,
-                        options: SearchFilterModel.departmentOptions,
-                        selected: _selectedDepartment,
-                        onToggle: () => setState(
-                          () => _departmentExpanded = !_departmentExpanded,
-                        ),
-                        onSelect: (value) =>
-                            setState(() => _selectedDepartment = value),
-                      ),
-                      SizedBox(height: 24.h),
-                      _ExpiryDateSection(
-                        label: _expiryDate == null
-                            ? '2026 / 00 / 00'
-                            : widget.initialFilter.copyWith(
-                                expiryDate: _expiryDate,
-                              ).expiryDateLabel,
-                        onTap: _pickExpiryDate,
-                      ),
-                    ],
+              if (_loadError != null)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: MyText(
+                    _loadError!,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.settingsDelete,
+                    textAlign: TextAlign.center,
                   ),
                 ),
+              Expanded(
+                child: _loading
+                    ? const AppLoadingState()
+                    : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 24.h),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _PriceSection(
+                              priceRange: _priceRange,
+                              minPrice: options.priceMin,
+                              maxPrice: options.priceMax,
+                              divisions: _priceDivisions(options),
+                              formatPrice: _formatPrice,
+                              onChanged: (values) =>
+                                  setState(() => _priceRange = values),
+                            ),
+                            SizedBox(height: 28.h),
+                            _CollapsibleChipSection(
+                              title: 'حسب البراند',
+                              expanded: _brandExpanded,
+                              emptyLabel: 'لا توجد براندات متاحة',
+                              options: options.brands
+                                  .map(
+                                    (brand) => _FilterChipOption(
+                                      id: brand.id,
+                                      label: brand.name,
+                                    ),
+                                  )
+                                  .toList(),
+                              selectedId: _selectedBrandId,
+                              onToggle: () => setState(
+                                () => _brandExpanded = !_brandExpanded,
+                              ),
+                              onSelect: (option) => setState(() {
+                                _selectedBrandId = option?.id;
+                                _selectedBrandName = option?.label;
+                              }),
+                            ),
+                            SizedBox(height: 24.h),
+                            _CollapsibleChipSection(
+                              title: 'حسب القسم',
+                              expanded: _departmentExpanded,
+                              emptyLabel: 'لا توجد أقسام متاحة',
+                              options: options.categories
+                                  .map(
+                                    (category) => _FilterChipOption(
+                                      id: category.id,
+                                      label: category.nameAr,
+                                    ),
+                                  )
+                                  .toList(),
+                              selectedId: _selectedCategoryId,
+                              onToggle: () => setState(
+                                () => _departmentExpanded = !_departmentExpanded,
+                              ),
+                              onSelect: (option) => setState(() {
+                                _selectedCategoryId = option?.id;
+                                _selectedCategoryName = option?.label;
+                              }),
+                            ),
+                            SizedBox(height: 24.h),
+                            _ExpiryDateSection(
+                              label: _expiryDate == null
+                                  ? '2026 / 00 / 00'
+                                  : widget.initialFilter
+                                        .copyWith(expiryDate: _expiryDate)
+                                        .expiryDateLabel,
+                              onTap: _pickExpiryDate,
+                            ),
+                          ],
+                        ),
+                      ),
               ),
               _FilterBottomBar(
                 onBack: () => Get.back(),
-                onApply: _applyAndClose,
+                onApply: _loading ? null : _applyAndClose,
               ),
             ],
           ),
@@ -186,6 +306,13 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
       ),
     );
   }
+}
+
+class _FilterChipOption {
+  final String id;
+  final String label;
+
+  const _FilterChipOption({required this.id, required this.label});
 }
 
 class _FilterHeader extends StatelessWidget {
@@ -226,17 +353,25 @@ class _FilterHeader extends StatelessWidget {
 
 class _PriceSection extends StatelessWidget {
   final RangeValues priceRange;
+  final double minPrice;
+  final double maxPrice;
+  final int? divisions;
   final String Function(double) formatPrice;
   final ValueChanged<RangeValues> onChanged;
 
   const _PriceSection({
     required this.priceRange,
+    required this.minPrice,
+    required this.maxPrice,
+    required this.divisions,
     required this.formatPrice,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final sliderEnabled = maxPrice > minPrice;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -263,10 +398,10 @@ class _PriceSection extends StatelessWidget {
           ),
           child: RangeSlider(
             values: priceRange,
-            min: SearchFilterModel.priceSliderMin,
-            max: SearchFilterModel.priceSliderMax,
-            divisions: 18,
-            onChanged: onChanged,
+            min: minPrice,
+            max: maxPrice,
+            divisions: divisions,
+            onChanged: sliderEnabled ? onChanged : null,
           ),
         ),
         Padding(
@@ -297,16 +432,18 @@ class _PriceSection extends StatelessWidget {
 class _CollapsibleChipSection extends StatelessWidget {
   final String title;
   final bool expanded;
-  final List<String> options;
-  final String? selected;
+  final String emptyLabel;
+  final List<_FilterChipOption> options;
+  final String? selectedId;
   final VoidCallback onToggle;
-  final ValueChanged<String?> onSelect;
+  final ValueChanged<_FilterChipOption?> onSelect;
 
   const _CollapsibleChipSection({
     required this.title,
     required this.expanded,
+    required this.emptyLabel,
     required this.options,
-    required this.selected,
+    required this.selectedId,
     required this.onToggle,
     required this.onSelect,
   });
@@ -342,20 +479,33 @@ class _CollapsibleChipSection extends StatelessWidget {
         ),
         if (expanded) ...[
           SizedBox(height: 14.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: options.map((option) {
-              final isAll = option == 'الكل';
-              final isSelected =
-                  isAll ? selected == null : selected == option;
-              return _FilterChip(
-                label: option,
-                isSelected: isSelected,
-                onTap: () => onSelect(isAll ? null : option),
-              );
-            }).toList(),
-          ),
+          if (options.isEmpty)
+            MyText(
+              emptyLabel,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+              textAlign: TextAlign.right,
+            )
+          else
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                _FilterChip(
+                  label: 'الكل',
+                  isSelected: selectedId == null,
+                  onTap: () => onSelect(null),
+                ),
+                ...options.map(
+                  (option) => _FilterChip(
+                    label: option.label,
+                    isSelected: selectedId == option.id,
+                    onTap: () => onSelect(option),
+                  ),
+                ),
+              ],
+            ),
         ],
       ],
     );
@@ -462,7 +612,7 @@ class _ExpiryDateSection extends StatelessWidget {
 
 class _FilterBottomBar extends StatelessWidget {
   final VoidCallback onBack;
-  final VoidCallback onApply;
+  final VoidCallback? onApply;
 
   const _FilterBottomBar({
     required this.onBack,
@@ -495,6 +645,9 @@ class _FilterBottomBar extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.productStore,
                     elevation: 0,
+                    disabledBackgroundColor: AppColors.productStore.withValues(
+                      alpha: 0.5,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28.r),
                     ),

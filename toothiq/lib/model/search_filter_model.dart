@@ -1,3 +1,5 @@
+import 'search_filter_options_model.dart';
+
 enum SearchSortOption {
   relevance('الأكثر صلة'),
   priceLow('السعر: من الأقل'),
@@ -18,36 +20,18 @@ enum SearchResultType {
 }
 
 class SearchFilterModel {
-  static const double defaultMinPrice = 60000;
-  static const double defaultMaxPrice = 100000;
-  static const double priceSliderMin = 10000;
-  static const double priceSliderMax = 150000;
-
-  static const List<String> brandOptions = [
-    'الكل',
-    'تنظيف أسنان',
-    'تنظيف أسنان خاص',
-    'حشوات',
-    'تقويم شفاف',
-    'تقويم شفاف',
-    'حشوات',
-  ];
-
-  static const List<String> departmentOptions = [
-    'الكل',
-    'تنظيف أسنان',
-    'تنظيف أسنان خاص',
-    'حشوات',
-    'تقويم شفاف',
-    'تقويم شفاف',
-    'حشوات',
-  ];
+  static const double fallbackMinPrice = SearchFilterOptionsModel.fallbackMinPrice;
+  static const double fallbackMaxPrice = SearchFilterOptionsModel.fallbackMaxPrice;
 
   final String? category;
+  final String? categoryId;
   final String? brand;
+  final String? brandId;
   final String? department;
   final double minPrice;
   final double maxPrice;
+  final double catalogMinPrice;
+  final double catalogMaxPrice;
   final DateTime? expiryDate;
   final SearchSortOption sort;
   final SearchResultType resultType;
@@ -55,22 +39,62 @@ class SearchFilterModel {
 
   const SearchFilterModel({
     this.category,
+    this.categoryId,
     this.brand,
+    this.brandId,
     this.department,
-    this.minPrice = defaultMinPrice,
-    this.maxPrice = defaultMaxPrice,
+    this.minPrice = fallbackMinPrice,
+    this.maxPrice = fallbackMaxPrice,
+    this.catalogMinPrice = fallbackMinPrice,
+    this.catalogMaxPrice = fallbackMaxPrice,
     this.expiryDate,
     this.sort = SearchSortOption.relevance,
     this.resultType = SearchResultType.all,
     this.minStoreRating,
   });
 
+  factory SearchFilterModel.withCatalogBounds({
+    required double catalogMinPrice,
+    required double catalogMaxPrice,
+    String? category,
+    String? categoryId,
+    String? brand,
+    String? brandId,
+    String? department,
+    double? minPrice,
+    double? maxPrice,
+    DateTime? expiryDate,
+    SearchSortOption sort = SearchSortOption.relevance,
+    SearchResultType resultType = SearchResultType.all,
+    double? minStoreRating,
+  }) {
+    return SearchFilterModel(
+      category: category,
+      categoryId: categoryId,
+      brand: brand,
+      brandId: brandId,
+      department: department,
+      minPrice: minPrice ?? catalogMinPrice,
+      maxPrice: maxPrice ?? catalogMaxPrice,
+      catalogMinPrice: catalogMinPrice,
+      catalogMaxPrice: catalogMaxPrice,
+      expiryDate: expiryDate,
+      sort: sort,
+      resultType: resultType,
+      minStoreRating: minStoreRating,
+    );
+  }
+
+  bool get hasPriceFilter =>
+      minPrice > catalogMinPrice || maxPrice < catalogMaxPrice;
+
   bool get hasActiveFilters =>
       category != null ||
+      categoryId != null ||
       brand != null ||
+      brandId != null ||
       department != null ||
-      minPrice != defaultMinPrice ||
-      maxPrice != defaultMaxPrice ||
+      hasPriceFilter ||
       expiryDate != null ||
       sort != SearchSortOption.relevance ||
       resultType != SearchResultType.all ||
@@ -79,12 +103,18 @@ class SearchFilterModel {
   SearchFilterModel copyWith({
     String? category,
     bool clearCategory = false,
+    String? categoryId,
+    bool clearCategoryId = false,
     String? brand,
     bool clearBrand = false,
+    String? brandId,
+    bool clearBrandId = false,
     String? department,
     bool clearDepartment = false,
     double? minPrice,
     double? maxPrice,
+    double? catalogMinPrice,
+    double? catalogMaxPrice,
     DateTime? expiryDate,
     bool clearExpiryDate = false,
     SearchSortOption? sort,
@@ -94,10 +124,14 @@ class SearchFilterModel {
   }) {
     return SearchFilterModel(
       category: clearCategory ? null : (category ?? this.category),
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
       brand: clearBrand ? null : (brand ?? this.brand),
+      brandId: clearBrandId ? null : (brandId ?? this.brandId),
       department: clearDepartment ? null : (department ?? this.department),
       minPrice: minPrice ?? this.minPrice,
       maxPrice: maxPrice ?? this.maxPrice,
+      catalogMinPrice: catalogMinPrice ?? this.catalogMinPrice,
+      catalogMaxPrice: catalogMaxPrice ?? this.catalogMaxPrice,
       expiryDate: clearExpiryDate ? null : (expiryDate ?? this.expiryDate),
       sort: sort ?? this.sort,
       resultType: resultType ?? this.resultType,
@@ -107,7 +141,17 @@ class SearchFilterModel {
     );
   }
 
-  SearchFilterModel clearAll() => const SearchFilterModel();
+  SearchFilterModel clearAll({
+    double? catalogMinPrice,
+    double? catalogMaxPrice,
+  }) {
+    final min = catalogMinPrice ?? this.catalogMinPrice;
+    final max = catalogMaxPrice ?? this.catalogMaxPrice;
+    return SearchFilterModel.withCatalogBounds(
+      catalogMinPrice: min,
+      catalogMaxPrice: max,
+    );
+  }
 
   String formatPrice(double value) {
     return '${_formatPriceNumber(value)} د.ع';
@@ -124,7 +168,7 @@ class SearchFilterModel {
   /// شارات الفلاتر النشطة لصفحة نتائج الفلترة.
   List<String> get activeFilterLabels {
     final labels = <String>[];
-    if (minPrice != defaultMinPrice || maxPrice != defaultMaxPrice) {
+    if (hasPriceFilter) {
       labels.add(
         'السعر ( ${_formatPriceNumber(minPrice)} - ${_formatPriceNumber(maxPrice)} )',
       );

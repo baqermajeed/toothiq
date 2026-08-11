@@ -31,11 +31,14 @@ class BrandModel {
       if (brandId == null || brandId.isEmpty) continue;
 
       final brandName = product.brandName?.trim();
-      if (brandName == null || brandName.isEmpty) continue;
-
       brandsById.putIfAbsent(
         brandId,
-        () => BrandModel(id: brandId, name: brandName),
+        () => BrandModel(
+          id: brandId,
+          name: (brandName != null && brandName.isNotEmpty)
+              ? brandName
+              : 'براند',
+        ),
       );
     }
 

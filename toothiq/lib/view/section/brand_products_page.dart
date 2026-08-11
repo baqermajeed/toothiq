@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../bindings/brand_products_binding.dart';
@@ -8,6 +9,7 @@ import '../../model/brand_model.dart';
 import '../../model/product_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/search_filter_row.dart';
 import '../../widget/section/section_app_bar.dart';
 import '../../widget/section/section_products_grid.dart';
 
@@ -42,20 +44,16 @@ class BrandProductsPage extends GetView<BrandProductsController> {
         backgroundColor: AppColors.background,
         appBar: SectionAppBar(title: controller.brand.name),
         body: Obx(() {
-          if (controller.isLoading.value && controller.products.isEmpty) {
+          if (controller.isLoading.value && controller.allProducts.isEmpty) {
             return const AppLoadingState();
           }
 
           if (controller.loadError.value != null &&
-              controller.products.isEmpty) {
+              controller.allProducts.isEmpty) {
             return AppErrorState(
               message: controller.loadError.value!,
               onRetry: () => controller.loadProducts(),
             );
-          }
-
-          if (controller.products.isEmpty) {
-            return const AppEmptyState(title: 'لا توجد منتجات لهذا البراند');
           }
 
           return RefreshIndicator(
@@ -63,6 +61,13 @@ class BrandProductsPage extends GetView<BrandProductsController> {
             onRefresh: controller.refresh,
             child: Column(
               children: [
+                SizedBox(height: 12.h),
+                SearchFilterRow(
+                  controller: controller.searchController,
+                  hintText: 'أبحث في منتجات ${controller.brand.name} ..',
+                  showFilter: false,
+                ),
+                SizedBox(height: 14.h),
                 if (controller.loadError.value != null)
                   AppErrorState(
                     message: controller.loadError.value!,
@@ -70,16 +75,35 @@ class BrandProductsPage extends GetView<BrandProductsController> {
                     compact: true,
                   ),
                 Expanded(
-                  child: SectionProductsGrid(
-                    products: controller.products,
-                    scrollController: controller.scrollController,
-                    emptyTitle: 'لا توجد منتجات لهذا البراند',
-                  ),
-                ),
-                AppLoadMoreFooter(
-                  isLoading: controller.loadingMore.value,
-                  hasNextPage: controller.hasNextPage.value,
-                  onTap: controller.loadMore,
+                  child: Obx(() {
+                    final products = controller.filteredProducts;
+                    if (products.isEmpty) {
+                      final hasSearch =
+                          controller.searchController.text.trim().isNotEmpty;
+                      return AppEmptyState(
+                        title: hasSearch
+                            ? 'لا توجد نتائج مطابقة للبحث'
+                            : 'لا توجد منتجات لهذا البراند',
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        Expanded(
+                          child: SectionProductsGrid(
+                            products: products,
+                            scrollController: controller.scrollController,
+                            emptyTitle: 'لا توجد منتجات لهذا البراند',
+                          ),
+                        ),
+                        AppLoadMoreFooter(
+                          isLoading: controller.loadingMore.value,
+                          hasNextPage: controller.hasNextPage.value,
+                          onTap: controller.loadMore,
+                        ),
+                      ],
+                    );
+                  }),
                 ),
               ],
             ),

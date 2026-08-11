@@ -12,13 +12,11 @@ class UserService {
 
   Future<UserModel> updateCurrentUser({
     String? name,
-    String? phone,
     String? clinicName,
     List<double>? location,
   }) {
     return _api.updateMe(
       name: name,
-      phone: phone,
       clinicName: clinicName,
       location: location,
     );

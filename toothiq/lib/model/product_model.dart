@@ -13,6 +13,8 @@ class ProductModel {
   final bool isFavorite;
   final String? shopId;
   final String? productCategoryId;
+  final String? subcategoryId;
+  final String? subcategoryName;
   final String? brandId;
   final String? brandName;
 
@@ -29,9 +31,20 @@ class ProductModel {
     this.isFavorite = false,
     this.shopId,
     this.productCategoryId,
+    this.subcategoryId,
+    this.subcategoryName,
     this.brandId,
     this.brandName,
   });
+
+  static String? _readRefId(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value['_id']?.toString() ?? value['id']?.toString();
+    }
+    final raw = value?.toString().trim();
+    if (raw == null || raw.isEmpty) return null;
+    return raw;
+  }
 
   static String? _readBrandName(Map<String, dynamic> json) {
     final direct = json['brandName']?.toString().trim();
@@ -44,15 +57,46 @@ class ProductModel {
       if (nested != null && nested.isNotEmpty) return nested;
     }
 
+    final brandRef = json['brandId'];
+    if (brandRef is Map<String, dynamic>) {
+      final nested = brandRef['nameAr']?.toString().trim() ??
+          brandRef['name']?.toString().trim();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
+
+    return null;
+  }
+
+  static String? _readSubcategoryName(Map<String, dynamic> json) {
+    final direct = json['subcategoryName']?.toString().trim();
+    if (direct != null && direct.isNotEmpty) return direct;
+
+    final subcategory = json['subcategory'];
+    if (subcategory is Map<String, dynamic>) {
+      final nested = subcategory['nameAr']?.toString().trim() ??
+          subcategory['name']?.toString().trim();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
+
+    final subcategoryRef = json['subcategoryId'];
+    if (subcategoryRef is Map<String, dynamic>) {
+      final nested = subcategoryRef['nameAr']?.toString().trim() ??
+          subcategoryRef['name']?.toString().trim();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
+
     return null;
   }
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     final priceValue = json['offerPrice'] ?? json['price'];
-    final image = ImageUrl.resolve(
-      json['image']?.toString(),
-      fallback: ImageUrl.productPlaceholder,
-    );
+    final gallery = _readGallery(json);
+    final image = gallery.isNotEmpty
+        ? gallery.first
+        : ImageUrl.resolve(
+            json['image']?.toString(),
+            fallback: ImageUrl.productPlaceholder,
+          );
 
     return ProductModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -62,13 +106,14 @@ class ProductModel {
       fullDescription: json['description']?.toString() ?? '',
       price: (priceValue as num?)?.toInt() ?? 0,
       imageAsset: image,
-      galleryAssets: [image],
+      galleryAssets: gallery,
       expirationDate: _formatDate(json['expiryDate']),
       shopId: json['shopId']?.toString(),
-      productCategoryId:
-          json['categoryId']?.toString() ??
-          json['productCategoryId']?.toString(),
-      brandId: json['brandId']?.toString(),
+      productCategoryId: _readRefId(json['categoryId']) ??
+          _readRefId(json['productCategoryId']),
+      subcategoryId: _readRefId(json['subcategoryId']),
+      subcategoryName: _readSubcategoryName(json),
+      brandId: _readRefId(json['brandId']),
       brandName: _readBrandName(json),
     );
   }
@@ -79,10 +124,13 @@ class ProductModel {
     required String shopName,
   }) {
     final priceValue = json['offerPrice'] ?? json['price'];
-    final image = ImageUrl.resolve(
-      json['image']?.toString(),
-      fallback: ImageUrl.productPlaceholder,
-    );
+    final gallery = _readGallery(json);
+    final image = gallery.isNotEmpty
+        ? gallery.first
+        : ImageUrl.resolve(
+            json['image']?.toString(),
+            fallback: ImageUrl.productPlaceholder,
+          );
 
     return ProductModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -92,15 +140,46 @@ class ProductModel {
       fullDescription: json['description']?.toString() ?? '',
       price: (priceValue as num?)?.toInt() ?? 0,
       imageAsset: image,
-      galleryAssets: [image],
+      galleryAssets: gallery,
       expirationDate: _formatDate(json['expiryDate']),
       shopId: shopId,
-      productCategoryId:
-          json['categoryId']?.toString() ??
-          json['productCategoryId']?.toString(),
-      brandId: json['brandId']?.toString(),
+      productCategoryId: _readRefId(json['categoryId']) ??
+          _readRefId(json['productCategoryId']),
+      subcategoryId: _readRefId(json['subcategoryId']),
+      subcategoryName: _readSubcategoryName(json),
+      brandId: _readRefId(json['brandId']),
       brandName: _readBrandName(json),
     );
+  }
+
+  static List<String> _readGallery(Map<String, dynamic> json) {
+    final raw = json['images'] ?? json['gallery'] ?? json['galleryAssets'];
+    final urls = <String>[];
+
+    if (raw is List) {
+      for (final item in raw) {
+        final resolved = ImageUrl.resolve(
+          item?.toString(),
+          fallback: '',
+        );
+        if (resolved.isNotEmpty && !urls.contains(resolved)) {
+          urls.add(resolved);
+        }
+      }
+    }
+
+    final primary = ImageUrl.resolve(
+      json['image']?.toString(),
+      fallback: '',
+    );
+    if (primary.isNotEmpty && !urls.contains(primary)) {
+      urls.insert(0, primary);
+    }
+
+    if (urls.isEmpty) {
+      return [ImageUrl.productPlaceholder];
+    }
+    return List<String>.unmodifiable(urls);
   }
 
   static String _formatDate(dynamic value) {
@@ -136,8 +215,55 @@ class ProductModel {
       isFavorite: isFavorite ?? this.isFavorite,
       shopId: shopId,
       productCategoryId: productCategoryId,
+      subcategoryId: subcategoryId,
+      subcategoryName: subcategoryName,
       brandId: brandId,
       brandName: brandName,
+    );
+  }
+
+  Map<String, dynamic> toFavoriteJson() {
+    return {
+      'id': id,
+      'name': name,
+      'storeName': storeName,
+      'description': description,
+      'fullDescription': fullDescription,
+      'price': price,
+      'imageAsset': imageAsset,
+      'galleryAssets': galleryAssets,
+      'expirationDate': expirationDate,
+      'shopId': shopId,
+      'productCategoryId': productCategoryId,
+      'subcategoryId': subcategoryId,
+      'subcategoryName': subcategoryName,
+      'brandId': brandId,
+      'brandName': brandName,
+      'isFavorite': true,
+    };
+  }
+
+  factory ProductModel.fromFavoriteJson(Map<String, dynamic> json) {
+    final gallery = json['galleryAssets'];
+    return ProductModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      storeName: json['storeName']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      fullDescription: json['fullDescription']?.toString() ?? '',
+      price: (json['price'] as num?)?.toInt() ?? 0,
+      imageAsset: json['imageAsset']?.toString() ?? ImageUrl.productPlaceholder,
+      galleryAssets: gallery is List
+          ? gallery.map((item) => item.toString()).toList(growable: false)
+          : const [],
+      expirationDate: json['expirationDate']?.toString() ?? '',
+      isFavorite: true,
+      shopId: json['shopId']?.toString(),
+      productCategoryId: json['productCategoryId']?.toString(),
+      subcategoryId: json['subcategoryId']?.toString(),
+      subcategoryName: json['subcategoryName']?.toString(),
+      brandId: json['brandId']?.toString(),
+      brandName: json['brandName']?.toString(),
     );
   }
 

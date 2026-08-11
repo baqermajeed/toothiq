@@ -35,7 +35,12 @@ class StoreDetailPage extends GetView<StoreDetailController> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: StoreDetailAppBar(rating: controller.store.rating),
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(56.h),
+          child: Obx(
+            () => StoreDetailAppBar(rating: controller.viewStore.rating),
+          ),
+        ),
         resizeToAvoidBottomInset: true,
         body: Obx(() {
           final tab = controller.selectedTabIndex.value;
@@ -207,14 +212,7 @@ class _ProductsTabContent extends StatelessWidget {
                   childAspectRatio: 0.55,
                 ),
                 itemBuilder: (context, index) {
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      return ProductCardWidget(
-                        product: products[index],
-                        maxHeight: constraints.maxHeight,
-                      );
-                    },
-                  );
+                  return ProductCardWidget(product: products[index]);
                 },
               ),
             ),
@@ -261,20 +259,20 @@ class _SectionsTabContent extends StatelessWidget {
             SearchFilterRow(
               controller: controller.searchController,
               hintText: 'أبحث عن قسم ..',
-              filterCircular: true,
               onFilterTap: () {},
             ),
             SizedBox(height: 16.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: GridView.builder(
+                clipBehavior: Clip.none,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 12.w,
                   mainAxisSpacing: 12.h,
-                  childAspectRatio: 0.82,
+                  childAspectRatio: 1.11,
                 ),
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
@@ -324,20 +322,20 @@ class _BrandsTabContent extends StatelessWidget {
             SearchFilterRow(
               controller: controller.searchController,
               hintText: 'أبحث عن براند محدد ..',
-              filterCircular: true,
               onFilterTap: () {},
             ),
             SizedBox(height: 16.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: GridView.builder(
+                clipBehavior: Clip.none,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 12.w,
                   mainAxisSpacing: 12.h,
-                  childAspectRatio: 0.78,
+                  childAspectRatio: 1.11,
                 ),
                 itemCount: brands.length,
                 itemBuilder: (context, index) {

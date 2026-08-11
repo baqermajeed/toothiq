@@ -9,6 +9,7 @@ import '../my_text.dart';
 abstract final class AppDialogs {
   static const _loadingRouteName = '/app-loading-dialog';
   static bool _loadingVisible = false;
+  static bool _loadingDismissed = false;
 
   static Future<bool> confirm({
     required String title,
@@ -64,59 +65,81 @@ abstract final class AppDialogs {
   static void showLoading(String message) {
     if (_loadingVisible) return;
     _loadingVisible = true;
-    Get.dialog(
-      PopScope(
-        canPop: false,
-        child: Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              margin: EdgeInsets.symmetric(horizontal: 32.w),
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16.r),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 40.w,
-                    height: 40.h,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
+    _loadingDismissed = false;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_loadingDismissed) {
+        _loadingVisible = false;
+        return;
+      }
+
+      Get.dialog(
+        PopScope(
+          canPop: false,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 32.w),
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  MyText(
-                    message,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 40.w,
+                      height: 40.h,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    MyText(
+                      message,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-      barrierDismissible: false,
-      routeSettings: const RouteSettings(name: _loadingRouteName),
-    ).whenComplete(() => _loadingVisible = false);
+        barrierDismissible: false,
+        routeSettings: const RouteSettings(name: _loadingRouteName),
+      ).whenComplete(() {
+        if (!_loadingDismissed) {
+          _loadingVisible = false;
+        }
+      });
+    });
   }
 
   static void hideLoading() {
-    if (!_loadingVisible) return;
-    if (Get.isDialogOpen == true) Get.back();
+    _loadingDismissed = true;
+
+    if (Get.isDialogOpen == true) {
+      final currentName = Get.rawRoute?.settings.name;
+      if (currentName == _loadingRouteName) {
+        Get.back();
+      } else {
+        Get.until((route) => route.settings.name != _loadingRouteName);
+      }
+    }
+
     _loadingVisible = false;
   }
 

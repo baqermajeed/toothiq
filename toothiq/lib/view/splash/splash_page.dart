@@ -80,25 +80,17 @@ class _SplashPageState extends State<SplashPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 120.w,
-                  height: 120.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.medical_services_rounded,
-                    size: 56.sp,
-                    color: AppColors.primary,
-                  ),
+                Image.asset(
+                  'assets/images/icon/toothiqlogo.png',
+                  width: 140.w,
+                  height: 140.w,
+                  fit: BoxFit.contain,
                 ),
-                SizedBox(height: 24.h),
-                MyText(
-                  'متجر طب الأسنان',
-                  fontSize: 28.sp,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                SizedBox(height: 20.h),
+                Image.asset(
+                  'assets/images/icon/toothiqtext.png',
+                  height: 28.h,
+                  fit: BoxFit.contain,
                 ),
                 SizedBox(height: 8.h),
                 MyText(

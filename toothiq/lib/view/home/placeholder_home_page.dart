@@ -24,7 +24,7 @@ class PlaceholderHomePage extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: MyText(
-            'متجر طب الأسنان',
+            'ToothIQ',
             fontSize: 20.sp,
             color: AppColors.primary,
           ),

@@ -35,52 +35,32 @@ class SectionDetailPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: SectionAppBar(title: category.name),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(height: 8.h),
-            _SectionFilterTabs(controller: ctrl),
-            SizedBox(height: 12.h),
-            Expanded(
-              child: Obx(() {
-                if (ctrl.isLoading.value && ctrl.sectionProducts.isEmpty) {
-                  return const AppLoadingState();
-                }
+        body: Obx(() {
+          if (ctrl.showFullScreenLoading) {
+            return const AppLoadingState();
+          }
 
-                if (ctrl.loadError.value != null &&
-                    ctrl.sectionProducts.isEmpty) {
-                  return AppErrorState(
-                    message: ctrl.loadError.value!,
-                    onRetry: () => ctrl.loadSectionData(),
-                  );
-                }
+          if (ctrl.loadError.value != null && ctrl.sectionProducts.isEmpty) {
+            return AppErrorState(
+              message: ctrl.loadError.value!,
+              onRetry: () => ctrl.loadSectionData(),
+            );
+          }
 
-                final tabIndex = ctrl.selectedTabIndex.value;
-                if (tabIndex == 1) {
-                  return _BrandsTabContent(controller: ctrl);
-                }
-                final products = tabIndex == 2
-                    ? ctrl.whiteningProducts
-                    : ctrl.sectionProducts;
-                if (products.isEmpty) {
-                  return const AppEmptyState(
-                    title: 'لا توجد منتجات في هذا القسم',
-                  );
-                }
-                return Column(
-                  children: [
-                    Expanded(child: SectionProductsGrid(products: products)),
-                    AppLoadMoreFooter(
-                      isLoading: ctrl.loadingMore.value,
-                      hasNextPage: ctrl.hasNextPage.value,
-                      onTap: ctrl.loadMore,
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ],
-        ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: 8.h),
+              _SectionFilterTabs(controller: ctrl),
+              SizedBox(height: 12.h),
+              Expanded(
+                child: ctrl.isBrandsTab
+                    ? _BrandsTabContent(controller: ctrl)
+                    : _ProductsTabContent(controller: ctrl),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -96,21 +76,70 @@ class _SectionFilterTabs extends StatelessWidget {
     return SizedBox(
       height: 44.h,
       child: Obx(() {
+        final tabs = controller.tabLabels;
         final selectedIndex = controller.selectedTabIndex.value;
         return ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.symmetric(horizontal: 16.w),
-          itemCount: SectionDetailController.tabs.length,
+          itemCount: tabs.length,
           separatorBuilder: (context, index) => SizedBox(width: 10.w),
           itemBuilder: (context, index) {
             return CategoryChipWidget(
-              label: SectionDetailController.tabs[index],
+              label: tabs[index],
               isSelected: selectedIndex == index,
               onTap: () => controller.selectTab(index),
             );
           },
         );
       }),
+    );
+  }
+}
+
+class _ProductsTabContent extends StatelessWidget {
+  final SectionDetailController controller;
+
+  const _ProductsTabContent({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Obx(
+          () => SearchFilterRow(
+            controller: controller.searchController,
+            hintText: controller.searchHintText,
+            showFilter: false,
+          ),
+        ),
+        SizedBox(height: 14.h),
+        Expanded(
+          child: Obx(() {
+            final products = controller.filteredProducts;
+            if (products.isEmpty) {
+              final hasSearch =
+                  controller.searchController.text.trim().isNotEmpty;
+              return AppEmptyState(
+                title: hasSearch
+                    ? 'لا توجد نتائج مطابقة للبحث'
+                    : 'لا توجد منتجات في هذا القسم',
+              );
+            }
+
+            return Column(
+              children: [
+                Expanded(child: SectionProductsGrid(products: products)),
+                AppLoadMoreFooter(
+                  isLoading: controller.loadingMore.value,
+                  hasNextPage: controller.hasNextPage.value,
+                  onTap: controller.loadMore,
+                ),
+              ],
+            );
+          }),
+        ),
+      ],
     );
   }
 }
@@ -125,24 +154,33 @@ class _BrandsTabContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SearchFilterRow(
-          controller: controller.brandSearchController,
-          hintText: 'أبحث عن براند محدد ..',
-          filterCircular: true,
+        Obx(
+          () => SearchFilterRow(
+            controller: controller.searchController,
+            hintText: controller.searchHintText,
+            showFilter: false,
+          ),
         ),
         SizedBox(height: 14.h),
         Expanded(
           child: Obx(() {
             if (controller.filteredBrands.isEmpty) {
-              return const AppEmptyState(title: 'لا توجد براندات متاحة');
+              final hasSearch =
+                  controller.searchController.text.trim().isNotEmpty;
+              return AppEmptyState(
+                title: hasSearch
+                    ? 'لا توجد براندات مطابقة للبحث'
+                    : 'لا توجد براندات متاحة',
+              );
             }
             return GridView.builder(
-              padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+              clipBehavior: Clip.none,
+              padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 16.h),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 12.w,
                 mainAxisSpacing: 12.h,
-                childAspectRatio: 0.78,
+                childAspectRatio: 1.11,
               ),
               itemCount: controller.filteredBrands.length,
               itemBuilder: (context, index) {

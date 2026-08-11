@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dental App Baqer</string>
+	<string>ToothIQ</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>dental_app_baqer</string>
+	<string>ToothIQ</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -72,6 +72,8 @@
 	<string>يحتاج التطبيق لموقعك لتحديد عنوان التوصيل على الخريطة.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>يحتاج التطبيق لموقعك لتحديد عنوان التوصيل على الخريطة.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يحتاج التطبيق للوصول إلى المعرض لاختيار صورة الملف الشخصي.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

@@ -7,72 +7,81 @@ import '../my_text.dart';
 
 class SavedAddressCardWidget extends StatelessWidget {
   final DeliveryAddressModel address;
+  final VoidCallback? onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const SavedAddressCardWidget({
     super.key,
     required this.address,
+    this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 14.h),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _LocationIconBox(),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 4.w,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14.r),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 14.h),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _LocationIconBox(),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    MyText(
-                      address.displayTitle,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.productTitle,
+                    Wrap(
+                      spacing: 4.w,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        MyText(
+                          address.displayTitle,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.productTitle,
+                        ),
+                        if (address.isCurrent)
+                          MyText(
+                            '( العنوان الحالي )',
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.productStore,
+                          ),
+                      ],
                     ),
-                    if (address.isCurrent)
-                      MyText(
-                        '( العنوان الحالي )',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.productStore,
-                      ),
+                    SizedBox(height: 6.h),
+                    MyText(
+                      address.displaySubtitle,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                      textAlign: TextAlign.right,
+                    ),
                   ],
                 ),
-                SizedBox(height: 6.h),
-                MyText(
-                  address.displaySubtitle,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                  textAlign: TextAlign.right,
-                ),
-              ],
-            ),
+              ),
+              SizedBox(width: 8.w),
+              _AddressActionButton(
+                backgroundColor: const Color(0xFFFFF3D6),
+                iconAsset: 'assets/images/cart/edi.png',
+                onTap: onEdit,
+              ),
+              SizedBox(width: 8.w),
+              _AddressActionButton(
+                backgroundColor: const Color(0xFFFFE8E8),
+                iconAsset: 'assets/images/cart/del.png',
+                onTap: onDelete,
+              ),
+            ],
           ),
-          SizedBox(width: 8.w),
-          _AddressActionButton(
-            backgroundColor: const Color(0xFFFFF3D6),
-            iconAsset: 'assets/images/cart/edi.png',
-            onTap: onEdit,
-          ),
-          SizedBox(width: 8.w),
-          _AddressActionButton(
-            backgroundColor: const Color(0xFFFFE8E8),
-            iconAsset: 'assets/images/cart/del.png',
-            onTap: onDelete,
-          ),
-        ],
+        ),
       ),
     );
   }

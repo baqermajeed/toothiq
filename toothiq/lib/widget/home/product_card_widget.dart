@@ -3,8 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../controller/cart_controller.dart';
-import '../../controller/home_controller.dart';
 import '../../model/product_model.dart';
+import '../../service_layer/services/favorites_service.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/app_image.dart';
 import '../../widget/cart/cart_icon.dart';
@@ -13,19 +13,19 @@ import '../../view/product/product_details_page.dart';
 /// كارد المنتج — مطابق لتصميم Frame_427321508
 class ProductCardWidget extends StatelessWidget {
   final ProductModel product;
-  final double? maxHeight;
 
   const ProductCardWidget({
     super.key,
     required this.product,
-    this.maxHeight,
   });
 
   static const double _cardRadius = 24;
+  static const double _fixedCardHeight = 277.56;
+  static const double _imageHeight = 127.34;
 
   @override
   Widget build(BuildContext context) {
-    final home = Get.find<HomeController>();
+    final favorites = Get.find<FavoritesService>();
 
     final card = Material(
       color: Colors.white,
@@ -42,15 +42,20 @@ class ProductCardWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-          Flexible(
-            child: _ProductImageSection(
-              imageAsset: product.imageAsset,
-              isFavorite: product.isFavorite,
-              onFavoriteTap: () => home.toggleFavorite(product.id),
+          Padding(
+            padding: EdgeInsets.all(6.w),
+            child: SizedBox(
+              height: _imageHeight.h,
+              child: _ProductImageSection(
+                imageAsset: product.imageAsset,
+                isFavorite: product.isFavorite,
+                onFavoriteTap: () => favorites.toggle(product),
+              ),
             ),
           ),
+          SizedBox(height: 8.h),
           Padding(
-            padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 0),
+            padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
@@ -68,7 +73,7 @@ class ProductCardWidget extends StatelessWidget {
                     height: 1.2,
                   ),
                 ),
-                SizedBox(height: 3.h),
+                SizedBox(height: 4.h),
                 Text(
                   product.storeName,
                   textAlign: TextAlign.right,
@@ -82,7 +87,7 @@ class ProductCardWidget extends StatelessWidget {
                     height: 1.2,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 8.h),
                 Text(
                   product.description,
                   textAlign: TextAlign.right,
@@ -99,7 +104,7 @@ class ProductCardWidget extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 6.h),
+          const Spacer(),
           Padding(
             padding: EdgeInsets.fromLTRB(10.w, 0, 10.w, 8.h),
             child: _ProductPriceBar(
@@ -118,15 +123,19 @@ class ProductCardWidget extends StatelessWidget {
       ),
     );
 
-    if (maxHeight != null) {
-      return SizedBox(height: maxHeight, child: card);
-    }
-
-    return card;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        height: _fixedCardHeight.h,
+        child: card,
+      ),
+    );
   }
 }
 
 class _ProductImageSection extends StatelessWidget {
+  static const double _imageRadius = 18;
+
   final String imageAsset;
   final bool isFavorite;
   final VoidCallback onFavoriteTap;
@@ -144,9 +153,7 @@ class _ProductImageSection extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(ProductCardWidget._cardRadius.r),
-          ),
+          borderRadius: BorderRadius.circular(_imageRadius.r),
           child: AppImage(
             source: imageAsset,
             fit: BoxFit.cover,
@@ -199,23 +206,29 @@ class _ProductPriceBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      height: 40.h,
+      padding: EdgeInsets.fromLTRB(0, 0, 10.w, 0),
       decoration: BoxDecoration(
         color: AppColors.productPriceBar,
         borderRadius: BorderRadius.circular(18.r),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            price,
-            style: TextStyle(
-              fontFamily: 'Expo Arabic',
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w800,
-              color: AppColors.productStore,
+          Expanded(
+            child: Align(
+              alignment: Alignment.center,
+              child: Text(
+                price,
+                style: TextStyle(
+                  fontFamily: 'Expo Arabic',
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.productStore,
+                ),
+              ),
             ),
           ),
-          const Spacer(),
           Material(
             color: AppColors.productStore,
             borderRadius: BorderRadius.circular(10.r),
@@ -223,8 +236,8 @@ class _ProductPriceBar extends StatelessWidget {
               onTap: onAddToCart,
               borderRadius: BorderRadius.circular(10.r),
               child: SizedBox(
-                width: 34.w,
-                height: 34.w,
+                width: 40.w,
+                height: double.infinity,
                 child: Center(
                   child: CartIcon(size: 19.sp, color: Colors.white),
                 ),

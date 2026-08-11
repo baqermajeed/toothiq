@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -37,7 +39,7 @@ class SettingsProfileCard extends StatelessWidget {
               padding: EdgeInsets.all(14.w),
               child: Row(
               children: [
-                _ProfileAvatar(),
+                _ProfileAvatar(imagePath: controller.profileImagePath.value),
                 SizedBox(width: 12.w),
                 Expanded(
                   child: Column(
@@ -82,8 +84,15 @@ class SettingsProfileCard extends StatelessWidget {
 }
 
 class _ProfileAvatar extends StatelessWidget {
+  final String? imagePath;
+
+  const _ProfileAvatar({this.imagePath});
+
   @override
   Widget build(BuildContext context) {
+    final hasImage =
+        imagePath != null && imagePath!.isNotEmpty && File(imagePath!).existsSync();
+
     return Container(
       width: 56.w,
       height: 56.w,
@@ -91,12 +100,20 @@ class _ProfileAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: AppColors.cardPlaceholder,
         border: Border.all(color: AppColors.settingsCardBorder, width: 1),
+        image: hasImage
+            ? DecorationImage(
+                image: FileImage(File(imagePath!)),
+                fit: BoxFit.cover,
+              )
+            : null,
       ),
-      child: Icon(
-        Icons.person_rounded,
-        size: 32.sp,
-        color: AppColors.settingsIcon,
-      ),
+      child: hasImage
+          ? null
+          : Icon(
+              Icons.person_rounded,
+              size: 32.sp,
+              color: AppColors.settingsIcon,
+            ),
     );
   }
 }

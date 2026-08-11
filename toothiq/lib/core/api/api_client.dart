@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../model/app_contact_model.dart';
 import '../../model/app_version_check_result.dart';
 import '../../model/auth_session_model.dart';
 import '../../model/banner_model.dart';
 import '../../model/brand_model.dart';
+import '../../model/category_section_model.dart';
 import '../../model/governorate_model.dart';
 import '../../model/order_detail_model.dart';
 import '../../model/order_model.dart';
@@ -142,7 +144,6 @@ class ApiClient {
 
   Future<UserModel> updateMe({
     String? name,
-    String? phone,
     String? clinicName,
     List<double>? location,
   }) async {
@@ -150,7 +151,6 @@ class ApiClient {
       ApiEndpoints.currentUser,
       body: {
         if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
         if (clinicName != null) 'clinicName': clinicName.trim(),
         if (location != null && location.length >= 2)
           'location': {
@@ -194,6 +194,35 @@ class ApiClient {
     }
   }
 
+  /// إعدادات المنصة العامة (تواصل، رسوم التوصيل، حالة التوصيل).
+  Future<AppContactModel> getAppContact() async {
+    try {
+      final data = await _getSuccessData(ApiEndpoints.appContact);
+      if (data is! Map<String, dynamic>) return AppContactModel.empty;
+      return AppContactModel.fromJson(data);
+    } catch (_) {
+      return AppContactModel.empty;
+    }
+  }
+
+  /// fallback لقراءة رسوم التوصيل من إعدادات المنصة (إذا كانت app-contact لا ترجعها).
+  Future<Map<String, dynamic>?> getAdminSettings() async {
+    try {
+      final data = await _getSuccessData('/api/admin/settings');
+      if (data is Map<String, dynamic>) return data;
+      return null;
+    } on ApiException catch (error) {
+      if (error.statusCode == 401 ||
+          error.statusCode == 403 ||
+          error.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<GovernorateModel>> getGovernorates() async {
     final data = await _getSuccessData(ApiEndpoints.governorates);
     if (data is! List) return [];
@@ -219,6 +248,80 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(ShopCategoryModel.fromJson)
         .toList(growable: false);
+  }
+
+  /// أقسام الكتالوج الرئيسية — `GET /api/catalog/categories`.
+  Future<List<ShopCategoryModel>> getCatalogCategories({bool tree = false}) async {
+    final data = await _getSuccessData(
+      ApiEndpoints.catalogCategories,
+      queryParameters: {if (tree) 'tree': true},
+    );
+    if (data is! List) return [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(ShopCategoryModel.fromJson)
+        .toList(growable: false);
+  }
+
+  /// تفاصيل قسم: أقسام فرعية + براندات — `GET /api/catalog/categories/{id}`.
+  Future<ShopCategoryModel?> getCatalogCategoryById(String categoryId) async {
+    if (categoryId.trim().isEmpty) return null;
+    try {
+      final data = await _getSuccessData(
+        ApiEndpoints.catalogCategory(categoryId),
+      );
+      if (data is! Map<String, dynamic>) return null;
+      return ShopCategoryModel.fromJson(data);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  /// أقسام فرعية لقسم — `GET /api/catalog/categories/{id}/subcategories`.
+  Future<List<CategorySectionModel>> getCatalogSubcategories(
+    String categoryId, {
+    bool withCounts = true,
+  }) async {
+    if (categoryId.trim().isEmpty) return [];
+    try {
+      final data = await _getSuccessData(
+        ApiEndpoints.catalogCategorySubcategories(categoryId),
+        queryParameters: {if (withCounts) 'withCounts': true},
+      );
+      if (data is! List) return [];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(CategorySectionModel.fromJson)
+          .where((section) => section.id.isNotEmpty && section.nameAr.isNotEmpty)
+          .toList(growable: false);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return [];
+      rethrow;
+    }
+  }
+
+  /// براندات لقسم — `GET /api/catalog/categories/{id}/brands`.
+  Future<List<BrandModel>> getCatalogBrands(
+    String categoryId, {
+    bool withCounts = true,
+  }) async {
+    if (categoryId.trim().isEmpty) return [];
+    try {
+      final data = await _getSuccessData(
+        ApiEndpoints.catalogCategoryBrands(categoryId),
+        queryParameters: {if (withCounts) 'withCounts': true},
+      );
+      if (data is! List) return [];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(BrandModel.fromJson)
+          .where((brand) => brand.id.isNotEmpty && brand.name.isNotEmpty)
+          .toList(growable: false);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return [];
+      rethrow;
+    }
   }
 
   Future<List<BrandModel>> getBrands({String? categoryId, String? shopId}) async {
@@ -419,10 +522,16 @@ class ApiClient {
   }
 
   Future<List<ShopCategoryModel>> getShopProductCategories(
-    String shopId,
-  ) async {
+    String shopId, {
+    bool grouped = false,
+    String? categoryId,
+  }) async {
     final data = await _getSuccessData(
       ApiEndpoints.shopProductCategories(shopId),
+      queryParameters: {
+        if (grouped) 'grouped': true,
+        if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+      },
     );
     final items = (data is List)
         ? data
@@ -496,6 +605,7 @@ class ApiClient {
       throw const ApiException('يرجى تحديد موقع التوصيل');
     }
 
+    final mergedNotes = _mergeOrderNotes(deliveryAddress, notes);
     await _postExpectSuccess(
       ApiEndpoints.orders,
       body: {
@@ -505,9 +615,7 @@ class ApiClient {
           'type': 'Point',
           'coordinates': deliveryCoordinates,
         },
-        if (_mergeOrderNotes(deliveryAddress, notes) case final merged?
-            when merged.isNotEmpty)
-          'notes': merged,
+        if (mergedNotes != null && mergedNotes.isNotEmpty) 'notes': mergedNotes,
       },
     );
   }
@@ -522,6 +630,7 @@ class ApiClient {
       throw const ApiException('يرجى تحديد موقع التوصيل');
     }
 
+    final mergedNotes = _mergeOrderNotes(deliveryAddress, notes);
     final data = await _postSuccessData(
       ApiEndpoints.orders,
       body: {
@@ -530,9 +639,7 @@ class ApiClient {
           'type': 'Point',
           'coordinates': deliveryCoordinates,
         },
-        if (_mergeOrderNotes(deliveryAddress, notes) case final merged?
-            when merged.isNotEmpty)
-          'notes': merged,
+        if (mergedNotes != null && mergedNotes.isNotEmpty) 'notes': mergedNotes,
       },
     );
     if (data is Map<String, dynamic>) {

@@ -12,11 +12,50 @@ import '../../widget/section/section_app_bar.dart';
 import '../../widget/settings/address_form_bottom_sheet.dart';
 import '../../widget/settings/saved_address_card_widget.dart';
 
-class SavedAddressesPage extends GetView<SavedAddressesController> {
-  const SavedAddressesPage({super.key});
+class SavedAddressesPage extends StatefulWidget {
+  final bool pickMode;
+  final bool openAddOnStart;
+
+  const SavedAddressesPage({
+    super.key,
+    this.pickMode = false,
+    this.openAddOnStart = false,
+  });
 
   static void open() {
     Get.to(() => const SavedAddressesPage(), binding: SavedAddressesBinding());
+  }
+
+  static Future<DeliveryAddressModel?> openForSelection({
+    bool openAddOnStart = false,
+  }) {
+    return Get.to<DeliveryAddressModel?>(
+      () => SavedAddressesPage(
+        pickMode: true,
+        openAddOnStart: openAddOnStart,
+      ),
+      binding: SavedAddressesBinding(),
+        ) ??
+        Future<DeliveryAddressModel?>.value(null);
+  }
+
+  @override
+  State<SavedAddressesPage> createState() => _SavedAddressesPageState();
+}
+
+class _SavedAddressesPageState extends State<SavedAddressesPage> {
+  late final SavedAddressesController controller;
+  bool _openedAddSheet = false;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<SavedAddressesController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.openAddOnStart || _openedAddSheet) return;
+      _openedAddSheet = true;
+      _onAddAddress();
+    });
   }
 
   @override
@@ -25,7 +64,9 @@ class SavedAddressesPage extends GetView<SavedAddressesController> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: const SectionAppBar(title: 'عناوين التوصيل المحفوظة'),
+        appBar: SectionAppBar(
+          title: widget.pickMode ? 'اختر عنوان التوصيل' : 'عناوين التوصيل المحفوظة',
+        ),
         body: Obx(() {
           final items = controller.addresses;
           final isEmpty = items.isEmpty;
@@ -53,9 +94,11 @@ class SavedAddressesPage extends GetView<SavedAddressesController> {
                           final address = items[index];
                           return SavedAddressCardWidget(
                             address: address,
+                            onTap: widget.pickMode
+                                ? () => _onPickAddress(address)
+                                : null,
                             onEdit: () => _onEditAddress(address),
-                            onDelete: () =>
-                                controller.deleteAddress(address.id),
+                            onDelete: () => controller.deleteAddress(address.id),
                           );
                         },
                       ),
@@ -83,6 +126,12 @@ class SavedAddressesPage extends GetView<SavedAddressesController> {
       lng: result.lng,
       setAsCurrent: controller.addresses.isEmpty,
     );
+
+    if (!widget.pickMode) return;
+    final current = controller.addresses.firstWhereOrNull((item) => item.isCurrent);
+    if (current != null && mounted) {
+      Get.back(result: current);
+    }
   }
 
   Future<void> _onEditAddress(DeliveryAddressModel address) async {
@@ -103,5 +152,11 @@ class SavedAddressesPage extends GetView<SavedAddressesController> {
       lat: result.lat,
       lng: result.lng,
     );
+  }
+
+  Future<void> _onPickAddress(DeliveryAddressModel address) async {
+    await controller.setCurrentAddress(address.id);
+    if (!mounted) return;
+    Get.back(result: address);
   }
 }

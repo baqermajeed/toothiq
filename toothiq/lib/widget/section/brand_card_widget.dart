@@ -17,45 +17,55 @@ class BrandCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16.r),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16.r),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.cardBorder),
-          ),
+    const designShadow = Color(0x61659AB9);
+    final radius = BorderRadius.circular(20.65.r);
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: const [
+            BoxShadow(
+              color: designShadow,
+              blurRadius: 5.5,
+              offset: Offset(0, 0),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.white,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 6.w),
+            padding: EdgeInsets.symmetric(vertical: 8.45.h, horizontal: 7.51.w),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10.r),
+                  borderRadius: BorderRadius.circular(10.5.r),
                   child: Image.asset(
                     brand.logoAsset,
-                    width: 44.w,
-                    height: 44.w,
+                    width: 38.w,
+                    height: 38.w,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.medical_services_outlined,
-                      size: 32.sp,
+                      size: 22.sp,
                       color: AppColors.productStore,
                     ),
                   ),
                 ),
-                SizedBox(height: 8.h),
                 MyText(
                   brand.name,
-                  fontSize: 12.sp,
+                  fontSize: 13.93.sp,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.productTitle,
+                  color: const Color(0xFF022B2F),
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  height: 1.5,
                 ),
               ],
             ),

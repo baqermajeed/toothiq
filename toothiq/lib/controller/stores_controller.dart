@@ -46,6 +46,7 @@ class StoresController extends GetxController {
 
   void _onScroll() {
     if (!hasNextPage.value || loadingMore.value) return;
+    if (scrollController.positions.length != 1) return;
     final pos = scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - _loadMoreThreshold) {
       loadMore();

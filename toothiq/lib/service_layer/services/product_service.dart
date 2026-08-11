@@ -1,6 +1,7 @@
 import '../../core/api/api_client.dart';
 import '../../model/paginated_result.dart';
 import '../../model/product_model.dart';
+import '../../model/search_filter_options_model.dart';
 
 class ProductService {
   final ApiClient _api;
@@ -39,6 +40,31 @@ class ProductService {
     int limit = 12,
   }) {
     return _api.searchProducts(query, page: page, limit: limit);
+  }
+
+  /// أقل وأعلى سعر بين كل المنتجات المتاحة في التطبيق.
+  Future<({double min, double max})> fetchPriceBounds({
+    int pageSize = 100,
+  }) async {
+    double? min;
+    double? max;
+    var page = 1;
+
+    while (true) {
+      final result = await fetchProductsPaginated(page: page, limit: pageSize);
+      for (final product in result.items) {
+        final price = product.price.toDouble();
+        min = min == null ? price : (price < min ? price : min);
+        max = max == null ? price : (price > max ? price : max);
+      }
+      if (!result.hasNextPage) break;
+      page++;
+    }
+
+    return (
+      min: (min ?? SearchFilterOptionsModel.fallbackMinPrice).toDouble(),
+      max: (max ?? SearchFilterOptionsModel.fallbackMaxPrice).toDouble(),
+    );
   }
 
   List<ProductModel> filterByCategoryId(

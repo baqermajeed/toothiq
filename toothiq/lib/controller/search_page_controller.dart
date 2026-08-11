@@ -16,13 +16,6 @@ class SearchPageController extends GetxController {
 
   final _prefs = PreferencesStorage.instance;
 
-  static const List<String> _defaultHistory = [
-    'سجل البحث',
-    'سجل البحث',
-    'سجل البحث',
-    'سجل البحث',
-  ];
-
   @override
   void onInit() {
     super.onInit();
@@ -32,11 +25,11 @@ class SearchPageController extends GetxController {
 
   void _loadHistory() {
     final saved = _prefs.getStringList(StorageKeys.searchHistory);
-    if (saved != null && saved.isNotEmpty) {
-      searchHistory.assignAll(saved);
-      return;
+    final cleaned = _sanitizeHistory(saved ?? const []);
+    searchHistory.assignAll(cleaned);
+    if (saved != null && cleaned.length != saved.length) {
+      _saveHistory();
     }
-    searchHistory.assignAll(_defaultHistory);
   }
 
   Future<void> _saveHistory() async {
@@ -53,8 +46,10 @@ class SearchPageController extends GetxController {
   }
 
   void addToHistory(String query) {
-    searchHistory.remove(query);
-    searchHistory.insert(0, query);
+    final normalized = query.trim();
+    if (normalized.isEmpty || normalized == 'سجل البحث') return;
+    searchHistory.remove(normalized);
+    searchHistory.insert(0, normalized);
     if (searchHistory.length > 10) {
       searchHistory.removeRange(10, searchHistory.length);
     }
@@ -69,6 +64,14 @@ class SearchPageController extends GetxController {
   void clearHistory() {
     searchHistory.clear();
     _saveHistory();
+  }
+
+  List<String> _sanitizeHistory(List<String> values) {
+    return values
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty && item != 'سجل البحث')
+        .toSet()
+        .toList(growable: false);
   }
 
   Future<void> openFilter(String query) async {

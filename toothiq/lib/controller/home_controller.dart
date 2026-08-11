@@ -9,6 +9,7 @@ import '../model/shop_category_model.dart';
 import '../core/api/api_exception.dart';
 import '../service_layer/services/banner_service.dart';
 import '../service_layer/services/category_service.dart';
+import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/product_service.dart';
 import '../view/search/search_filter_page.dart';
 import '../view/search/search_results_page.dart';
@@ -17,10 +18,10 @@ class HomeController extends GetxController {
   final BannerService _bannerService = Get.find<BannerService>();
   final CategoryService _categoryService = Get.find<CategoryService>();
   final ProductService _productService = Get.find<ProductService>();
+  final FavoritesService _favoritesService = Get.find<FavoritesService>();
 
   final searchController = TextEditingController();
   final bannerPageController = PageController();
-  final productsScrollController = ScrollController();
   final bannerIndex = 0.obs;
   final selectedCategoryIndex = 0.obs;
   final hasNotification = true.obs;
@@ -35,12 +36,10 @@ class HomeController extends GetxController {
   final currentPage = 1.obs;
   final loadError = RxnString();
   static const int _pageSize = 12;
-  static const double _loadMoreThreshold = 200;
 
   @override
   void onInit() {
     super.onInit();
-    productsScrollController.addListener(_onProductsScroll);
     loadHome();
   }
 
@@ -48,17 +47,7 @@ class HomeController extends GetxController {
   void onClose() {
     searchController.dispose();
     bannerPageController.dispose();
-    productsScrollController.removeListener(_onProductsScroll);
-    productsScrollController.dispose();
     super.onClose();
-  }
-
-  void _onProductsScroll() {
-    if (!hasNextPage.value || loadingMore.value) return;
-    final pos = productsScrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - _loadMoreThreshold) {
-      loadMoreProducts();
-    }
   }
 
   Future<void> loadHome() async {
@@ -143,9 +132,11 @@ class HomeController extends GetxController {
       productCategoryId: category.isAll ? null : category.id,
     );
     products.assignAll(
-      _productService.filterByCategoryId(
-        result.items,
-        category.isAll ? null : category.id,
+      _favoritesService.applyFavoriteState(
+        _productService.filterByCategoryId(
+          result.items,
+          category.isAll ? null : category.id,
+        ),
       ),
     );
     hasNextPage.value = result.hasNextPage;
@@ -164,9 +155,11 @@ class HomeController extends GetxController {
         productCategoryId: category.isAll ? null : category.id,
       );
       products.addAll(
-        _productService.filterByCategoryId(
-          result.items,
-          category.isAll ? null : category.id,
+        _favoritesService.applyFavoriteState(
+          _productService.filterByCategoryId(
+            result.items,
+            category.isAll ? null : category.id,
+          ),
         ),
       );
       hasNextPage.value = result.hasNextPage;
@@ -178,12 +171,18 @@ class HomeController extends GetxController {
     }
   }
 
-  void toggleFavorite(String productId) {
+  Future<void> toggleFavorite(String productId) async {
     final index = products.indexWhere((p) => p.id == productId);
     if (index == -1) return;
-    products[index] = products[index].copyWith(
-      isFavorite: !products[index].isFavorite,
-    );
+    final isFavorite = await _favoritesService.toggle(products[index]);
+    products[index] = products[index].copyWith(isFavorite: isFavorite);
+    products.refresh();
+  }
+
+  void updateFavoriteState(String productId, bool isFavorite) {
+    final index = products.indexWhere((p) => p.id == productId);
+    if (index == -1) return;
+    products[index] = products[index].copyWith(isFavorite: isFavorite);
     products.refresh();
   }
 

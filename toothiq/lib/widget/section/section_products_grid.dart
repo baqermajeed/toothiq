@@ -37,17 +37,7 @@ class SectionProductsGrid extends StatelessWidget {
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Align(
-              alignment: Alignment.topCenter,
-              child: ProductCardWidget(
-                product: products[index],
-                maxHeight: constraints.maxHeight,
-              ),
-            );
-          },
-        );
+        return ProductCardWidget(product: products[index]);
       },
     );
   }

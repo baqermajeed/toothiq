@@ -208,6 +208,9 @@ abstract final class OrderJsonParser {
     final shop = json['shopId'];
     if (shop is Map<String, dynamic>) return shop;
 
+    final shopObj = json['shop'];
+    if (shopObj is Map<String, dynamic>) return shopObj;
+
     final portions = json['shopPortions'];
     if (portions is List && portions.isNotEmpty) {
       final first = portions.first;
@@ -240,7 +243,12 @@ abstract final class OrderJsonParser {
   }
 
   static int deliveryFee(Map<String, dynamic> json) {
-    return (json['deliveryFee'] as num?)?.toInt() ?? 0;
+    return readAmount(
+      json['deliveryFee'] ??
+          json['globalDeliveryFee'] ??
+          json['unifiedDeliveryFee'] ??
+          json['defaultDeliveryFee'],
+    );
   }
 
   static int readAmount(dynamic value) {

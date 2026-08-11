@@ -183,7 +183,6 @@ class _SearchHistorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final history = controller.searchHistory;
-      if (history.isEmpty) return const SizedBox.shrink();
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,25 +198,76 @@ class _SearchHistorySection extends StatelessWidget {
                   textAlign: TextAlign.right,
                 ),
               ),
-              GestureDetector(
-                onTap: controller.clearHistory,
-                behavior: HitTestBehavior.opaque,
-                child: Icon(
-                  Icons.delete_outline_rounded,
-                  color: AppColors.settingsDelete,
-                  size: 22.sp,
+              if (history.isNotEmpty)
+                GestureDetector(
+                  onTap: controller.clearHistory,
+                  behavior: HitTestBehavior.opaque,
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.settingsDelete,
+                    size: 22.sp,
+                  ),
                 ),
-              ),
             ],
           ),
           SizedBox(height: 14.h),
-          ...history.map(
-            (item) => _SearchHistoryItem(
-              label: item,
-              onTap: () => onItemTap(item),
-              onRemove: () => controller.removeHistoryItem(item),
+          if (history.isEmpty)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2FAFB),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: AppColors.searchBorder),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40.w,
+                    height: 40.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      Icons.history_toggle_off_rounded,
+                      color: AppColors.productStore,
+                      size: 24.sp,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MyText(
+                          'لا يوجد سجل بحث',
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.productTitle,
+                          textAlign: TextAlign.right,
+                        ),
+                        SizedBox(height: 3.h),
+                        MyText(
+                          'ابحث عن منتج أو متجر وسيظهر هنا',
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                          textAlign: TextAlign.right,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          if (history.isNotEmpty)
+            ...history.map(
+              (item) => _SearchHistoryItem(
+                label: item,
+                onTap: () => onItemTap(item),
+                onRemove: () => controller.removeHistoryItem(item),
+              ),
+            ),
         ],
       );
     });

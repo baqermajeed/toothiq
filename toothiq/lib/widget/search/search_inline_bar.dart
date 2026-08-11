@@ -3,8 +3,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../utils/app_colors.dart';
 
-/// شريط البحث مع زر الفلتر داخل الحقل — مطابق لتصميم صفحات البحث.
+/// شريط البحث مع زر الفلتر داخل الحقل — مطابق للصفحة الرئيسية.
 class SearchInlineBar extends StatelessWidget {
+  static const String _filterIconAsset =
+      'assets/images/icon/Frame 427321661.png';
+  static const String _searchIconAsset =
+      'assets/images/icon/Frame 427321662.png';
+
   final TextEditingController controller;
   final FocusNode? focusNode;
   final String hintText;
@@ -20,28 +25,57 @@ class SearchInlineBar extends StatelessWidget {
     this.onSubmitted,
   });
 
-  static const double _barHeight = 48;
-
   @override
   Widget build(BuildContext context) {
-    final radius = Radius.circular(14.r);
-    final filterRadius = BorderRadiusDirectional.only(
-      topEnd: radius,
-      bottomEnd: radius,
-    );
-    final resolvedFilterRadius =
-        filterRadius.resolve(Directionality.of(context));
+    const designShadow = Color(0x61659AB9);
+    const filterColor = Color(0xFF16929E);
 
     return Container(
-      height: _barHeight.h,
+      height: 53.72.h,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(21.89.r),
         border: Border.all(color: AppColors.searchBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: designShadow,
+            blurRadius: 3.98,
+            offset: Offset(0, 0),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
       child: Row(
+        textDirection: TextDirection.ltr,
         children: [
+          Material(
+            color: filterColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(21.89.r),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onFilterTap,
+              customBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(21.89.r),
+              ),
+              child: SizedBox(
+                width: 48.75.w,
+                height: 53.72.h,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    10.94.w,
+                    13.93.h,
+                    11.94.w,
+                    13.93.h,
+                  ),
+                  child: Image.asset(
+                    _filterIconAsset,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: TextField(
               controller: controller,
@@ -51,45 +85,33 @@ class SearchInlineBar extends StatelessWidget {
               onSubmitted: onSubmitted,
               style: TextStyle(
                 fontFamily: 'Expo Arabic',
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
               decoration: InputDecoration(
                 hintText: hintText,
                 hintStyle: TextStyle(
                   fontFamily: 'Expo Arabic',
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 8.w,
-                  vertical: 12.h,
+                  horizontal: 15.92.w,
+                  vertical: 14.h,
                 ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.textPrimary,
-                  size: 22.sp,
-                ),
-              ),
-            ),
-          ),
-          Material(
-            color: AppColors.productStore,
-            borderRadius: resolvedFilterRadius,
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onFilterTap,
-              borderRadius: resolvedFilterRadius,
-              child: SizedBox(
-                width: _barHeight.h,
-                height: _barHeight.h,
-                child: Icon(
-                  Icons.tune_rounded,
-                  color: Colors.white,
-                  size: 22.sp,
+                prefixIcon: Padding(
+                  padding: EdgeInsetsDirectional.only(start: 15.w, end: 6.w),
+                  child: SizedBox(
+                    width: 22.w,
+                    height: 22.w,
+                    child: Image.asset(
+                      _searchIconAsset,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
             ),

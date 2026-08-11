@@ -17,15 +17,43 @@ import 'stores/stores_page.dart';
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
+  static const routeName = '/main';
+
   /// يعيد تسجيل الـ controllers بعد Get.offAll
   static void open() {
     HomeBinding().dependencies();
     if (!Get.isRegistered<AppUpdateController>()) {
       Get.put(AppUpdateController(), permanent: true);
-    } else {
-      Get.find<AppUpdateController>().checkForUpdate();
     }
-    Get.offAll(() => const MainPage());
+
+    // لا تفتح دايلوغ التحديث قبل اكتمال الانتقال — يسبب ANR مع Get.offAll.
+    Get.offAll(() => const MainPage(), routeName: routeName);
+
+    Future<void>.delayed(const Duration(milliseconds: 350), () {
+      if (!Get.isRegistered<AppUpdateController>()) return;
+      Get.find<AppUpdateController>().checkForUpdate();
+    });
+  }
+
+  /// العودة للصفحة الرئيسية بعد إتمام الطلب دون إعادة إنشائها.
+  static void returnFromCheckout() {
+    if (Get.isRegistered<MainController>()) {
+      Get.find<MainController>().changeTab(OrdersController.ordersTabIndex);
+    }
+    if (Get.isRegistered<OrdersController>()) {
+      Get.find<OrdersController>().refreshSilently();
+    }
+
+    final nav = Get.key.currentState;
+    if (nav == null) return;
+
+    var pops = 0;
+    while (nav.canPop() && pops < 4) {
+      if (Get.rawRoute?.settings.name == routeName) return;
+      Get.back();
+      pops++;
+      if (Get.rawRoute?.settings.name == routeName) return;
+    }
   }
 
   @override

@@ -18,4 +18,22 @@ class CartItemModel {
     );
     return '$formatted د.ع';
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'quantity': quantity,
+      'product': product.toFavoriteJson(),
+    };
+  }
+
+  factory CartItemModel.fromJson(Map<String, dynamic> json) {
+    final rawProduct = json['product'];
+    final productMap = rawProduct is Map<String, dynamic>
+        ? rawProduct
+        : const <String, dynamic>{};
+    return CartItemModel(
+      product: ProductModel.fromFavoriteJson(productMap),
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    );
+  }
 }

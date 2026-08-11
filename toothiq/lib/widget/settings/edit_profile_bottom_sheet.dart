@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -19,9 +21,11 @@ class EditProfileBottomSheet extends StatefulWidget {
       isDismissible: true,
       enableDrag: true,
     ).whenComplete(() {
-      if (Get.isRegistered<EditProfileController>()) {
-        Get.delete<EditProfileController>();
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (Get.isRegistered<EditProfileController>()) {
+          Get.delete<EditProfileController>();
+        }
+      });
     });
   }
 
@@ -111,7 +115,12 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 20.h),
-                _EditProfileAvatar(onTap: ctrl.onPickPhoto),
+                Obx(
+                  () => _EditProfileAvatar(
+                    imagePath: ctrl.profileImagePath.value,
+                    onTap: ctrl.onPickPhoto,
+                  ),
+                ),
                 SizedBox(height: 24.h),
                 SettingsLabeledField(
                   label: 'أسم المستخدم',
@@ -122,10 +131,11 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                 SizedBox(height: 18.h),
                 SettingsLabeledField(
                   label: 'رقم الهاتف',
-                  hint: 'أكتب رقم هاتفك',
+                  hint: 'لا يمكن تعديل رقم الهاتف',
                   controller: ctrl.phoneController,
                   focusNode: _phoneFocus,
                   keyboardType: TextInputType.phone,
+                  readOnly: true,
                 ),
                 SizedBox(height: 18.h),
                 SettingsLabeledField(
@@ -147,12 +157,19 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
 }
 
 class _EditProfileAvatar extends StatelessWidget {
+  final String? imagePath;
   final VoidCallback onTap;
 
-  const _EditProfileAvatar({required this.onTap});
+  const _EditProfileAvatar({
+    required this.imagePath,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final hasImage =
+        imagePath != null && imagePath!.isNotEmpty && File(imagePath!).existsSync();
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -168,12 +185,20 @@ class _EditProfileAvatar extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: AppColors.cardPlaceholder,
                 border: Border.all(color: AppColors.settingsCardBorder),
+                image: hasImage
+                    ? DecorationImage(
+                        image: FileImage(File(imagePath!)),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: Icon(
-                Icons.person_rounded,
-                size: 48.sp,
-                color: AppColors.settingsIcon,
-              ),
+              child: hasImage
+                  ? null
+                  : Icon(
+                      Icons.person_rounded,
+                      size: 48.sp,
+                      color: AppColors.settingsIcon,
+                    ),
             ),
             Container(
               width: 40.w,

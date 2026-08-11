@@ -31,7 +31,7 @@ class CategoriesPage extends StatelessWidget {
             SearchFilterRow(
               controller: categories.searchController,
               hintText: 'أبحث عن قسم ..',
-              filterCircular: true,
+              showFilter: false,
             ),
             SizedBox(height: 16.h),
             Expanded(
@@ -57,13 +57,14 @@ class CategoriesPage extends StatelessWidget {
                   color: AppColors.primary,
                   onRefresh: categories.refresh,
                   child: GridView.builder(
+                    clipBehavior: Clip.none,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+                    padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 16.h),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       crossAxisSpacing: 12.w,
                       mainAxisSpacing: 12.h,
-                      childAspectRatio: 0.82,
+                      childAspectRatio: 1.11,
                     ),
                     itemCount: categories.filteredCategories.length,
                     itemBuilder: (context, index) {

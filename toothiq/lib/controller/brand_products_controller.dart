@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../core/api/api_exception.dart';
 import '../model/brand_model.dart';
 import '../model/product_model.dart';
+import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/product_service.dart';
 
 class BrandProductsController extends GetxController {
@@ -17,8 +18,11 @@ class BrandProductsController extends GetxController {
   final String? categoryId;
   final List<ProductModel> _initialProducts;
   final ProductService _productService = Get.find<ProductService>();
+  final FavoritesService _favoritesService = Get.find<FavoritesService>();
 
-  final products = <ProductModel>[].obs;
+  final searchController = TextEditingController();
+  final allProducts = <ProductModel>[].obs;
+  final filteredProducts = <ProductModel>[].obs;
   final scrollController = ScrollController();
   final isLoading = false.obs;
   final loadingMore = false.obs;
@@ -32,14 +36,31 @@ class BrandProductsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    searchController.addListener(_onSearch);
     scrollController.addListener(_onScroll);
     loadProducts();
   }
 
   @override
   void onClose() {
+    searchController.removeListener(_onSearch);
+    searchController.dispose();
     scrollController.dispose();
     super.onClose();
+  }
+
+  void _onSearch() {
+    final query = searchController.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      filteredProducts.assignAll(allProducts);
+      return;
+    }
+
+    filteredProducts.assignAll(
+      allProducts
+          .where((product) => product.name.toLowerCase().contains(query))
+          .toList(),
+    );
   }
 
   void _onScroll() {
@@ -59,14 +80,20 @@ class BrandProductsController extends GetxController {
         .toList(growable: false);
   }
 
+  void _setProducts(List<ProductModel> items) {
+    allProducts.assignAll(_favoritesService.applyFavoriteState(items));
+    _onSearch();
+  }
+
   Future<void> loadProducts() async {
     isLoading.value = true;
     loadError.value = null;
     currentPage.value = 1;
+    searchController.clear();
 
     final cached = _filterByBrand(_initialProducts);
     if (cached.isNotEmpty) {
-      products.assignAll(cached);
+      _setProducts(cached);
     }
 
     try {
@@ -80,14 +107,17 @@ class BrandProductsController extends GetxController {
         _productService.filterByCategoryId(result.items, categoryId),
       );
       if (filtered.isNotEmpty) {
-        products.assignAll(filtered);
+        _setProducts(filtered);
+      } else if (cached.isEmpty) {
+        allProducts.clear();
+        filteredProducts.clear();
       }
       hasNextPage.value = result.hasNextPage;
       currentPage.value = result.page;
     } on ApiException catch (error) {
-      if (products.isEmpty) loadError.value = error.message;
+      if (allProducts.isEmpty) loadError.value = error.message;
     } catch (_) {
-      if (products.isEmpty) {
+      if (allProducts.isEmpty) {
         loadError.value = 'تعذر تحميل منتجات البراند';
       }
     } finally {
@@ -106,11 +136,14 @@ class BrandProductsController extends GetxController {
         productCategoryId: categoryId,
         brandId: brand.id,
       );
-      products.addAll(
-        _filterByBrand(
-          _productService.filterByCategoryId(result.items, categoryId),
+      allProducts.addAll(
+        _favoritesService.applyFavoriteState(
+          _filterByBrand(
+            _productService.filterByCategoryId(result.items, categoryId),
+          ),
         ),
       );
+      _onSearch();
       hasNextPage.value = result.hasNextPage;
       currentPage.value = result.page;
     } catch (_) {

@@ -5,6 +5,8 @@ import '../controller/saved_addresses_controller.dart';
 class SavedAddressesBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<SavedAddressesController>(() => SavedAddressesController());
+    if (!Get.isRegistered<SavedAddressesController>()) {
+      Get.put(SavedAddressesController(), permanent: true);
+    }
   }
 }

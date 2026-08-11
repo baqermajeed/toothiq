@@ -57,12 +57,27 @@ class BasketAppBar extends StatelessWidget implements PreferredSizeWidget {
         SizedBox(width: 8.w),
       ],
       leading: showClearButton
-          ? IconButton(
-              onPressed: onClearTap,
-              icon: Icon(
-                Icons.delete_outline_rounded,
-                color: AppColors.settingsDelete,
-                size: 26.sp,
+          ? Padding(
+              padding: EdgeInsets.all(8.w),
+              child: Material(
+                color: const Color(0xFFFFE8E8),
+                borderRadius: BorderRadius.circular(12.r),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onClearTap,
+                  child: SizedBox(
+                    width: 40.w,
+                    height: 40.w,
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/cart/del.png',
+                        width: 20.w,
+                        height: 20.w,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             )
           : const SizedBox.shrink(),

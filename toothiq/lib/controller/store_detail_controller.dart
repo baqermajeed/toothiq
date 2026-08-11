@@ -9,13 +9,17 @@ import '../model/product_model.dart';
 import '../model/shop_category_model.dart';
 import '../model/store_model.dart';
 import '../model/store_review_model.dart';
+import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/shop_service.dart';
+import '../view/auth/login_page.dart';
 import '../widget/common/app_toast.dart';
 import '../view/section/brand_products_page.dart';
 import '../view/section/section_detail_page.dart';
+import 'session_controller.dart';
 
 class StoreDetailController extends GetxController {
   final ShopService _shopService = Get.find<ShopService>();
+  final FavoritesService _favoritesService = Get.find<FavoritesService>();
   final StoreModel store;
 
   StoreDetailController({required this.store});
@@ -153,7 +157,7 @@ class StoreDetailController extends GetxController {
       final storeId = store.id;
       final results = await Future.wait([
         _shopService.getShopById(storeId),
-        _shopService.fetchShopProductCategories(storeId),
+        _shopService.fetchShopProductCategories(storeId, grouped: true),
         _shopService.fetchShopReviews(storeId),
       ]);
 
@@ -161,15 +165,16 @@ class StoreDetailController extends GetxController {
       currentStore.value = updatedStore;
       await _loadProductsFirstPage();
 
-      final categoryCards = _mapCategories(
-        results[1] as List<ShopCategoryModel>,
-      );
+      final shopCategories = results[1] as List<ShopCategoryModel>;
+      final categoryCards = _mapCategories(shopCategories);
       categories.assignAll(categoryCards);
       filteredCategories.assignAll(categoryCards);
 
-      final mappedBrands = categoryCards
-          .map((c) => BrandModel(id: c.id, name: c.name))
-          .toList(growable: false);
+      final mappedBrands = await _shopService.fetchShopBrands(
+        categoryIds: shopCategories.map((c) => c.id).toList(growable: false),
+        products: products,
+        shopCategories: shopCategories,
+      );
       brands.assignAll(mappedBrands);
       filteredBrands.assignAll(mappedBrands);
 
@@ -206,7 +211,7 @@ class StoreDetailController extends GetxController {
       page: 1,
       limit: _productsPageSize,
     );
-    products.assignAll(result.items);
+    products.assignAll(_favoritesService.applyFavoriteState(result.items));
     hasNextProductsPage.value = result.hasNextPage;
     currentProductsPage.value = result.page;
   }
@@ -259,6 +264,16 @@ class StoreDetailController extends GetxController {
     if (text.isEmpty) return;
     if (isSubmittingReview.value) return;
 
+    if (!Get.find<SessionController>().isAuthenticated) {
+      AppToast.show(
+        'تسجيل الدخول مطلوب',
+        'يجب تسجيل الدخول لإرسال تقييمك',
+        type: ToastType.warning,
+      );
+      await Get.to(() => const LoginPage());
+      return;
+    }
+
     isSubmittingReview.value = true;
     try {
       await _shopService.submitShopReview(
@@ -269,6 +284,22 @@ class StoreDetailController extends GetxController {
       reviewController.clear();
       final latest = await _shopService.fetchShopReviews(viewStore.id);
       reviews.assignAll(latest);
+      final updatedStore = await _shopService.getShopById(viewStore.id);
+      currentStore.value = updatedStore;
+      AppToast.show(
+        'تم الإرسال',
+        'شكراً لمشاركة رأيك',
+        type: ToastType.success,
+      );
+    } on ApiException catch (error) {
+      final message = error.statusCode == 401
+          ? 'انتهت جلستك، سجّل الدخول ثم حاول مرة أخرى'
+          : error.message;
+      AppToast.show(
+        'تعذر الإرسال',
+        message,
+        type: ToastType.error,
+      );
     } catch (_) {
       AppToast.show(
         'تعذر الإرسال',
@@ -280,12 +311,18 @@ class StoreDetailController extends GetxController {
     }
   }
 
-  void toggleFavorite(String productId) {
+  Future<void> toggleFavorite(String productId) async {
     final idx = products.indexWhere((p) => p.id == productId);
     if (idx == -1) return;
-    products[idx] = products[idx].copyWith(
-      isFavorite: !products[idx].isFavorite,
-    );
+    final isFavorite = await _favoritesService.toggle(products[idx]);
+    products[idx] = products[idx].copyWith(isFavorite: isFavorite);
+    products.refresh();
+  }
+
+  void updateFavoriteState(String productId, bool isFavorite) {
+    final idx = products.indexWhere((p) => p.id == productId);
+    if (idx == -1) return;
+    products[idx] = products[idx].copyWith(isFavorite: isFavorite);
     products.refresh();
   }
 }

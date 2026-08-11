@@ -32,7 +32,7 @@ class StoresPage extends StatelessWidget {
               controller: stores.searchController,
               hintText: 'أبحث عن متجر محدد ..',
               onSubmitted: (_) => stores.submitSearch(),
-              onFilterTap: stores.onFilterTap,
+              showFilter: false,
             ),
             SizedBox(height: 16.h),
             Expanded(

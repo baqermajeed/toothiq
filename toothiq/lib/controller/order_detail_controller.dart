@@ -168,6 +168,7 @@ class OrderDetailController extends GetxController with WidgetsBindingObserver {
             shopId: current.shopId,
           ),
           quantity: line.quantity,
+          showFeedback: false,
         );
       }
 

@@ -8,7 +8,7 @@ class BrandService {
   BrandService(this._api);
 
   Future<List<BrandModel>> fetchBrandsByCategory(String categoryId) {
-    return _api.getBrands(categoryId: categoryId);
+    return _api.getCatalogBrands(categoryId);
   }
 
   List<BrandModel> brandsFromProducts(Iterable<ProductModel> products) {

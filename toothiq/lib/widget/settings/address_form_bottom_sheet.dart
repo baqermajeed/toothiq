@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
+import '../../model/governorate_model.dart';
+import '../../service_layer/services/governorate_service.dart';
 import '../../utils/app_colors.dart';
 import '../../view/map/map_pick_page.dart';
 import '../common/app_toast.dart';
@@ -79,17 +81,13 @@ class AddressFormBottomSheet extends StatefulWidget {
 }
 
 class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
-  static const _governorates = ['بابل', 'بغداد', 'النجف', 'كربلاء', 'البصرة'];
-  static const _areas = [
-    'شارع الأطباء',
-    'شارع الجمعية',
-    'شارع 40',
-    'حي الجامعة',
-    'المدينة الطبية',
-  ];
+  final _governorateService = Get.find<GovernorateService>();
+
+  final _governorates = <GovernorateModel>[].obs;
+  final isLoadingGovernorates = true.obs;
 
   late String? _governorate;
-  late String? _area;
+  late final TextEditingController _areaController;
   late final TextEditingController _landmarkController;
   double? _lat;
   double? _lng;
@@ -99,14 +97,30 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
     super.initState();
     _governorate =
         widget.initialGovernorate.isEmpty ? null : widget.initialGovernorate;
-    _area = widget.initialArea.isEmpty ? null : widget.initialArea;
+    _areaController = TextEditingController(text: widget.initialArea);
     _landmarkController = TextEditingController(text: widget.initialLandmark);
     _lat = widget.initialLat;
     _lng = widget.initialLng;
+    _loadGovernorates();
+  }
+
+  Future<void> _loadGovernorates() async {
+    isLoadingGovernorates.value = true;
+    try {
+      final items = await _governorateService.fetchGovernorates();
+      _governorates.assignAll(
+        items.where((item) => item.nameAr.trim().isNotEmpty),
+      );
+    } catch (_) {
+      _governorates.clear();
+    } finally {
+      isLoadingGovernorates.value = false;
+    }
   }
 
   @override
   void dispose() {
+    _areaController.dispose();
     _landmarkController.dispose();
     super.dispose();
   }
@@ -169,30 +183,41 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
                           textAlign: TextAlign.right,
                         ),
                         SizedBox(height: 10.h),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _AddressDropdownField(
-                                value: _governorate,
-                                hint: 'المحافظة',
-                                options: _governorates,
-                                onSelected: (value) {
-                                  setState(() => _governorate = value);
-                                },
+                        Obx(() {
+                          if (isLoadingGovernorates.value) {
+                            return SizedBox(
+                              height: 54.h,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              child: _AddressDropdownField(
-                                value: _area,
-                                hint: 'المنطقة',
-                                options: _areas,
-                                onSelected: (value) {
-                                  setState(() => _area = value);
-                                },
-                              ),
-                            ),
-                          ],
+                            );
+                          }
+
+                          return _AddressDropdownField(
+                            value: _governorate,
+                            hint: 'اختر المحافظة',
+                            options: _governorates
+                                .map((item) => item.nameAr)
+                                .toList(growable: false),
+                            onSelected: (value) {
+                              setState(() => _governorate = value);
+                            },
+                          );
+                        }),
+                        SizedBox(height: 20.h),
+                        MyText(
+                          'المنطقة',
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.productTitle,
+                          textAlign: TextAlign.right,
+                        ),
+                        SizedBox(height: 10.h),
+                        _AddressTextField(
+                          controller: _areaController,
+                          hintText: 'أكتب اسم المنطقة',
                         ),
                         SizedBox(height: 20.h),
                         MyText(
@@ -323,7 +348,7 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
 
   void _save() {
     final governorate = _governorate?.trim() ?? '';
-    final area = _area?.trim() ?? '';
+    final area = _areaController.text.trim();
     final landmark = _landmarkController.text.trim();
 
     if (governorate.isEmpty || area.isEmpty || landmark.isEmpty) return;

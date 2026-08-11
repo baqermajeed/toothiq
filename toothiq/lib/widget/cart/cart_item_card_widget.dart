@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../model/cart_item_model.dart';
 import '../../utils/app_colors.dart';
+import '../app_image.dart';
 
 class CartItemCardWidget extends StatelessWidget {
   final CartItemModel item;
@@ -38,21 +39,12 @@ class CartItemCardWidget extends StatelessWidget {
                 SizedBox(width: 10.w),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
-                  child: Image.asset(
-                    item.product.imageAsset,
+                  child: AppImage(
+                    source: item.product.imageAsset,
                     width: 72.w,
                     height: 72.w,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 72.w,
-                      height: 72.w,
-                      color: AppColors.cardPlaceholder,
-                      child: Icon(
-                        Icons.medical_services_rounded,
-                        color: AppColors.productStore,
-                        size: 28.sp,
-                      ),
-                    ),
+                    errorIcon: Icons.medical_services_rounded,
                   ),
                 ),
               ],

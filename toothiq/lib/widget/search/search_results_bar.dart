@@ -3,8 +3,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../utils/app_colors.dart';
 
-/// شريط البحث في صفحة النتائج — فلتر خارج الحقل + إلغاء.
+/// شريط البحث في صفحة النتائج — مطابق للصفحة الرئيسية.
 class SearchResultsBar extends StatelessWidget {
+  static const String _filterIconAsset =
+      'assets/images/icon/Frame 427321661.png';
+  static const String _searchIconAsset =
+      'assets/images/icon/Frame 427321662.png';
+
   final TextEditingController controller;
   final String hintText;
   final VoidCallback onFilterTap;
@@ -29,97 +34,111 @@ class SearchResultsBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _buildSearchField()),
-            SizedBox(width: 10.w),
-            _buildFilterButton(),
+            Expanded(child: _buildSearchFieldWithFilter()),
             SizedBox(width: 12.w),
             _buildCancelButton(),
           ],
         ),
         if (subtitle != null) ...[
           SizedBox(height: 16.h),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: subtitle!,
-                ),
-              ),
-              SizedBox(width: 10.w),
-              SizedBox(width: 48.w),
-              SizedBox(width: 12.w),
-              Opacity(
-                opacity: 0,
-                child: IgnorePointer(child: _buildCancelButton()),
-              ),
-            ],
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: subtitle!,
           ),
         ],
       ],
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchFieldWithFilter() {
+    const designShadow = Color(0x61659AB9);
+    const filterColor = Color(0xFF16929E);
     return Container(
-      height: 48.h,
+      height: 53.72.h,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(21.89.r),
         border: Border.all(color: AppColors.searchBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: designShadow,
+            blurRadius: 3.98,
+            offset: Offset(0, 0),
+          ),
+        ],
       ),
-      child: TextField(
-        controller: controller,
-        textAlign: TextAlign.right,
-        textInputAction: TextInputAction.search,
-        onSubmitted: onSubmitted,
-        style: TextStyle(
-          fontFamily: 'Expo Arabic',
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
-        ),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(
-            fontFamily: 'Expo Arabic',
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
+      child: Row(
+        textDirection: TextDirection.ltr,
+        children: [
+          Material(
+            color: filterColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(21.89.r),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onFilterTap,
+              customBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(21.89.r),
+              ),
+              child: SizedBox(
+                width: 48.75.w,
+                height: 53.72.h,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    10.94.w,
+                    13.93.h,
+                    11.94.w,
+                    13.93.h,
+                  ),
+                  child: Image.asset(
+                    _filterIconAsset,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
           ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 14.w,
-            vertical: 12.h,
+          Expanded(
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.right,
+              textInputAction: TextInputAction.search,
+              onSubmitted: onSubmitted,
+              style: TextStyle(
+                fontFamily: 'Expo Arabic',
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: TextStyle(
+                  fontFamily: 'Expo Arabic',
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 15.92.w,
+                  vertical: 14.h,
+                ),
+                prefixIcon: Padding(
+                  padding: EdgeInsetsDirectional.only(start: 15.w, end: 6.w),
+                  child: SizedBox(
+                    width: 22.w,
+                    height: 22.w,
+                    child: Image.asset(
+                      _searchIconAsset,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-          prefixIcon: Icon(
-            Icons.search,
-            color: AppColors.textPrimary,
-            size: 22.sp,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterButton() {
-    return Material(
-      color: AppColors.productStore,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onFilterTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 48.w,
-          height: 48.w,
-          child: Icon(
-            Icons.tune_rounded,
-            color: Colors.white,
-            size: 24.sp,
-          ),
-        ),
+        ],
       ),
     );
   }

@@ -129,7 +129,7 @@ class DentalApp extends StatelessWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return GetMaterialApp(
-          title: 'متجر طب الأسنان',
+          title: 'ToothIQ',
           debugShowCheckedModeBanner: false,
           locale: const Locale('ar'),
           fallbackLocale: const Locale('ar'),

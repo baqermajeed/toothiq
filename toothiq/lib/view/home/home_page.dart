@@ -16,8 +16,40 @@ import '../../widget/common/async_state_widgets.dart';
 import '../../widget/search_filter_row.dart';
 import '../../widget/my_text.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!Get.isRegistered<HomeController>()) return;
+    final home = Get.find<HomeController>();
+    if (!home.hasNextPage.value || home.loadingMore.value) return;
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      home.loadMoreProducts();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +59,11 @@ class HomePage extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: const MainAppBar(title: 'أسم التطبيق'),
+        appBar: MainAppBar(
+          title: 'ToothIQ',
+          showBrandLogo: true,
+          scrollController: _scrollController,
+        ),
         body: Obx(() {
           if (home.isLoading.value && home.products.isEmpty) {
             return const AppLoadingState();
@@ -37,32 +73,29 @@ class HomePage extends StatelessWidget {
             onRefresh: home.refresh,
             backgroundColor: AppColors.primaryLight,
             indicatorBuilder: (context, controller) {
-              return Padding(
-                padding: EdgeInsets.all(6.w),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Opacity(
-                    opacity: controller.state.isLoading
-                        ? 1.0
-                        : math.min(controller.value, 1.0),
-                    child: Icon(
-                      Icons.medical_services_rounded,
-                      size: 28.sp,
-                      color: AppColors.primary,
-                    ),
+              return Opacity(
+                opacity: controller.state.isLoading
+                    ? 1.0
+                    : math.min(controller.value, 1.0),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/icon/toothiqlogo.png',
+                    fit: BoxFit.fill,
+                    width: double.infinity,
+                    height: double.infinity,
                   ),
                 ),
               );
             },
             child: SingleChildScrollView(
-              controller: home.productsScrollController,
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 4.h),
                   SearchFilterRow(
                     controller: home.searchController,
                     hintText: 'أبحث عن منتج أو متجر محدد ..',
@@ -71,7 +104,7 @@ class HomePage extends StatelessWidget {
                     onFilterTap: SearchPage.open,
                   ),
                   if (home.loadError.value != null) ...[
-                    SizedBox(height: 12.h),
+                    SizedBox(height: 8.h),
                     AppErrorState(
                       message: home.loadError.value!,
                       onRetry: () => home.refresh(),
@@ -79,7 +112,7 @@ class HomePage extends StatelessWidget {
                     ),
                   ],
                   if (home.categories.length > 1) ...[
-                    SizedBox(height: 20.h),
+                    SizedBox(height: 14.h),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: Align(
@@ -92,7 +125,7 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 12.h),
+                    SizedBox(height: 8.h),
                     SizedBox(
                       height: 44.h,
                       child: ListView.separated(
@@ -112,9 +145,9 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                   ],
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 14.h),
                   const HomeBannerCarousel(),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 16.h),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     child: Align(
@@ -127,15 +160,15 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 14.h),
+                  SizedBox(height: 10.h),
                   if (home.isLoading.value || home.isCategoryLoading.value)
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32.h),
+                      padding: EdgeInsets.symmetric(vertical: 24.h),
                       child: const AppLoadingState(),
                     )
                   else if (home.products.isEmpty)
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20.h),
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
                       child: const AppEmptyState(
                         title: 'لا توجد منتجات حالياً',
                       ),
@@ -154,14 +187,7 @@ class HomePage extends StatelessWidget {
                           childAspectRatio: 0.55,
                         ),
                         itemBuilder: (context, index) {
-                          return LayoutBuilder(
-                            builder: (context, constraints) {
-                              return ProductCardWidget(
-                                product: home.products[index],
-                                maxHeight: constraints.maxHeight,
-                              );
-                            },
-                          );
+                          return ProductCardWidget(product: home.products[index]);
                         },
                       ),
                     ),
@@ -170,7 +196,7 @@ class HomePage extends StatelessWidget {
                     hasNextPage: home.hasNextPage.value,
                     onTap: home.loadMoreProducts,
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 16.h),
                 ],
               ),
             ),

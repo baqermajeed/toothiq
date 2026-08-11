@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../core/api/api_exception.dart';
@@ -10,13 +10,16 @@ import '../widget/common/app_toast.dart';
 import '../widget/dialogs/app_dialogs.dart';
 import '../widget/dialogs/delivery_location_required_dialog.dart';
 import '../widget/dialogs/order_success_dialog.dart';
-import '../widget/basket/delivery_time_picker.dart';
+import '../service_layer/services/platform_settings_service.dart';
+import '../widget/settings/address_form_bottom_sheet.dart';
 import 'cart_controller.dart';
+import 'saved_addresses_controller.dart';
+import 'session_controller.dart';
 import 'settings_controller.dart';
 
 enum CheckoutStep { delivery, confirm, success }
 
-enum PaymentMethod { onDelivery, mastercard }
+enum PaymentMethod { onDelivery }
 
 class CheckoutController extends GetxController {
   final currentStep = CheckoutStep.delivery.obs;
@@ -24,7 +27,6 @@ class CheckoutController extends GetxController {
   final customerNameCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   final altPhoneCtrl = TextEditingController();
-  final deliveryTimeCtrl = TextEditingController(text: '00:00');
 
   final customerNameError = RxnString();
   final phoneError = RxnString();
@@ -32,9 +34,8 @@ class CheckoutController extends GetxController {
 
   final savedAddresses = <String>[].obs;
   final selectedAddress = RxnString();
-
-  final deliveryPeriods = const ['صباحاً', 'ظهراً', 'مساءً'];
-  final selectedPeriod = 'مساءً'.obs;
+  final SavedAddressesController _savedAddressesController =
+      Get.find<SavedAddressesController>();
 
   final paymentMethod = PaymentMethod.onDelivery.obs;
 
@@ -56,7 +57,6 @@ class CheckoutController extends GetxController {
     customerNameCtrl.dispose();
     phoneCtrl.dispose();
     altPhoneCtrl.dispose();
-    deliveryTimeCtrl.dispose();
     super.onClose();
   }
 
@@ -65,15 +65,22 @@ class CheckoutController extends GetxController {
       Get.lazyPut<SettingsController>(() => SettingsController());
     }
     final settings = Get.find<SettingsController>();
+    final sessionUser = Get.isRegistered<SessionController>()
+        ? Get.find<SessionController>().user.value
+        : null;
 
     final name = settings.displayNameForForms;
     if (name.isNotEmpty) {
       customerNameCtrl.text = name;
+    } else if ((sessionUser?.name.trim() ?? '').isNotEmpty) {
+      customerNameCtrl.text = sessionUser!.name.trim();
     }
 
     final phone = settings.userPhone.value.trim();
     if (phone.isNotEmpty) {
       phoneCtrl.text = phone;
+    } else if ((sessionUser?.phone.trim() ?? '').isNotEmpty) {
+      phoneCtrl.text = sessionUser!.phone.trim();
     }
 
     final altPhone = settings.userAltPhone.value.trim();
@@ -81,12 +88,39 @@ class CheckoutController extends GetxController {
       altPhoneCtrl.text = altPhone;
     }
 
-    final address = settings.userAddress.value.trim();
-    if (address.isNotEmpty) {
-      if (!savedAddresses.contains(address)) {
-        savedAddresses.add(address);
+    _syncSavedAddresses();
+
+    if ((selectedAddress.value ?? '').trim().isEmpty) {
+      final profileAddress = settings.userAddress.value.trim();
+      if (profileAddress.isNotEmpty) {
+        selectedAddress.value = profileAddress;
+      } else if (sessionUser != null) {
+        final governorate = sessionUser.governorateId.trim();
+        final clinic = (sessionUser.clinicName ?? '').trim();
+        final fallbackAddress = [governorate, clinic]
+            .where((part) => part.isNotEmpty)
+            .join(' ، ');
+        if (fallbackAddress.isNotEmpty) {
+          selectedAddress.value = fallbackAddress;
+        }
       }
-      selectedAddress.value = address;
+    }
+  }
+
+  void _syncSavedAddresses() {
+    final items = _savedAddressesController.addresses;
+    savedAddresses.assignAll(
+      items.map((address) => address.formattedLine).where((line) => line.isNotEmpty),
+    );
+
+    final current = items.firstWhereOrNull((address) => address.isCurrent);
+    if (current != null && current.formattedLine.isNotEmpty) {
+      selectedAddress.value = current.formattedLine;
+      return;
+    }
+
+    if (savedAddresses.isNotEmpty && (selectedAddress.value ?? '').isEmpty) {
+      selectedAddress.value = savedAddresses.first;
     }
   }
 
@@ -94,6 +128,14 @@ class CheckoutController extends GetxController {
     isInitializing.value = true;
     loadError.value = null;
     try {
+      await Get.find<PlatformSettingsService>().refresh();
+      final sessionUser = Get.isRegistered<SessionController>()
+          ? Get.find<SessionController>().user.value
+          : null;
+      final sessionUserId = sessionUser?.id.trim() ?? '';
+      if (sessionUserId.isNotEmpty) {
+        await _savedAddressesController.bindToUser(sessionUserId);
+      }
       _loadProfileFromSettings();
     } catch (_) {
       loadError.value = 'تعذر تحميل بيانات الطلب';
@@ -118,39 +160,36 @@ class CheckoutController extends GetxController {
   void selectAddress(String address) {
     selectedAddress.value = address;
     addressError.value = null;
-  }
 
-  void addAddress(String address) {
-    final trimmed = address.trim();
-    if (trimmed.isEmpty) return;
-    if (!savedAddresses.contains(trimmed)) {
-      savedAddresses.add(trimmed);
-    }
-    selectAddress(trimmed);
-    if (Get.isRegistered<SettingsController>()) {
-      Get.find<SettingsController>().saveProfile(address: trimmed);
+    final match = _savedAddressesController.addresses.firstWhereOrNull(
+      (item) => item.formattedLine == address,
+    );
+    if (match != null) {
+      _savedAddressesController.setCurrentAddress(match.id);
     }
   }
 
-  void selectPeriod(String period) {
-    selectedPeriod.value = period;
+  Future<void> addAddressFromForm(AddressFormResult result) async {
+    await _savedAddressesController.addAddress(
+      governorate: result.governorate,
+      area: result.area,
+      landmark: result.landmark,
+      lat: result.lat,
+      lng: result.lng,
+      setAsCurrent: true,
+    );
+    _syncSavedAddresses();
+
+    final current = _savedAddressesController.addresses.firstWhereOrNull(
+      (item) => item.isCurrent,
+    );
+    if (current != null && current.formattedLine.isNotEmpty) {
+      selectAddress(current.formattedLine);
+    }
   }
 
   void selectPayment(PaymentMethod method) {
     paymentMethod.value = method;
-  }
-
-  Future<void> pickDeliveryTime(BuildContext context) async {
-    final parts = deliveryTimeCtrl.text.split(':');
-    final initial = TimeOfDay(
-      hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 0 : 0,
-      minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
-    );
-    final picked = await DeliveryTimePicker.show(context, initialTime: initial);
-    if (picked == null) return;
-    final hour = picked.hour.toString().padLeft(2, '0');
-    final minute = picked.minute.toString().padLeft(2, '0');
-    deliveryTimeCtrl.text = '$hour:$minute';
   }
 
   bool _validateDeliveryForm() {
@@ -193,13 +232,7 @@ class CheckoutController extends GetxController {
     CheckoutConfirmPage.open();
   }
 
-  String get paymentMethodLabel =>
-      paymentMethod.value == PaymentMethod.onDelivery
-      ? 'عند الأستلام'
-      : 'ماستر كارد';
-
-  String get deliveryTimeLabel =>
-      '${deliveryTimeCtrl.text.trim()} ${selectedPeriod.value}';
+  String get paymentMethodLabel => 'عند الأستلام';
 
   Future<void> submitOrder() async {
     if (isSubmitting.value) return;
@@ -227,15 +260,25 @@ class CheckoutController extends GetxController {
     submitError.value = null;
     AppDialogs.showLoading('جاري إرسال الطلب...');
     try {
+      final match = _savedAddressesController.addresses.firstWhereOrNull(
+        (item) => item.formattedLine == deliveryAddress,
+      );
       final orderId = await cart.completeOrderFromCart(
         deliveryAddress: deliveryAddress,
+        lat: match?.lat,
+        lng: match?.lng,
+        clearAfterSuccess: false,
       );
 
       AppDialogs.hideLoading();
 
       currentStep.value = CheckoutStep.success;
-      MainPage.open();
-      showOrderSuccessDialog(orderId: orderId);
+      MainPage.returnFromCheckout();
+      cart.clearCart();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showOrderSuccessDialog(orderId: orderId);
+      });
     } on ApiException catch (error) {
       submitError.value = error.message;
       AppDialogs.hideLoading();

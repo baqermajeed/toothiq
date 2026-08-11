@@ -16,32 +16,77 @@ class SettingsController extends GetxController {
   final PreferencesStorage _prefs = PreferencesStorage.instance;
   final UserService _userService = Get.find<UserService>();
 
-  final userName = 'د. بهجة مصطفى'.obs;
-  final userPhone = '0770 000 000'.obs;
+  final userName = ''.obs;
+  final userPhone = ''.obs;
   final userAltPhone = ''.obs;
-  final userAddress = 'العيادة ، بابل ، شارع 40'.obs;
+  final userAddress = ''.obs;
+  final profileImagePath = RxnString();
   final notificationsEnabled = true.obs;
   final isSyncingProfile = false.obs;
+  String? _userId;
+  Worker? _sessionUserWorker;
 
   @override
   void onInit() {
     super.onInit();
-    _loadProfileFromPreferences();
-    syncProfileFromApi();
+    _loadDevicePreferences();
+    _bindSessionUserState();
   }
 
-  void _loadProfileFromPreferences() {
-    final name = _prefs.getString(StorageKeys.profileName);
-    final phone = _prefs.getString(StorageKeys.profilePhone);
-    final altPhone = _prefs.getString(StorageKeys.profileAltPhone);
-    final address = _prefs.getString(StorageKeys.profileAddress);
-    final notifications = _prefs.getBool(StorageKeys.notificationsEnabled);
+  @override
+  void onClose() {
+    _sessionUserWorker?.dispose();
+    super.onClose();
+  }
 
-    if ((name ?? '').isNotEmpty) userName.value = name!;
-    if ((phone ?? '').isNotEmpty) userPhone.value = phone!;
-    if (altPhone != null) userAltPhone.value = altPhone;
-    if ((address ?? '').isNotEmpty) userAddress.value = address!;
+  void _loadDevicePreferences() {
+    final notifications = _prefs.getBool(StorageKeys.notificationsEnabled);
     if (notifications != null) notificationsEnabled.value = notifications;
+  }
+
+  void _bindSessionUserState() {
+    if (!Get.isRegistered<SessionController>()) return;
+    final session = Get.find<SessionController>();
+
+    // تعبئة أولية عند إنشاء الكنترولر بعد اكتمال تسجيل الدخول.
+    bindToUser(session.user.value);
+
+    // إبقاء البطاقة متزامنة مع أي تغيير بالجسلة (دخول/خروج/استرجاع).
+    _sessionUserWorker = ever<UserModel?>(
+      session.user,
+      (user) => bindToUser(user),
+    );
+  }
+
+  Future<void> bindToUser(UserModel? user) async {
+    if (user == null || user.id.trim().isEmpty) {
+      _userId = null;
+      _resetProfileState();
+      return;
+    }
+
+    _userId = user.id;
+    applyUserFromSession(user);
+    await _loadProfileImageForCurrentUser();
+  }
+
+  void _resetProfileState() {
+    userName.value = '';
+    userPhone.value = '';
+    userAltPhone.value = '';
+    userAddress.value = '';
+    profileImagePath.value = null;
+  }
+
+  Future<void> _loadProfileImageForCurrentUser() async {
+    profileImagePath.value = null;
+    final userId = _userId;
+    if (userId == null || userId.isEmpty) return;
+
+    final imagePath = _prefs.getString(StorageKeys.profileImagePathFor(userId));
+    if (imagePath != null && imagePath.isNotEmpty) {
+      profileImagePath.value = imagePath;
+    }
   }
 
   void applyUserFromSession(UserModel user) {
@@ -54,10 +99,6 @@ class SettingsController extends GetxController {
     userName.value = user.name;
     userPhone.value = user.phone;
     userAddress.value = address;
-
-    _prefs.setString(StorageKeys.profileName, user.name);
-    _prefs.setString(StorageKeys.profilePhone, user.phone);
-    _prefs.setString(StorageKeys.profileAddress, address);
   }
 
   Future<void> saveProfile({
@@ -68,20 +109,33 @@ class SettingsController extends GetxController {
   }) async {
     if (name != null && name.trim().isNotEmpty) {
       userName.value = name.trim();
-      await _prefs.setString(StorageKeys.profileName, userName.value);
     }
     if (phone != null && phone.trim().isNotEmpty) {
       userPhone.value = phone.trim();
-      await _prefs.setString(StorageKeys.profilePhone, userPhone.value);
     }
     if (altPhone != null) {
       userAltPhone.value = altPhone.trim();
-      await _prefs.setString(StorageKeys.profileAltPhone, userAltPhone.value);
     }
     if (address != null && address.trim().isNotEmpty) {
       userAddress.value = address.trim();
-      await _prefs.setString(StorageKeys.profileAddress, userAddress.value);
     }
+  }
+
+  Future<void> saveProfileImagePath(String? path) async {
+    final trimmed = path?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      profileImagePath.value = null;
+      final userId = _userId;
+      if (userId != null && userId.isNotEmpty) {
+        await _prefs.remove(StorageKeys.profileImagePathFor(userId));
+      }
+      return;
+    }
+
+    profileImagePath.value = trimmed;
+    final userId = _userId;
+    if (userId == null || userId.isEmpty) return;
+    await _prefs.setString(StorageKeys.profileImagePathFor(userId), trimmed);
   }
 
   Future<void> syncProfileFromApi() async {
@@ -100,19 +154,17 @@ class SettingsController extends GetxController {
 
   Future<void> updateProfileOnApi({
     required String name,
-    required String phone,
     required String clinicName,
   }) async {
     final user = await _userService.updateCurrentUser(
       name: name,
-      phone: phone,
       clinicName: clinicName,
     );
     await _saveUserModelLocally(user);
     if (Get.isRegistered<SessionController>()) {
       Get.find<SessionController>().user.value = user;
     }
-    await AppDataRefreshService.refreshAfterProfileUpdate();
+    AppDataRefreshService.refreshAfterProfileUpdate();
   }
 
   Future<void> _saveUserModelLocally(UserModel user) async {

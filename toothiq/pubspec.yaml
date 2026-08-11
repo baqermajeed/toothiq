@@ -1,5 +1,5 @@
 name: dental_app_baqer
-description: "Dental products e-commerce app."
+description: "ToothIQ — dental products e-commerce app."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -29,11 +29,22 @@ dependencies:
   google_maps_flutter: ^2.9.0
   geolocator: ^13.0.2
   geocoding: ^3.0.0
+  image_picker: ^1.2.3
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/icon/toothiqlogo.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/icon/toothiqlogo.png
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

@@ -28,6 +28,14 @@ class DeliveryAddressModel {
     return landmark;
   }
 
+  String get formattedLine {
+    return [
+      governorate.trim(),
+      area.trim(),
+      landmark.trim(),
+    ].where((part) => part.isNotEmpty).join(' ، ');
+  }
+
   DeliveryAddressModel copyWith({
     String? id,
     String? governorate,
@@ -60,7 +68,7 @@ class DeliveryAddressModel {
 
   factory DeliveryAddressModel.fromJson(Map<String, dynamic> json) {
     return DeliveryAddressModel(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       governorate: json['governorate'] as String? ??
           json['label'] as String? ??
           '',

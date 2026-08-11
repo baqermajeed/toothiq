@@ -71,7 +71,10 @@ class ProductDetailsPage extends StatelessWidget {
                         ],
                         _ProductGallerySection(controller: ctrl),
                         SizedBox(height: 16.h),
-                        _StoreLinkBar(storeName: product.storeName),
+                        _StoreLinkBar(
+                          storeName: product.storeName,
+                          onTap: ctrl.openStorePage,
+                        ),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
                           child: Column(
@@ -211,6 +214,7 @@ class _CircleIconButton extends StatelessWidget {
 
 class _ProductGallerySection extends StatelessWidget {
   static const double _galleryHeight = 280;
+  static const int _maxThumbs = 4;
 
   final ProductDetailsController controller;
 
@@ -218,96 +222,147 @@ class _ProductGallerySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final images = controller.product.images;
     final galleryHeight = _galleryHeight.h;
+    final thumbGap = 6.h;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: SizedBox(
         height: galleryHeight,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Obx(
-                () => Stack(
+        child: Obx(() {
+          if (controller.showGalleryLoading) {
+            return Container(
+              width: double.infinity,
+              height: galleryHeight,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.primary,
+                ),
+              ),
+            );
+          }
+
+          final images = controller.product.images;
+          if (images.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          final selectedIndex =
+              controller.selectedImageIndex.value.clamp(0, images.length - 1);
+          final thumbCount = images.length.clamp(0, _maxThumbs);
+          // مقاس ثابت كما في حالة 4 صور — بدون تمديد عند 2 أو 3.
+          final thumbSize =
+              (galleryHeight - (thumbGap * (_maxThumbs - 1))) / _maxThumbs;
+
+          Widget mainImage() {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: AppImage(
+                    source: images[selectedIndex],
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  right: 10.w,
+                  bottom: 10.h,
+                  child: Container(
+                    width: 36.w,
+                    height: 36.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.open_in_full_rounded,
+                      size: 18.sp,
+                      color: AppColors.productStore,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // صورة واحدة: العرض الكامل بدون عمود مصغّرات.
+          if (thumbCount <= 1) {
+            return mainImage();
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: mainImage()),
+              SizedBox(width: 10.w),
+              SizedBox(
+                width: thumbSize,
+                height: galleryHeight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16.r),
-                      child: AppImage(
-                        source: images[controller.selectedImageIndex.value],
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    Positioned(
-                      right: 10.w,
-                      bottom: 10.h,
-                      child: Container(
-                        width: 36.w,
-                        height: 36.w,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.open_in_full_rounded,
-                          size: 18.sp,
-                          color: AppColors.productStore,
+                    for (var index = 0; index < thumbCount; index++) ...[
+                      if (index > 0) SizedBox(height: thumbGap),
+                      SizedBox(
+                        width: thumbSize,
+                        height: thumbSize,
+                        child: _GalleryThumb(
+                          source: images[index],
+                          isSelected: selectedIndex == index,
+                          onTap: () => controller.selectImage(index),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-            ),
-            SizedBox(width: 10.w),
-            Obx(() {
-              final thumbCount = images.length.clamp(0, 4);
-              return SizedBox(
-                width: 56.w,
-                height: galleryHeight,
-                child: Column(
-                  children: List.generate(thumbCount, (index) {
-                    final isSelected =
-                        controller.selectedImageIndex.value == index;
-                    return Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          bottom: index < thumbCount - 1 ? 6.h : 0,
-                        ),
-                        child: GestureDetector(
-                          onTap: () => controller.selectImage(index),
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12.r),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.productStore
-                                    : AppColors.cardBorder,
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(11.r),
-                              child: AppImage(
-                                source: images[index],
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              );
-            }),
-          ],
+            ],
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _GalleryThumb extends StatelessWidget {
+  final String source;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _GalleryThumb({
+    required this.source,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: isSelected ? AppColors.productStore : AppColors.cardBorder,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11.r),
+          child: AppImage(
+            source: source,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );
@@ -316,8 +371,9 @@ class _ProductGallerySection extends StatelessWidget {
 
 class _StoreLinkBar extends StatelessWidget {
   final String storeName;
+  final VoidCallback onTap;
 
-  const _StoreLinkBar({required this.storeName});
+  const _StoreLinkBar({required this.storeName, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -327,7 +383,7 @@ class _StoreLinkBar extends StatelessWidget {
         color: AppColors.primaryLight,
         borderRadius: BorderRadius.circular(14.r),
         child: InkWell(
-          onTap: () {},
+          onTap: onTap,
           borderRadius: BorderRadius.circular(14.r),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -340,10 +396,13 @@ class _StoreLinkBar extends StatelessWidget {
                   color: AppColors.productStore,
                 ),
                 const Spacer(),
-                Icon(
-                  Icons.chevron_left,
-                  color: AppColors.productStore,
-                  size: 22.sp,
+                Transform.rotate(
+                  angle: 3.141592653589793,
+                  child: Icon(
+                    Icons.chevron_left,
+                    color: AppColors.productStore,
+                    size: 22.sp,
+                  ),
                 ),
               ],
             ),

@@ -7,10 +7,12 @@ import '../../controller/search_controller.dart';
 import '../../model/search_filter_model.dart';
 import '../../utils/app_colors.dart';
 import '../../view/search/search_filter_page.dart';
+import '../../view/stores/store_detail_page.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/home/product_card_widget.dart';
 import '../../widget/my_text.dart';
 import '../../widget/search/search_results_bar.dart';
+import '../../widget/stores/store_card_widget.dart';
 
 class SearchResultsPage extends StatefulWidget {
   const SearchResultsPage({super.key});
@@ -110,7 +112,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                   }
 
                   if (search.loadError.value != null &&
-                      search.products.isEmpty) {
+                      search.products.isEmpty &&
+                      search.stores.isEmpty) {
                     return AppErrorState(
                       message: search.loadError.value!,
                       onRetry: () => search.search(),
@@ -124,14 +127,14 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                     );
                   }
 
-                  if (search.products.isEmpty) {
+                  if (search.products.isEmpty && search.stores.isEmpty) {
                     return const AppEmptyState(
                       title: 'لا توجد نتائج',
                       subtitle: 'جرّب كلمات أخرى أو عدّل الفلتر',
                     );
                   }
 
-                  return _ProductsGrid(search: search);
+                  return _SearchResultsBody(search: search);
                 }),
               ),
             ],
@@ -206,40 +209,92 @@ class _FilterResultChip extends StatelessWidget {
   }
 }
 
-class _ProductsGrid extends StatelessWidget {
+class _SearchResultsBody extends StatelessWidget {
   final SearchProductsController search;
 
-  const _ProductsGrid({required this.search});
+  const _SearchResultsBody({required this.search});
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
+    return CustomScrollView(
       controller: search.scrollController,
       physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 24.h),
-      itemCount:
-          search.products.length +
-          ((search.loadingMore.value || search.hasNextPage.value) ? 1 : 0),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12.w,
-        mainAxisSpacing: 14.h,
-        childAspectRatio: 0.55,
-      ),
-      itemBuilder: (context, index) {
-        if (index >= search.products.length) {
-          if (search.loadingMore.value) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return Center(
-            child: TextButton(
-              onPressed: search.loadMore,
-              child: const Text('تحميل المزيد'),
+      slivers: [
+        if (search.stores.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 10.h),
+              child: MyText(
+                'المتاجر',
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.productTitle,
+                textAlign: TextAlign.right,
+              ),
             ),
-          );
-        }
-        return ProductCardWidget(product: search.products[index]);
-      },
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+            sliver: SliverList.separated(
+              itemCount: search.stores.length,
+              separatorBuilder: (_, _) => SizedBox(height: 12.h),
+              itemBuilder: (context, index) {
+                final store = search.stores[index];
+                return StoreCardWidget(
+                  store: store,
+                  onViewStore: () => StoreDetailPage.open(store),
+                );
+              },
+            ),
+          ),
+        ],
+        if (search.products.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 10.h),
+              child: MyText(
+                'المنتجات',
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.productTitle,
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 24.h),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12.w,
+                mainAxisSpacing: 14.h,
+                childAspectRatio: 0.55,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index >= search.products.length) {
+                    if (search.loadingMore.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return Center(
+                      child: TextButton(
+                        onPressed: search.loadMore,
+                        child: const Text('تحميل المزيد'),
+                      ),
+                    );
+                  }
+                  return ProductCardWidget(product: search.products[index]);
+                },
+                childCount:
+                    search.products.length +
+                    ((search.loadingMore.value || search.hasNextPage.value)
+                        ? 1
+                        : 0),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

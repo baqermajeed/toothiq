@@ -10,6 +10,7 @@ class SettingsLabeledField extends StatelessWidget {
   final TextInputType keyboardType;
   final FocusNode? focusNode;
   final VoidCallback? onTap;
+  final bool readOnly;
 
   const SettingsLabeledField({
     super.key,
@@ -19,6 +20,7 @@ class SettingsLabeledField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.focusNode,
     this.onTap,
+    this.readOnly = false,
   });
 
   @override
@@ -48,6 +50,7 @@ class SettingsLabeledField extends StatelessWidget {
             controller: controller,
             focusNode: focusNode,
             onTap: onTap,
+            readOnly: readOnly,
             keyboardType: keyboardType,
             textAlign: TextAlign.right,
             style: TextStyle(

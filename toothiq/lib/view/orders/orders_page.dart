@@ -33,7 +33,6 @@ class OrdersPage extends StatelessWidget {
               controller: orders.searchController,
               hintText: 'أبحث عن طلب ..',
               onFilterTap: orders.onFilterTap,
-              filterCircular: true,
             ),
             SizedBox(height: 14.h),
             Expanded(

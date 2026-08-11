@@ -7,7 +7,7 @@ import '../service_layer/services/auth_service.dart';
 import '../service_layer/services/notification_service.dart';
 import '../service_layer/services/token_storage.dart';
 import '../service_layer/services/user_service.dart';
-import 'settings_controller.dart';
+import '../service_layer/services/user_session_service.dart';
 
 /// حالة الجلسة — نفس تدفق قريب: توكنات آمنة + مستخدم من API + تحميل عند الإقلاع.
 class SessionController extends GetxController {
@@ -43,16 +43,18 @@ class SessionController extends GetxController {
       final hasTokens = await _tokenStorage.hasTokens();
       if (!hasTokens) {
         user.value = null;
+        await UserSessionService.onSignedOut();
         return;
       }
       try {
         final me = await _authService.me();
         user.value = me;
-        _syncProfileCache(me);
+        await UserSessionService.onSignedIn(me);
         await _postAuthSync();
       } catch (_) {
         await _tokenStorage.clearTokens();
         user.value = null;
+        await UserSessionService.onSignedOut();
       }
     } finally {
       isLoading.value = false;
@@ -62,7 +64,7 @@ class SessionController extends GetxController {
   Future<void> setSession(AuthSessionModel session) async {
     await _tokenStorage.saveTokens(session.accessToken, session.refreshToken);
     user.value = session.user;
-    _syncProfileCache(session.user);
+    await UserSessionService.onSignedIn(session.user);
     await _postAuthSync();
   }
 
@@ -74,7 +76,7 @@ class SessionController extends GetxController {
     await _tokenStorage.saveTokens(accessToken, refreshToken);
     if (user != null) {
       this.user.value = user;
-      _syncProfileCache(user);
+      await UserSessionService.onSignedIn(user);
       await _postAuthSync();
     }
   }
@@ -83,20 +85,16 @@ class SessionController extends GetxController {
     await _clearFcmToken();
     user.value = null;
     await _tokenStorage.clearTokens();
+    await UserSessionService.onSignedOut();
   }
 
   Future<void> onSessionExpired() async {
-    // مثل قريب: مسح الجلسة بصمت دون رسالة أو توجيه.
-    await clearSession();
+    user.value = null;
+    await UserSessionService.onSignedOut();
   }
 
   /// للتوافق مع الاستدعاءات القديمة.
   Future<void> hydrateFromStorage() => loadStoredAuth();
-
-  void _syncProfileCache(UserModel user) {
-    if (!Get.isRegistered<SettingsController>()) return;
-    Get.find<SettingsController>().applyUserFromSession(user);
-  }
 
   Future<void> _postAuthSync() async {
     AppDataRefreshService.refreshAfterAuth();

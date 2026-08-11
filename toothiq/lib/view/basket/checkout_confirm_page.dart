@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../controller/checkout_controller.dart';
+import '../../service_layer/services/platform_settings_service.dart';
 import '../../model/order_line_item_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/basket/checkout_confirm_bottom_bar.dart';
@@ -37,6 +38,9 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
         }),
         body: Obx(() {
           final cart = controller.cart;
+          if (Get.isRegistered<PlatformSettingsService>()) {
+            Get.find<PlatformSettingsService>().contact.value;
+          }
 
           if (cart.isEmpty) {
             return AppEmptyState(
@@ -101,10 +105,6 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                         value: altPhone.isEmpty ? 'لا يوجد' : altPhone,
                       ),
                       OrderInfoField(
-                        label: 'وقت التوصيل :',
-                        value: controller.deliveryTimeLabel,
-                      ),
-                      OrderInfoField(
                         label: 'عنوان التوصيل :',
                         value: controller.selectedAddress.value ?? '',
                       ),
@@ -162,9 +162,9 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                         value: cart.formattedOrderPrice,
                         valueIsGreen: true,
                       ),
-                      const OrderInfoField(
+                      OrderInfoField(
                         label: 'سعر التوصيل :',
-                        value: 'مجاني',
+                        value: cart.formattedDeliveryFee,
                       ),
                       OrderInfoField(
                         label: 'السعر الكلي :',

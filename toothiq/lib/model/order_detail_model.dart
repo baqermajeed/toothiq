@@ -229,13 +229,27 @@ class OrderDetailModel {
 
   static String _shopAddress(Map<String, dynamic>? shopMap) {
     if (shopMap == null) return 'غير متوفر';
-    final description = shopMap['description']?.toString().trim();
-    if (description != null && description.isNotEmpty) return description;
+
+    final directAddress = shopMap['address']?.toString().trim();
+    if (directAddress != null && directAddress.isNotEmpty) {
+      return directAddress;
+    }
+
     final location = shopMap['location'];
     if (location is Map<String, dynamic>) {
       final address = location['address']?.toString().trim();
       if (address != null && address.isNotEmpty) return address;
+
+      final parts = <String>[
+        location['governorate']?.toString().trim() ?? '',
+        location['area']?.toString().trim() ?? '',
+        location['landmark']?.toString().trim() ?? '',
+      ].where((part) => part.isNotEmpty).toList(growable: false);
+      if (parts.isNotEmpty) {
+        return parts.join(' ، ');
+      }
     }
+
     return 'غير متوفر';
   }
 
