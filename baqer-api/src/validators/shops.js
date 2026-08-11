@@ -10,6 +10,14 @@ const timeHHmm = Joi.alternatives().try(
   })
 );
 
+const phoneSchema = Joi.string()
+  .trim()
+  .pattern(/^[0-9\u0660-\u0669]{11}$/)
+  .allow('', null)
+  .messages({
+    'string.pattern.base': 'رقم الهاتف يجب أن يكون مكوناً من ١١ رقم.',
+  });
+
 const createShopSchema = Joi.object({
   name: Joi.string().trim().min(1).max(200).required(),
   description: Joi.string().trim().allow(''),
@@ -17,6 +25,9 @@ const createShopSchema = Joi.object({
     type: Joi.string().valid('Point').default('Point'),
     coordinates: Joi.array().items(Joi.number()).length(2).required(),
   }).required(),
+  address: Joi.string().trim().max(500).allow('', null),
+  phone: phoneSchema,
+  phone2: phoneSchema,
   deliveryFee: Joi.number().min(0),
   openHours: Joi.object({
     from: timeHHmm,
@@ -32,6 +43,9 @@ const updateShopSchema = Joi.object({
     type: Joi.string().valid('Point').default('Point'),
     coordinates: Joi.array().items(Joi.number()).length(2).required(),
   }),
+  address: Joi.string().trim().max(500).allow('', null),
+  phone: phoneSchema,
+  phone2: phoneSchema,
   deliveryFee: Joi.number().min(0),
   isOpen: Joi.boolean(),
   openHours: Joi.object({

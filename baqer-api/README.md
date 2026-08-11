@@ -126,3 +126,5 @@ src/
 
 ISC
 # qareyp-api
+# baqer_system_api
+# baqer_system_api

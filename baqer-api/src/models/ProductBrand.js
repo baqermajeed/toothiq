@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const brandSchema = new mongoose.Schema(
+const productBrandSchema = new mongoose.Schema(
   {
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     nameAr: { type: String, required: true, trim: true },
@@ -10,8 +10,8 @@ const brandSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-brandSchema.index({ categoryId: 1, order: 1, isActive: 1 });
-brandSchema.index({ categoryId: 1, nameAr: 1 }, { unique: true });
+productBrandSchema.index({ categoryId: 1, order: 1, isActive: 1 });
+productBrandSchema.index({ categoryId: 1, nameAr: 1 }, { unique: true });
 
-const Brand = mongoose.model('Brand', brandSchema);
-module.exports = Brand;
+const ProductBrand = mongoose.model('ProductBrand', productBrandSchema);
+module.exports = ProductBrand;

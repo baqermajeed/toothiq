@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Category, ProductSubcategory, Brand, Product } = require('../models');
+const { Category, ProductSubcategory, ProductBrand, Product } = require('../models');
 const { badRequest, notFound } = require('../utils/errors');
 
 function ensureObjectId(id, fieldName) {
@@ -12,7 +12,7 @@ async function listAll() {
   const [categories, subcategories, brands] = await Promise.all([
     Category.find().sort({ order: 1, nameAr: 1 }).lean(),
     ProductSubcategory.find().sort({ order: 1, nameAr: 1 }).lean(),
-    Brand.find().sort({ order: 1, nameAr: 1 }).lean(),
+    ProductBrand.find().sort({ order: 1, nameAr: 1 }).lean(),
   ]);
   return { categories, subcategories, brands };
 }
@@ -62,9 +62,9 @@ async function createBrand(body) {
   const category = await Category.findById(body.categoryId).lean();
   if (!category) throw notFound('التصنيف الرئيسي غير موجود');
   const nameAr = String(body.nameAr || '').trim();
-  const exists = await Brand.findOne({ categoryId: body.categoryId, nameAr }).lean();
+  const exists = await ProductBrand.findOne({ categoryId: body.categoryId, nameAr }).lean();
   if (exists) throw badRequest('البراند موجود مسبقاً داخل نفس التصنيف الرئيسي');
-  return Brand.create({
+  return ProductBrand.create({
     categoryId: body.categoryId,
     nameAr,
     order: body.order != null ? Number(body.order) : 0,
@@ -73,7 +73,7 @@ async function createBrand(body) {
 }
 
 async function updateBrand(id, body) {
-  const row = await Brand.findById(id);
+  const row = await ProductBrand.findById(id);
   if (!row) throw notFound('البراند غير موجود');
   if (body.categoryId !== undefined) {
     ensureObjectId(body.categoryId, 'categoryId');
@@ -89,11 +89,11 @@ async function updateBrand(id, body) {
 }
 
 async function removeBrand(id) {
-  const row = await Brand.findById(id);
+  const row = await ProductBrand.findById(id);
   if (!row) throw notFound('البراند غير موجود');
   const productsCount = await Product.countDocuments({ brandId: id });
   if (productsCount > 0) throw badRequest('لا يمكن حذف البراند لوجود منتجات مرتبطة به');
-  await Brand.findByIdAndDelete(id);
+  await ProductBrand.findByIdAndDelete(id);
   return { deleted: true };
 }
 

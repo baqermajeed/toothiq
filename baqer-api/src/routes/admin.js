@@ -215,6 +215,23 @@ router.delete(
   adminController.deleteUser
 );
 
+router.get(
+  '/drivers/:driverId/wallet',
+  validateParams(objectIdParam('driverId')),
+  adminController.getDriverWallet
+);
+router.post(
+  '/drivers/:driverId/wallet/collect',
+  validateParams(objectIdParam('driverId')),
+  validateBody((body) => {
+    const Joi = require('joi');
+    return Joi.object({
+      amount: Joi.number().positive().required(),
+    }).validate(body, { abortEarly: false });
+  }),
+  adminController.collectDriverWallet
+);
+
 router.get('/banners', bannerAdminController.list);
 router.post('/banners', uploadBannerImage, bannerAdminController.create);
 router.patch(

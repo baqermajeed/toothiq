@@ -99,6 +99,10 @@ export function ProductsPage() {
       setErr('معرّف المحل مطلوب')
       return
     }
+    if ((newSubcategoryId || newBrandId) && !newCategoryId) {
+      setErr('يجب اختيار التصنيف الرئيسي عند ربط المنتج بتصنيف فرعي أو براند')
+      return
+    }
     const fd = new FormData()
     fd.append('name', newName)
     fd.append('description', newDescription)
@@ -342,9 +346,17 @@ export function ProductsPage() {
                 <input className="input" type="number" min="0" step="any" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} required />
               </div>
               <div className="field">
-                <label>تصنيف رئيسي (اختياري)</label>
-                <select className="select" value={newCategoryId} onChange={(e) => setNewCategoryId(e.target.value)}>
-                  <option value="">بدون</option>
+                <label>تصنيف رئيسي</label>
+                <select
+                  className="select"
+                  value={newCategoryId}
+                  onChange={(e) => {
+                    setNewCategoryId(e.target.value)
+                    setNewSubcategoryId('')
+                    setNewBrandId('')
+                  }}
+                >
+                  <option value="">اختر تصنيفًا رئيسيًا</option>
                   {categories.map((c) => (
                     <option key={String(c.id ?? c._id)} value={String(c.id ?? c._id)}>
                       {String(c.nameAr ?? '')}
@@ -354,7 +366,12 @@ export function ProductsPage() {
               </div>
               <div className="field">
                 <label>تصنيف فرعي (اختياري)</label>
-                <select className="select" value={newSubcategoryId} onChange={(e) => setNewSubcategoryId(e.target.value)}>
+                <select
+                  className="select"
+                  value={newSubcategoryId}
+                  disabled={!newCategoryId}
+                  onChange={(e) => setNewSubcategoryId(e.target.value)}
+                >
                   <option value="">بدون</option>
                   {subcategories
                     .filter((s) => !newCategoryId || String(s.categoryId) === newCategoryId)
@@ -367,7 +384,12 @@ export function ProductsPage() {
               </div>
               <div className="field">
                 <label>براند (اختياري)</label>
-                <select className="select" value={newBrandId} onChange={(e) => setNewBrandId(e.target.value)}>
+                <select
+                  className="select"
+                  value={newBrandId}
+                  disabled={!newCategoryId}
+                  onChange={(e) => setNewBrandId(e.target.value)}
+                >
                   <option value="">بدون</option>
                   {brands
                     .filter((b) => !newCategoryId || String(b.categoryId) === newCategoryId)

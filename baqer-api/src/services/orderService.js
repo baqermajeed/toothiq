@@ -345,6 +345,7 @@ async function create(customerId, body) {
         discountCode: discountCodeStored,
         discountAmount,
         deliveryLocation: body.deliveryLocation,
+        deliveryAddress: body.deliveryAddress?.trim() || null,
         notes: body.notes,
         notesAudioUrl: body.notesAudioUrl || null,
         statusHistory: [
@@ -382,6 +383,7 @@ async function create(customerId, body) {
       discountCode: discountCodeStored,
       discountAmount,
       deliveryLocation: body.deliveryLocation,
+      deliveryAddress: body.deliveryAddress?.trim() || null,
       notes: body.notes,
       notesAudioUrl: body.notesAudioUrl || null,
       statusHistory: [
@@ -412,6 +414,7 @@ async function createVoiceOrder(customerId, body) {
       totalPrice: 0,
       deliveryFee,
       deliveryLocation: body.deliveryLocation,
+      deliveryAddress: body.deliveryAddress?.trim() || null,
       notes: null,
       notesAudioUrl: body.notesAudioUrl,
       statusHistory: [
@@ -432,6 +435,7 @@ async function createVoiceOrder(customerId, body) {
     totalPrice: 0,
     deliveryFee: deliveryFeeNoShop,
     deliveryLocation: body.deliveryLocation,
+    deliveryAddress: body.deliveryAddress?.trim() || null,
     notes: null,
     notesAudioUrl: body.notesAudioUrl,
     statusHistory: [

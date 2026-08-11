@@ -1,6 +1,6 @@
 const Category = require('../models/Category');
 const ProductSubcategory = require('../models/ProductSubcategory');
-const Brand = require('../models/Brand');
+const ProductBrand = require('../models/ProductBrand');
 const { notFound, badRequest } = require('../utils/errors');
 
 /** List categories for public/app (active only, sorted by order). */
@@ -91,16 +91,17 @@ async function update(id, body) {
   return category;
 }
 
-/** Delete category (admin). Fails if subcategories/brands exist under it. */
+/** Delete category (admin). Fails if subcategories exist under it. */
 async function remove(id) {
   const category = await Category.findById(id);
   if (!category) throw notFound('Category not found');
-  const [subCount, brandCount] = await Promise.all([
-    ProductSubcategory.countDocuments({ categoryId: id }),
-    Brand.countDocuments({ categoryId: id }),
-  ]);
-  if (subCount > 0 || brandCount > 0) {
-    throw badRequest('لا يمكن حذف التصنيف الرئيسي لوجود تصنيفات فرعية أو براندات مرتبطة به');
+  const subCount = await ProductSubcategory.countDocuments({ categoryId: id });
+  if (subCount > 0) {
+    throw badRequest('لا يمكن حذف التصنيف الرئيسي لوجود تصنيفات فرعية مرتبطة به');
+  }
+  const brandCount = await ProductBrand.countDocuments({ categoryId: id });
+  if (brandCount > 0) {
+    throw badRequest('لا يمكن حذف التصنيف الرئيسي لوجود براندات مرتبطة به');
   }
   await Category.findByIdAndDelete(id);
   return { deleted: true };

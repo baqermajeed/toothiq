@@ -13,6 +13,9 @@ export function ShopsPage() {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [address, setAddress] = useState('')
+  const [phone, setPhone] = useState('')
+  const [phone2, setPhone2] = useState('')
   const [lng, setLng] = useState(44.3661)
   const [lat, setLat] = useState(33.3152)
   const [openFrom, setOpenFrom] = useState('09:00')
@@ -54,6 +57,9 @@ export function ShopsPage() {
     setEditId(null)
     setName('')
     setDescription('')
+    setAddress('')
+    setPhone('')
+    setPhone2('')
     setLng(44.3661)
     setLat(33.3152)
     setOwnerPhone('')
@@ -68,6 +74,9 @@ export function ShopsPage() {
     setEditId(String(row._id))
     setName(String(row.name ?? ''))
     setDescription(String(row.description ?? ''))
+    setAddress(String(row.address ?? ''))
+    setPhone(String(row.phone ?? ''))
+    setPhone2(String(row.phone2 ?? ''))
     const loc = row.location as { coordinates?: number[] } | undefined
     const c = loc?.coordinates
     setLng(c && c[0] != null ? Number(c[0]) : 44.3661)
@@ -89,9 +98,23 @@ export function ShopsPage() {
   async function submitShop(e: FormEvent) {
     e.preventDefault()
     setErr('')
+    if (modal === 'create') {
+      const ph = ownerPhone.trim()
+      if (!/^[0-9]{11}$/.test(ph)) {
+        setErr('هاتف تسجيل الدخول يجب أن يكون ١١ رقماً')
+        return
+      }
+      if (ownerPassword.trim().length < 8) {
+        setErr('كلمة مرور تطبيق المحل مطلوبة (٨ أحرف على الأقل)')
+        return
+      }
+    }
     const fd = new FormData()
     fd.append('name', name)
     fd.append('description', description)
+    if (address.trim()) fd.append('address', address.trim())
+    if (phone.trim()) fd.append('phone', phone.trim())
+    if (phone2.trim()) fd.append('phone2', phone2.trim())
     fd.append('lng', String(lng))
     fd.append('lat', String(lat))
     fd.append('openHoursFrom', openFrom)
@@ -103,7 +126,7 @@ export function ShopsPage() {
     }
     if (modal === 'create') {
       fd.append('ownerPhone', ownerPhone.trim())
-      if (ownerPassword.trim()) fd.append('ownerPassword', ownerPassword)
+      fd.append('ownerPassword', ownerPassword)
       fd.append('ownerName', ownerName.trim() || 'مالك المحل')
       if (ownerGovernorateId) fd.append('ownerGovernorateId', ownerGovernorateId)
     }
@@ -174,6 +197,7 @@ export function ShopsPage() {
                 <tr>
                   <th>صورة</th>
                   <th>الاسم</th>
+                  <th>التصنيف</th>
                   <th>مفتوح</th>
                   <th>نشط</th>
                   <th></th>
@@ -186,6 +210,7 @@ export function ShopsPage() {
                     <tr key={String(s._id)}>
                       <td>{img ? <img className="thumb" src={assetUrl(img)} alt="" /> : '—'}</td>
                       <td>{String(s.name ?? '')}</td>
+                      <td>{String(s.category ?? '')}</td>
                       <td>{s.isOpen ? 'نعم' : 'لا'}</td>
                       <td>{s.isActive !== false ? 'نعم' : 'لا'}</td>
                       <td>
@@ -230,6 +255,40 @@ export function ShopsPage() {
                 <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
               <div className="field">
+                <label>عنوان المتجر</label>
+                <input
+                  className="input"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="مثال: بغداد — الأعظمية"
+                />
+              </div>
+              <div className="row">
+                <div className="field" style={{ flex: 1 }}>
+                  <label>هاتف المتجر الأول</label>
+                  <input
+                    className="input"
+                    dir="ltr"
+                    style={{ textAlign: 'left' }}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="07XXXXXXXXX"
+                  />
+                </div>
+                <div className="field" style={{ flex: 1 }}>
+                  <label>هاتف المتجر الثاني</label>
+                  <input
+                    className="input"
+                    dir="ltr"
+                    style={{ textAlign: 'left' }}
+                    value={phone2}
+                    onChange={(e) => setPhone2(e.target.value)}
+                    placeholder="07XXXXXXXXX"
+                  />
+                </div>
+              </div>
+
+              <div className="field">
                 <label>موقع المحل على الخريطة</label>
                 <p className="muted" style={{ marginTop: 0 }}>
                   انقر على الخريطة أو اسحب العلامة لتحديد الموقع.
@@ -242,13 +301,13 @@ export function ShopsPage() {
 
               {modal === 'create' ? (
                 <>
-                  <h4 style={{ marginBottom: '0.5rem' }}>حساب مالك المحل</h4>
+                  <h4 style={{ marginBottom: '0.5rem' }}>حساب تطبيق إدارة المحل</h4>
                   <p className="muted" style={{ marginTop: 0 }}>
-                    أدخل رقم الهاتف (١١ رقماً). إن كان الرقم غير مسجّل يجب إدخال كلمة مرور لإنشاء حساب صاحب المحل. إن كان مسجّلاً يُربط
-                    المحل به ويُضاف دور «محل» عند الحاجة دون تغيير كلمة المرور.
+                    يُنشأ حساب صاحب المحل تلقائياً عند الحفظ. يستخدم رقم الهاتف وكلمة المرور أدناه لتسجيل الدخول في تطبيق إدارة
+                    المحل — دون الحاجة لإنشاء مستخدم منفصل.
                   </p>
                   <div className="field">
-                    <label>هاتف المالك</label>
+                    <label>هاتف تسجيل الدخول</label>
                     <input
                       className="input"
                       dir="ltr"
@@ -260,13 +319,15 @@ export function ShopsPage() {
                     />
                   </div>
                   <div className="field">
-                    <label>كلمة مرور الحساب (عند رقم جديد — ٨ أحرف على الأقل)</label>
+                    <label>كلمة مرور تطبيق المحل (٨ أحرف على الأقل)</label>
                     <input
                       className="input"
                       type="password"
                       value={ownerPassword}
                       onChange={(e) => setOwnerPassword(e.target.value)}
                       autoComplete="new-password"
+                      required
+                      minLength={8}
                     />
                   </div>
                   <div className="field">

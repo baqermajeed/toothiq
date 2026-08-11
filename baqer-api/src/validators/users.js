@@ -30,6 +30,9 @@ const updateUserByAdminSchema = Joi.object({
       'string.pattern.base': 'رقم الهاتف يجب أن يكون مكوناً من ١١ رقم.',
     }),
   email: Joi.string().trim().email().allow('', null),
+  password: Joi.string().min(8).max(128).messages({
+    'string.min': 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.',
+  }),
   roles: Joi.array().items(Joi.string().valid(...Object.values(ROLES))).min(1),
 }).min(1);
 

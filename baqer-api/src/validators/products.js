@@ -13,6 +13,8 @@ const createProductSchema = Joi.object({
   productCategoryId: Joi.string().trim().allow('').optional(),
   offerPrice: Joi.number().min(0).allow(null),
   offerEndsAt: Joi.date().iso().allow(null),
+  stock: Joi.number().integer().min(0),
+  quantity: Joi.number().integer().min(0),
   productionDate: Joi.date().iso().allow(null),
   expiryDate: Joi.date().iso().allow(null),
 });
@@ -30,6 +32,8 @@ const updateProductSchema = Joi.object({
   productCategoryId: Joi.string().trim().allow('', null),
   offerPrice: Joi.number().min(0).allow(null),
   offerEndsAt: Joi.date().iso().allow(null),
+  stock: Joi.number().integer().min(0),
+  quantity: Joi.number().integer().min(0),
   productionDate: Joi.date().iso().allow(null),
   expiryDate: Joi.date().iso().allow(null),
 }).min(1);

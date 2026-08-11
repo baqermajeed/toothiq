@@ -3,6 +3,7 @@ const Joi = require('joi');
 const createProductCategorySchema = Joi.object({
   nameAr: Joi.string().trim().min(1).max(100).required(),
   parentCategoryId: Joi.string().trim().allow('', null),
+  subcategoryId: Joi.string().trim().allow('', null),
   order: Joi.number().integer().min(0).empty(''),
   isActive: Joi.boolean().truthy('true', '1').falsy('false', '0', ''),
   image: Joi.string().trim().allow('', null),
@@ -11,6 +12,7 @@ const createProductCategorySchema = Joi.object({
 const updateProductCategorySchema = Joi.object({
   nameAr: Joi.string().trim().min(1).max(100),
   parentCategoryId: Joi.string().trim().allow('', null),
+  subcategoryId: Joi.string().trim().allow('', null),
   order: Joi.number().integer().min(0).empty(''),
   isActive: Joi.boolean().truthy('true', '1').falsy('false', '0', ''),
   image: Joi.string().trim().allow('', null),

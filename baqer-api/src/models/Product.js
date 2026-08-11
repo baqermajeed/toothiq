@@ -11,10 +11,11 @@ const productSchema = new mongoose.Schema(
     isAvailable: { type: Boolean, default: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     subcategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductSubcategory' },
-    brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand' },
+    brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductBrand' },
     productCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductCategory' },
     offerPrice: { type: Number, min: 0 },
     offerEndsAt: { type: Date },
+    stock: { type: Number, default: 0, min: 0 },
     productionDate: { type: Date },
     expiryDate: { type: Date },
   },
@@ -23,7 +24,10 @@ const productSchema = new mongoose.Schema(
 
 productSchema.index({ shopId: 1 });
 productSchema.index({ shopId: 1, name: 1 });
-productSchema.index({ categoryId: 1, subcategoryId: 1, brandId: 1 });
+productSchema.index({ categoryId: 1, subcategoryId: 1 });
+productSchema.index({ categoryId: 1, brandId: 1 });
+productSchema.index({ shopId: 1, categoryId: 1, subcategoryId: 1 });
+productSchema.index({ shopId: 1, categoryId: 1, brandId: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 module.exports = Product;

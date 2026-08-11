@@ -24,6 +24,7 @@ const createOrderSchema = Joi.object({
   items: Joi.array().items(orderItemSchema),
   fixedNumber: Joi.number().valid(10),
   deliveryLocation: deliveryLocationSchema,
+  deliveryAddress: Joi.string().trim().max(500).allow('', null),
   notes: Joi.string().trim().allow(''),
   notesAudioUrl: Joi.string().trim().uri({ allowRelative: true }).allow('', null),
   discountCode: Joi.string().trim().max(32).allow('', null),
@@ -38,6 +39,7 @@ const createVoiceOrderSchema = Joi.object({
     type: Joi.string().valid('Point').default('Point'),
     coordinates: Joi.array().items(Joi.number()).length(2).required(),
   }).required(),
+  deliveryAddress: Joi.string().trim().max(500).allow('', null),
   notesAudioUrl: Joi.string().trim().uri({ allowRelative: true }).required(),
 });
 

@@ -12,6 +12,7 @@ const {
 } = require('../utils/fcmNotifications');
 const { notifyNewOrder, notifyOrderStatusChange } = require('../utils/telegram');
 const { ORDER_STATUS } = require('../config/constants');
+const { notifyDriversNewOrder: emitDriverNewOrder } = require('../socket');
 
 async function list(req, res, next) {
   try {
@@ -100,8 +101,12 @@ async function updateStatus(req, res, next) {
         notifyTrackingEnded(req.params.id, order.status);
       }
     }
-    if (order && order.status === ORDER_STATUS.ACCEPTED) {
+    if (order && order.status === ORDER_STATUS.ACCEPTED && !order.driverId) {
       notifyCustomerOrderAccepted(order);
+      emitDriverNewOrder(order);
+    }
+    if (order && order.status === ORDER_STATUS.PREPARING && !order.driverId) {
+      emitDriverNewOrder(order);
     }
     if (order && order.status === ORDER_STATUS.ON_THE_WAY) {
       notifyCustomerOrderOnTheWay(order);

@@ -3,6 +3,7 @@ const ProductCategory = require('../models/ProductCategory');
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
 const Category = require('../models/Category');
+const ProductSubcategory = require('../models/ProductSubcategory');
 const { notFound, forbidden } = require('../utils/errors');
 
 /**
@@ -29,6 +30,7 @@ async function listByShop(shopId, opts = {}) {
     id: c._id.toString(),
     shopId: c.shopId?.toString(),
     parentCategoryId: c.parentCategoryId?.toString() || null,
+    subcategoryId: c.subcategoryId?.toString() || null,
     nameAr: c.nameAr,
     order: c.order ?? 0,
     isActive: c.isActive !== false,
@@ -125,6 +127,24 @@ async function getById(categoryId, shopId) {
   return category;
 }
 
+async function validateSectionTaxonomy(body) {
+  if (body.subcategoryId) {
+    const sub = await ProductSubcategory.findById(body.subcategoryId).lean();
+    if (!sub) {
+      const { badRequest } = require('../utils/errors');
+      throw badRequest('التصنيف الفرعي غير موجود');
+    }
+    if (body.parentCategoryId && sub.categoryId.toString() !== String(body.parentCategoryId)) {
+      const { badRequest } = require('../utils/errors');
+      throw badRequest('التصنيف الفرعي لا يتبع القسم الرئيسي المحدد');
+    }
+    if (!body.parentCategoryId) {
+      body.parentCategoryId = sub.categoryId.toString();
+    }
+    if (!body.nameAr) body.nameAr = sub.nameAr;
+  }
+}
+
 /**
  * Create product category. Caller must ensure user has permission (admin or shop owner).
  */
@@ -134,6 +154,7 @@ async function create(shopId, userId, body, userRoles = []) {
   const isAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
   const isOwner = shop.ownerId.toString() === userId.toString();
   if (!isAdmin && !isOwner) throw forbidden('Not the shop owner');
+  await validateSectionTaxonomy(body);
   if (body.parentCategoryId) {
     const parent = await Category.findById(body.parentCategoryId).lean();
     if (!parent) {
@@ -144,6 +165,7 @@ async function create(shopId, userId, body, userRoles = []) {
   const category = await ProductCategory.create({
     shopId,
     parentCategoryId: body.parentCategoryId || undefined,
+    subcategoryId: body.subcategoryId || undefined,
     nameAr: (body.nameAr || '').trim(),
     order: body.order != null ? Number(body.order) : 0,
     isActive: body.isActive !== false,
@@ -160,6 +182,7 @@ async function update(categoryId, shopId, userId, body, userRoles = []) {
   if (!isAdmin && !isOwner) throw forbidden('Not the shop owner');
   const category = await ProductCategory.findOne({ _id: categoryId, shopId });
   if (!category) throw notFound('Product category not found');
+  await validateSectionTaxonomy(body);
   if (body.parentCategoryId) {
     const parent = await Category.findById(body.parentCategoryId).lean();
     if (!parent) {
@@ -170,6 +193,9 @@ async function update(categoryId, shopId, userId, body, userRoles = []) {
   if (body.nameAr !== undefined) category.nameAr = String(body.nameAr).trim();
   if (body.parentCategoryId !== undefined) {
     category.parentCategoryId = body.parentCategoryId ? String(body.parentCategoryId).trim() : null;
+  }
+  if (body.subcategoryId !== undefined) {
+    category.subcategoryId = body.subcategoryId ? String(body.subcategoryId).trim() : null;
   }
   if (body.order !== undefined) category.order = Number(body.order);
   if (body.isActive !== undefined) category.isActive = body.isActive !== false;

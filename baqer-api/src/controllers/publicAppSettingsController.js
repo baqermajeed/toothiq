@@ -8,6 +8,8 @@ async function getAppSettings(req, res, next) {
       data: {
         deliveryEnabled: s.deliveryEnabled,
         deliveryPauseReason: s.deliveryPauseReason,
+        globalDeliveryFee: Number(s.globalDeliveryFee) || 0,
+        deliveryFee: Number(s.globalDeliveryFee) || 0,
         supportPhone: s.supportPhone,
         facebookUrl: s.facebookUrl,
         instagramUrl: s.instagramUrl,

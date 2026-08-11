@@ -1,91 +1,67 @@
 const path = require('path');
-
-// تحميل .env من جذر المشروع (يعمل مع PM2 و node مباشرة)
-const envPath = path.join(__dirname, '..', '..', '.env');
-require('dotenv').config({ path: envPath });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
-const platformSettingsSource = process.env.PLATFORM_SETTINGS_SOURCE === 'env' ? 'env' : 'db';
-const platformDeliveryEnabled = process.env.PLATFORM_DELIVERY_ENABLED !== 'false';
-const platformDeliveryPauseReason = String(process.env.PLATFORM_DELIVERY_PAUSE_REASON || '').trim();
-const platformGlobalDeliveryFee = Math.max(0, parseFloat(process.env.PLATFORM_GLOBAL_DELIVERY_FEE || '0') || 0);
 
-if (isProduction) {
-  const minLen = 16;
-  if (!process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS_SECRET.length < minLen) {
-    throw new Error(
-      `JWT_ACCESS_SECRET is required in production (min ${minLen} chars). ` +
-        `Check .env exists at ${path.dirname(envPath)}`
-    );
-  }
+function boolEnv(name, defaultValue = false) {
+  const v = process.env[name];
+  if (v == null || v === '') return defaultValue;
+  return ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase());
 }
 
-const env = {
+function numEnv(name, defaultValue = 0) {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) ? n : defaultValue;
+}
+
+module.exports = {
   nodeEnv,
   isProduction,
-  port: parseInt(process.env.PORT || '3000', 10),
-  mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/qarep',
+  port: numEnv('PORT', 3000),
+  mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/baqer',
   jwt: {
-    accessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-do-not-use-in-prod',
-    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '365d',
+    accessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-me',
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '90d',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '100d',
   },
-  bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+  bcryptRounds: numEnv('BCRYPT_ROUNDS', 12),
   rateLimit: {
-    enabled: process.env.RATE_LIMIT_ENABLED !== 'false',
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-    max: parseInt(process.env.RATE_LIMIT_MAX || '1000', 10),
-    authWindowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS || '900000', 10),
-    authMax: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '30', 10),
+    enabled: boolEnv('RATE_LIMIT_ENABLED', true),
+    windowMs: numEnv('RATE_LIMIT_WINDOW_MS', 900000),
+    max: numEnv('RATE_LIMIT_MAX', 300),
+    authWindowMs: numEnv('RATE_LIMIT_AUTH_WINDOW_MS', 900000),
+    authMax: numEnv('RATE_LIMIT_AUTH_MAX', 15),
   },
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',
     chatId: process.env.TELEGRAM_CHAT_ID || '',
   },
-  /** مصدر إعدادات المنصة: db (افتراضي) أو env */
-  platformSettingsSource,
-  /** إعدادات المنصة من البيئة (تُستخدم عند PLATFORM_SETTINGS_SOURCE=env). */
+  platformSettingsSource: process.env.PLATFORM_SETTINGS_SOURCE || 'db',
   platformSettings: {
-    deliveryEnabled: platformDeliveryEnabled,
-    deliveryPauseReason: platformDeliveryPauseReason,
-    globalDeliveryFee: platformGlobalDeliveryFee,
+    deliveryEnabled: boolEnv('PLATFORM_DELIVERY_ENABLED', true),
+    deliveryPauseReason: process.env.PLATFORM_DELIVERY_PAUSE_REASON || '',
+    globalDeliveryFee: numEnv('PLATFORM_GLOBAL_DELIVERY_FEE', 0),
   },
-
-  /** نطاقات CORS المسموحة في الإنتاج (مفصولة بفاصلة). فارغ = السماح للجميع */
   corsOrigins: process.env.CORS_ORIGINS || '',
-
-  /** مسار ملف اعتماد Firebase للإشعارات (FCM) */
-  firebaseCredentialsPath: process.env.FIREBASE_CREDENTIALS_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
-
-  /** mediasoup PTT — تواصل صوتي self-hosted بين السائقين */
+  firebaseCredentialsPath:
+    process.env.FIREBASE_CREDENTIALS_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
   ptt: {
-    enabled: process.env.PTT_ENABLED !== 'false',
-    maxParticipants: parseInt(process.env.PTT_MAX_PARTICIPANTS || '6', 10),
+    enabled: boolEnv('PTT_ENABLED', true),
+    maxParticipants: numEnv('PTT_MAX_PARTICIPANTS', 6),
   },
-
-  /** إعدادات تحديث التطبيق — يُستخدم من endpoint التحقق من الإصدار */
   appUpdate: {
-    /** الإصدار الأدنى المطلوب (مثل 1.1.0) — إذا كان إصدار التطبيق أقل يُعرض تحذير التحديث */
     minimumVersion: process.env.APP_MINIMUM_VERSION || '1.0.0',
-    /** رابط التحديث legacy (للتطبيقات الحالية) */
-    storeUrl: process.env.APP_STORE_URL || 'https://play.google.com/store/apps/details?id=com.example.qaryp',
-    /** عند true: التحديث إجباري — المستخدم لا يستطيع إغلاق الدايلوغ والاستمرار */
-    forceUpdate: process.env.APP_FORCE_UPDATE === 'true',
+    storeUrl: process.env.APP_STORE_URL || '',
+    forceUpdate: boolEnv('APP_FORCE_UPDATE', false),
   },
-  /** إعدادات تحديث التطبيق v2 — مستقلة للتطبيقات الجديدة فقط */
   appUpdateV2: {
-    /** الإصدار الأدنى المطلوب لنسخة v2 */
     minimumVersion: process.env.APP_V2_MINIMUM_VERSION || '1.0.0',
-    /** رابط تحديث خاص بأندرويد */
-    androidUrl:
-      process.env.APP_V2_STORE_URL_ANDROID || 'https://play.google.com/store/apps/details?id=com.example.qaryp',
-    /** رابط تحديث خاص بـ iOS */
-    iosUrl: process.env.APP_V2_STORE_URL_IOS || 'https://apps.apple.com/app/id0000000000',
-    /** رابط fallback اختياري لنسخة v2 */
+    androidUrl: process.env.APP_V2_STORE_URL_ANDROID || process.env.APP_STORE_URL_ANDROID || '',
+    iosUrl: process.env.APP_V2_STORE_URL_IOS || process.env.APP_STORE_URL_IOS || '',
     fallbackUrl: process.env.APP_V2_STORE_URL || '',
-    /** عند true: التحديث إجباري — المستخدم لا يستطيع إغلاق الدايلوغ والاستمرار */
-    forceUpdate: process.env.APP_V2_FORCE_UPDATE === 'true',
+    forceUpdate: boolEnv('APP_V2_FORCE_UPDATE', false),
   },
+  driverWalletRatePerOrder: numEnv('DRIVER_WALLET_RATE_PER_ORDER', 1000),
 };
-
-module.exports = env;

@@ -1,7 +1,14 @@
 const ROLES = Object.freeze({
   CUSTOMER: 'customer',
   SHOP: 'shop',
+  DRIVER: 'driver',
   ADMIN: 'admin',
+});
+
+const DRIVER_ORDER_TABS = Object.freeze({
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
 });
 
 const SHOP_CATEGORIES = Object.freeze([
@@ -29,6 +36,7 @@ const ORDER_STATUS = Object.freeze({
 
 module.exports = {
   ROLES,
+  DRIVER_ORDER_TABS,
   SHOP_CATEGORIES,
   ORDER_STATUS,
 };

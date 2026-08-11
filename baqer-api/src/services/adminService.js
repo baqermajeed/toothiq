@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 const { User, Shop, Order, Product } = require('../models');
 const authService = require('./authService');
+const env = require('../config/env');
 const { ROLES } = require('../config/constants');
 const { deleteProductImageIfLocal, getMissingImageMongoCondition } = require('./productService');
 const { notFound, badRequest } = require('../utils/errors');
@@ -379,6 +381,9 @@ async function createShop(adminId, body) {
     name: rest.name,
     description: rest.description,
     location: rest.location,
+    address: rest.address?.trim() || null,
+    phone: rest.phone?.trim() || null,
+    phone2: rest.phone2?.trim() || null,
     deliveryFee: 0,
     isOpen: rest.isOpen !== false,
     isHidden: rest.isHidden === true,
@@ -396,6 +401,9 @@ async function updateShop(shopId, body) {
     'name',
     'description',
     'location',
+    'address',
+    'phone',
+    'phone2',
     'isOpen',
     'isActive',
     'isHidden',
@@ -450,11 +458,19 @@ async function updateUser(userId, updates) {
   for (const key of allowed) {
     if (updates[key] !== undefined) body[key] = updates[key];
   }
+
+  const password = typeof updates.password === 'string' ? updates.password.trim() : '';
+  if (password) {
+    body.passwordHash = await bcrypt.hash(password, env.bcryptRounds);
+    body.refreshTokenHash = null;
+  }
+
   if (Object.keys(body).length === 0) {
     const user = await User.findById(userId).select('-passwordHash -refreshTokenHash').lean();
     if (!user) throw notFound('User not found');
     return user;
   }
+
   const user = await User.findByIdAndUpdate(userId, body, {
     new: true,
     runValidators: true,

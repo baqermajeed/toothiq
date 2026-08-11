@@ -16,12 +16,29 @@ function roomName(orderId) {
   return `order:${orderId}`;
 }
 
-/** Deprecated: driver pool removed; kept as no-op for API compatibility. */
-function notifyDriversNewOrder() {}
+function driversRoomName() {
+  return 'drivers';
+}
+
+/**
+ * Notify all connected drivers of a new order available for acceptance.
+ * @param {object} order - Order document or plain object
+ */
+function notifyDriversNewOrder(order) {
+  if (!io || !order) return;
+  const payload = orderToPlain(order);
+  if (!payload) return;
+  io.to(driversRoomName()).emit('driver:new_order', { order: payload });
+  console.log('[Socket] driver:new_order بُث إلى غرفة السائقين');
+}
 
 function notifyDriversOrderUpdated() {}
 
-function notifyDriversOrderRemoved() {}
+/** إبلاغ السائقين بأن الطلب لم يعد متاحاً (قُبل من سائق آخر). */
+function notifyDriversOrderRemoved(orderId) {
+  if (!io || !orderId) return;
+  io.to(driversRoomName()).emit('driver:order_removed', { orderId: String(orderId) });
+}
 
 /**
  * Notify room that tracking has ended (order status changed from on_the_way).
@@ -117,6 +134,13 @@ function setupSocketIO(server) {
     // - لاسلكي السائقين القديم
     // - لاسلكي الطلب الجديد بين السائق وصاحب المحل
     registerPttHandlers(socket);
+
+    // انضمام السائق إلى غرفة السائقين لاستقبال الطلبات الجديدة
+    if (socket.userRoles && Array.isArray(socket.userRoles) && socket.userRoles.includes('driver')) {
+      const room = driversRoomName();
+      socket.join(room);
+      console.log('[Socket] انضمام سائق إلى الغرفة:', room);
+    }
 
     // انضمام صاحب المحل إلى غرفة محله لاستقبال طلبات جديدة
     if (socket.userRoles && Array.isArray(socket.userRoles) && socket.userRoles.includes('shop')) {

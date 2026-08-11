@@ -43,6 +43,7 @@ const spec = {
     { name: 'Shops', description: 'المحلات والتقييمات' },
     { name: 'Products', description: 'المنتجات والعروض' },
     { name: 'Categories', description: 'فئات المحلات العامة (تصنيف المحلات)' },
+    { name: 'Catalog', description: 'كتالوج عام: أقسام → فرعية → منتجات من كل المحلات' },
     { name: 'Product Categories', description: 'أقسام المنتجات داخل كل محل' },
     { name: 'Banners', description: 'البانرات النشطة' },
     { name: 'Orders', description: 'الطلبات' },
@@ -367,6 +368,8 @@ const spec = {
                   price: { type: 'number' },
                   image: { type: 'string' },
                   isAvailable: { type: 'boolean' },
+                  categoryId: { type: 'string', nullable: true, description: 'القسم العام' },
+                  subcategoryId: { type: 'string', nullable: true, description: 'القسم الفرعي' },
                   productCategoryId: { type: 'string', nullable: true },
                   offerPrice: { type: 'number', nullable: true },
                   offerEndsAt: { type: 'string', format: 'date-time', nullable: true },
@@ -398,6 +401,8 @@ const spec = {
                   price: { type: 'number' },
                   image: { type: 'string' },
                   isAvailable: { type: 'boolean' },
+                  categoryId: { type: 'string', nullable: true, description: 'القسم العام' },
+                  subcategoryId: { type: 'string', nullable: true, description: 'القسم الفرعي' },
                   productCategoryId: { type: 'string', nullable: true },
                   offerPrice: { type: 'number', nullable: true },
                   offerEndsAt: { type: 'string', format: 'date-time', nullable: true },
@@ -411,6 +416,63 @@ const spec = {
         responses: { 200: { description: 'OK' }, 403: { description: 'Forbidden' }, 404: { description: 'Not found' } },
       },
       delete: { summary: 'Delete product', tags: ['Products'], security: [{ bearerAuth: [] }], responses: { 200: { description: 'OK' }, 403: { description: 'Forbidden' }, 404: { description: 'Not found' } } },
+    },
+    '/api/catalog/categories': {
+      get: {
+        summary: 'List catalog categories with product counts',
+        description: 'tree=true يرجع الأقسام مع الفرعية للاختيار في التطبيق',
+        tags: ['Catalog'],
+        parameters: [
+          { name: 'tree', in: 'query', schema: { type: 'boolean' }, description: 'إرجاع شجرة كاملة (أقسام + فرعية)' },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/catalog/categories/{categoryId}': {
+      get: {
+        summary: 'Category detail with subcategories that have products',
+        tags: ['Catalog'],
+        parameters: [{ name: 'categoryId', in: 'path', required: true }],
+        responses: { 200: { description: 'OK' }, 404: { description: 'Not found' } },
+      },
+    },
+    '/api/catalog/categories/{categoryId}/subcategories': {
+      get: {
+        summary: 'List subcategories for a category',
+        tags: ['Catalog'],
+        parameters: [
+          { name: 'categoryId', in: 'path', required: true },
+          { name: 'withCounts', in: 'query', schema: { type: 'boolean' } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/catalog/products': {
+      get: {
+        summary: 'List products across all shops by category/subcategory',
+        tags: ['Catalog'],
+        parameters: [
+          { name: 'categoryId', in: 'query', schema: { type: 'string' } },
+          { name: 'subcategoryId', in: 'query', schema: { type: 'string' } },
+          { name: 'shopId', in: 'query', schema: { type: 'string' } },
+          { name: 'q', in: 'query', schema: { type: 'string' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/shops/{shopId}/catalog': {
+      get: {
+        summary: 'Shop catalog for a main category (subcategories + products)',
+        tags: ['Catalog'],
+        parameters: [
+          { name: 'shopId', in: 'path', required: true },
+          { name: 'categoryId', in: 'query', required: true, schema: { type: 'string' } },
+          { name: 'includeProducts', in: 'query', schema: { type: 'boolean' } },
+        ],
+        responses: { 200: { description: 'OK' }, 404: { description: 'Not found' } },
+      },
     },
     '/api/categories': {
       get: {
@@ -449,6 +511,7 @@ const spec = {
                 properties: {
                   nameAr: { type: 'string' },
                   parentCategoryId: { type: 'string', nullable: true, description: 'معرّف الفئة الرئيسية التي يتبع لها هذا القسم' },
+                  subcategoryId: { type: 'string', nullable: true, description: 'ربط القسم بفرعي عام' },
                   order: { type: 'number' },
                   isActive: { type: 'boolean' },
                   image: { type: 'string', format: 'binary', description: 'jpeg/png/webp' },
@@ -462,6 +525,7 @@ const spec = {
                 properties: {
                   nameAr: { type: 'string' },
                   parentCategoryId: { type: 'string', nullable: true, description: 'معرّف الفئة الرئيسية التي يتبع لها هذا القسم' },
+                  subcategoryId: { type: 'string', nullable: true, description: 'ربط القسم بفرعي عام' },
                   order: { type: 'number' },
                   isActive: { type: 'boolean' },
                   image: { type: 'string', nullable: true },

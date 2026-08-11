@@ -11,28 +11,29 @@ const pointSchema = new mongoose.Schema(
 
 const orderItemSchema = new mongoose.Schema(
   {
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    name: { type: String, required: true },
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    name: { type: String, trim: true },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
+    image: { type: String, trim: true },
   },
   { _id: false }
 );
 
 const shopPortionSchema = new mongoose.Schema(
   {
-    shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
+    shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' },
     items: [orderItemSchema],
-    subtotal: { type: Number, required: true, min: 0 },
+    subtotal: { type: Number, default: 0 },
   },
   { _id: false }
 );
 
 const statusHistorySchema = new mongoose.Schema(
   {
-    status: { type: String, enum: Object.values(ORDER_STATUS), required: true },
+    status: { type: String, required: true },
     changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    changedByRole: { type: String },
+    changedByRole: { type: String, trim: true },
     changedAt: { type: Date, default: Date.now },
   },
   { _id: false }
@@ -47,9 +48,7 @@ const orderSchema = new mongoose.Schema(
     shopPortions: [shopPortionSchema],
     totalPrice: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, required: true, min: 0 },
-    /** كود الخصم المطبّق (إن وُجد). */
     discountCode: { type: String, trim: true, default: null },
-    /** مبلغ الخصم المطبّق على مجموع المنتجات (لا يشمل التوصيل). */
     discountAmount: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
@@ -57,27 +56,23 @@ const orderSchema = new mongoose.Schema(
       default: ORDER_STATUS.PENDING,
     },
     deliveryLocation: { type: pointSchema, required: true },
-    notes: { type: String, trim: true },
+    deliveryAddress: { type: String, trim: true, default: null },
+    notes: { type: String, trim: true, default: '' },
     notesAudioUrl: { type: String, trim: true, default: null },
     cancelReason: { type: String, trim: true, default: null },
     postponedReason: { type: String, trim: true, default: null },
     statusHistory: [statusHistorySchema],
-    // تسلسل داخلي للطلب (يُستخدم مع originalOrderId لتمييز الطلبات المكررة)
-    orderNumber: { type: Number, index: true, unique: true, sparse: true },
-    // إذا كان الطلب مكرراً، يشير إلى الطلب الأصلي داخل نفس النافذة الزمنية
+    orderNumber: { type: Number },
     originalOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
-    // حقل مريح للقراءة السريعة؛ يمكن اشتقاقه من originalOrderId
     isDuplicate: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 orderSchema.index({ customerId: 1, createdAt: -1 });
-orderSchema.index({ shopId: 1, status: 1 });
-orderSchema.index({ 'shopPortions.shopId': 1, status: 1 });
-orderSchema.index({ driverId: 1, status: 1 });
-orderSchema.index({ deliveryLocation: '2dsphere' });
-orderSchema.index({ status: 1 });
+orderSchema.index({ shopId: 1, status: 1, createdAt: -1 });
+orderSchema.index({ driverId: 1, status: 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
 
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;

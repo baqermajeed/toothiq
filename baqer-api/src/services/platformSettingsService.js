@@ -205,6 +205,10 @@ async function getPublicContactPayload() {
     supportPhoneHilla: '',
     supportPhoneDiwaniya: '',
     aboutUs: s.aboutUs || '',
+    deliveryEnabled: s.deliveryEnabled !== false,
+    deliveryPauseReason: s.deliveryPauseReason || '',
+    globalDeliveryFee: Number(s.globalDeliveryFee) || 0,
+    deliveryFee: Number(s.globalDeliveryFee) || 0,
   };
 }
 

@@ -319,6 +319,35 @@ async function updateSettings(req, res, next) {
   }
 }
 
+const driverWalletService = require('../services/driverWalletService');
+
+async function getDriverWallet(req, res, next) {
+  try {
+    const data = await driverWalletService.getWallet(req.params.driverId, {
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function collectDriverWallet(req, res, next) {
+  try {
+    const adminName = req.user?.name || 'الإدارة';
+    const data = await driverWalletService.collectFromWallet(
+      req.params.driverId,
+      req.userId,
+      adminName,
+      req.body.amount
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listUsers,
   getUserById,
@@ -342,4 +371,6 @@ module.exports = {
   bulkUpdateShopsOpenHours,
   getSettings,
   updateSettings,
+  getDriverWallet,
+  collectDriverWallet,
 };

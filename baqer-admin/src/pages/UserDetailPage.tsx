@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../lib/api'
-import { adminApi, fetchGovernorates } from '../api/admin'
+import { adminApi } from '../api/admin'
+import { fetchGovernorates } from '../api/admin'
 import { ROLES } from '../lib/constants'
 
 export function UserDetailPage() {
@@ -80,7 +81,7 @@ export function UserDetailPage() {
         name,
         phone,
         email: email || null,
-        roles: roles.length ? roles : undefined,
+        roles,
       })
       setMsg('تم الحفظ')
     } catch (ex) {
@@ -157,30 +158,21 @@ export function UserDetailPage() {
             />
           </div>
         ) : null}
-        {isNew ? (
-          <>
-            <div className="field">
-              <label>المحافظة (اختياري)</label>
-              <select className="select" value={governorateId} onChange={(e) => setGovernorateId(e.target.value)}>
-                <option value="">—</option>
-                {govs.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.nameAr}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>اسم العيادة (اختياري)</label>
-              <input className="input" value={clinicName} onChange={(e) => setClinicName(e.target.value)} />
-            </div>
-          </>
-        ) : (
-          <p className="muted">
-            المحافظة: {(govs.find((g) => g.id === governorateId)?.nameAr ?? governorateId) || '—'} — العيادة:{' '}
-            {clinicName || '—'}
-          </p>
-        )}
+        <div className="field">
+          <label>المحافظة</label>
+          <select className="select" value={governorateId} onChange={(e) => setGovernorateId(e.target.value)}>
+            <option value="">—</option>
+            {govs.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.nameAr}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>اسم العيادة (اختياري)</label>
+          <input className="input" value={clinicName} onChange={(e) => setClinicName(e.target.value)} />
+        </div>
         <div className="field">
           <label>الأدوار</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

@@ -21,6 +21,15 @@ function parseShopBody(raw) {
   const body = {};
   if (raw.name !== undefined) body.name = typeof raw.name === 'string' ? raw.name.trim() : raw.name;
   if (raw.description !== undefined) body.description = typeof raw.description === 'string' ? raw.description.trim() : raw.description;
+  if (raw.address !== undefined) {
+    body.address = typeof raw.address === 'string' ? raw.address.trim() : raw.address;
+  }
+  if (raw.phone !== undefined && raw.phone !== '') {
+    body.phone = normalizeDigitsToLatin(String(raw.phone).trim());
+  }
+  if (raw.phone2 !== undefined && raw.phone2 !== '') {
+    body.phone2 = normalizeDigitsToLatin(String(raw.phone2).trim());
+  }
   if (raw.deliveryFee !== undefined) body.deliveryFee = typeof raw.deliveryFee === 'number' ? raw.deliveryFee : parseFloat(raw.deliveryFee);
   if (raw.isOpen !== undefined) body.isOpen = raw.isOpen === true || raw.isOpen === 'true';
   if (raw.isActive !== undefined) body.isActive = raw.isActive === true || raw.isActive === 'true';

@@ -149,6 +149,12 @@ function parseBulkProductText(text) {
   return { valid, failed };
 }
 
+function parseStockValue(raw) {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const num = typeof raw === 'number' ? raw : parseInt(String(raw).trim(), 10);
+  return Number.isFinite(num) && num >= 0 ? num : undefined;
+}
+
 function parseProductBody(raw) {
   const body = {};
   if (raw.name !== undefined) body.name = typeof raw.name === 'string' ? raw.name.trim() : raw.name;
@@ -189,6 +195,10 @@ function parseProductBody(raw) {
     body.productCategoryId = (v === '' || v === null) ? null : (typeof v === 'string' ? v.trim() : v);
   }
   if (raw.offerPrice !== undefined) body.offerPrice = raw.offerPrice === null || raw.offerPrice === '' ? null : (typeof raw.offerPrice === 'number' ? raw.offerPrice : parseFloat(raw.offerPrice));
+  const stockVal = parseStockValue(raw.stock);
+  const quantityVal = parseStockValue(raw.quantity);
+  if (stockVal !== undefined) body.stock = stockVal;
+  else if (quantityVal !== undefined) body.stock = quantityVal;
   if (raw.offerEndsAt !== undefined) body.offerEndsAt = (raw.offerEndsAt === null || raw.offerEndsAt === '') ? null : (raw.offerEndsAt instanceof Date ? raw.offerEndsAt : new Date(raw.offerEndsAt));
   if (raw.productionDate !== undefined) body.productionDate = (raw.productionDate === null || raw.productionDate === '') ? null : (raw.productionDate instanceof Date ? raw.productionDate : new Date(raw.productionDate));
   if (raw.expiryDate !== undefined) body.expiryDate = (raw.expiryDate === null || raw.expiryDate === '') ? null : (raw.expiryDate instanceof Date ? raw.expiryDate : new Date(raw.expiryDate));
@@ -249,12 +259,18 @@ async function list(req, res, next) {
       : {};
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const productCategoryId = typeof req.query.productCategoryId === 'string' ? req.query.productCategoryId.trim() || undefined : undefined;
+    const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() || undefined : undefined;
+    const subcategoryId = typeof req.query.subcategoryId === 'string' ? req.query.subcategoryId.trim() || undefined : undefined;
+    const brandId = typeof req.query.brandId === 'string' ? req.query.brandId.trim() || undefined : undefined;
     const hasOffer = req.query.hasOffer === 'true' || req.query.hasOffer === true;
     const includeUnavailable = canSeeHiddenShop;
     const options = {
       ...pagination,
       q: q || undefined,
       productCategoryId,
+      categoryId,
+      subcategoryId,
+      brandId,
       hasOffer: hasOffer || undefined,
       includeUnavailable,
     };
@@ -492,6 +508,15 @@ async function listAll(req, res, next) {
     if (req.query.productCategoryId != null && String(req.query.productCategoryId).trim() !== '') {
       filters.productCategoryId = String(req.query.productCategoryId).trim();
     }
+    if (req.query.categoryId != null && String(req.query.categoryId).trim() !== '') {
+      filters.categoryId = String(req.query.categoryId).trim();
+    }
+    if (req.query.subcategoryId != null && String(req.query.subcategoryId).trim() !== '') {
+      filters.subcategoryId = String(req.query.subcategoryId).trim();
+    }
+    if (req.query.brandId != null && String(req.query.brandId).trim() !== '') {
+      filters.brandId = String(req.query.brandId).trim();
+    }
     logProductRequest('listAll', req, null);
     const result = await productService.listAll(filters);
     logProductResponse('listAll', result);
@@ -506,6 +531,15 @@ async function search(req, res, next) {
     const q = req.query.q ?? '';
     const qTrim = typeof q === 'string' ? q.trim() : '';
     const pagination = { page: req.query.page, limit: req.query.limit };
+    if (req.query.categoryId != null && String(req.query.categoryId).trim() !== '') {
+      pagination.categoryId = String(req.query.categoryId).trim();
+    }
+    if (req.query.subcategoryId != null && String(req.query.subcategoryId).trim() !== '') {
+      pagination.subcategoryId = String(req.query.subcategoryId).trim();
+    }
+    if (req.query.brandId != null && String(req.query.brandId).trim() !== '') {
+      pagination.brandId = String(req.query.brandId).trim();
+    }
     logProductRequest('search (GET)', req, null, { q });
     console.log('[Products API] search (GET) resolved:', {
       qLength: qTrim.length,
@@ -533,6 +567,15 @@ async function searchPost(req, res, next) {
       } catch (_) {}
     }
     const pagination = { page: body.page, limit: body.limit };
+    if (body.categoryId != null && String(body.categoryId).trim() !== '') {
+      pagination.categoryId = String(body.categoryId).trim();
+    }
+    if (body.subcategoryId != null && String(body.subcategoryId).trim() !== '') {
+      pagination.subcategoryId = String(body.subcategoryId).trim();
+    }
+    if (body.brandId != null && String(body.brandId).trim() !== '') {
+      pagination.brandId = String(body.brandId).trim();
+    }
     logProductRequest('search (POST)', req, null, { q, bodyKeys: Object.keys(body) });
     const qTrim = typeof q === 'string' ? q.trim() : '';
     console.log('[Products API] search (POST) resolved:', {
@@ -560,6 +603,18 @@ async function listRandomMultiShops(req, res, next) {
       productCategoryId:
         req.query.productCategoryId != null && String(req.query.productCategoryId).trim() !== ''
           ? String(req.query.productCategoryId).trim()
+          : undefined,
+      categoryId:
+        req.query.categoryId != null && String(req.query.categoryId).trim() !== ''
+          ? String(req.query.categoryId).trim()
+          : undefined,
+      subcategoryId:
+        req.query.subcategoryId != null && String(req.query.subcategoryId).trim() !== ''
+          ? String(req.query.subcategoryId).trim()
+          : undefined,
+      brandId:
+        req.query.brandId != null && String(req.query.brandId).trim() !== ''
+          ? String(req.query.brandId).trim()
           : undefined,
     };
     const result = await productService.listRandomFromMultipleShops(filters);

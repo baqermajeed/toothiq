@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const { Product, ProductCategory, Shop, Category, ProductSubcategory, Brand } = require('../models');
+const { Product, ProductCategory, Shop, Category, ProductSubcategory, ProductBrand } = require('../models');
 const { badRequest } = require('../utils/errors');
 const { notFound, forbidden } = require('../utils/errors');
 
@@ -98,7 +98,7 @@ function normalizeProductImages(images, fallbackImage) {
  * @param {{ page?: number, limit?: number, q?: string, productCategoryId?: string, hasOffer?: boolean, includeUnavailable?: boolean }} opts
  */
 async function listByShop(shopId, opts = {}) {
-  const { page, limit, q, productCategoryId, hasOffer, includeUnavailable } = opts;
+  const { page, limit, q, productCategoryId, categoryId, subcategoryId, brandId, hasOffer, includeUnavailable } = opts;
   const query = { shopId };
   if (!includeUnavailable) query.isAvailable = true;
 
@@ -106,9 +106,7 @@ async function listByShop(shopId, opts = {}) {
     const safe = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     query.name = new RegExp(safe, 'i');
   }
-  if (productCategoryId) {
-    query.productCategoryId = productCategoryId;
-  }
+  applyTaxonomyFilters(query, { productCategoryId, categoryId, subcategoryId, brandId });
   if (hasOffer === true) {
     query.offerPrice = { $exists: true, $ne: null, $gt: 0 };
     query.$or = [
@@ -126,8 +124,7 @@ async function listByShop(shopId, opts = {}) {
     const pageNum = Number(page);
     const [rawItems, total] = await Promise.all([
       Product.find(query)
-        .populate('productCategoryId', 'nameAr')
-        .populate('shopId', 'isOpen')
+        .populate(PRODUCT_POPULATE)
         .sort(sort)
         .skip(skip)
         .limit(limitNum)
@@ -138,50 +135,151 @@ async function listByShop(shopId, opts = {}) {
     return { items, pagination: { page: pageNum, limit: limitNum, total } };
   }
   const rawProducts = await Product.find(query)
-    .populate('productCategoryId', 'nameAr')
-    .populate('shopId', 'isOpen')
+    .populate(PRODUCT_POPULATE)
     .sort(sort)
     .lean();
   return rawProducts.map((p) => mapProductWithCategory(p));
 }
 
+async function getVisibleShopIds() {
+  return Shop.find({ isActive: true, isHidden: { $ne: true } }).distinct('_id');
+}
+
+function applyTaxonomyFilters(query, filters = {}) {
+  const { categoryId, subcategoryId, brandId, productCategoryId } = filters;
+  if (categoryId && mongoose.Types.ObjectId.isValid(String(categoryId))) {
+    query.categoryId = new mongoose.Types.ObjectId(String(categoryId).trim());
+  }
+  if (subcategoryId && mongoose.Types.ObjectId.isValid(String(subcategoryId))) {
+    query.subcategoryId = new mongoose.Types.ObjectId(String(subcategoryId).trim());
+  }
+  if (brandId && mongoose.Types.ObjectId.isValid(String(brandId))) {
+    query.brandId = new mongoose.Types.ObjectId(String(brandId).trim());
+  }
+  if (productCategoryId && mongoose.Types.ObjectId.isValid(String(productCategoryId))) {
+    query.productCategoryId = new mongoose.Types.ObjectId(String(productCategoryId).trim());
+  }
+}
+
+async function validateProductTaxonomy(body) {
+  let categoryId = body.categoryId;
+  const subcategoryId = body.subcategoryId;
+  const brandId = body.brandId;
+  let subDoc = null;
+  let brandDoc = null;
+
+  if (subcategoryId) {
+    subDoc = await ProductSubcategory.findById(subcategoryId).lean();
+    if (!subDoc) throw badRequest('التصنيف الفرعي غير موجود');
+    if (categoryId && subDoc.categoryId.toString() !== String(categoryId)) {
+      throw badRequest('التصنيف الفرعي لا يتبع التصنيف الرئيسي المحدد');
+    }
+    if (!categoryId) {
+      categoryId = subDoc.categoryId.toString();
+      body.categoryId = categoryId;
+    }
+  }
+
+  if (brandId) {
+    brandDoc = await ProductBrand.findById(brandId).lean();
+    if (!brandDoc) throw badRequest('البراند غير موجود');
+    if (categoryId && brandDoc.categoryId.toString() !== String(categoryId)) {
+      throw badRequest('البراند لا يتبع التصنيف الرئيسي المحدد');
+    }
+    if (!categoryId) {
+      categoryId = brandDoc.categoryId.toString();
+      body.categoryId = categoryId;
+    }
+  }
+
+  if (subDoc && brandDoc && subDoc.categoryId.toString() !== brandDoc.categoryId.toString()) {
+    throw badRequest('التصنيف الفرعي والبراند يجب أن يتبعا نفس التصنيف الرئيسي');
+  }
+
+  if ((subcategoryId || brandId) && !categoryId) {
+    throw badRequest('يجب اختيار التصنيف الرئيسي عند ربط المنتج بتصنيف فرعي أو براند');
+  }
+
+  if (categoryId) {
+    const cat = await Category.findById(categoryId).lean();
+    if (!cat) throw badRequest('التصنيف الرئيسي غير موجود');
+  }
+}
+
+async function resolveProductCategoryForTaxonomy(shopId, body) {
+  if (body.productCategoryId) return body.productCategoryId;
+  if (!body.subcategoryId) return undefined;
+  const sectionQuery = { shopId, subcategoryId: body.subcategoryId };
+  if (body.categoryId) sectionQuery.parentCategoryId = body.categoryId;
+  const section = await ProductCategory.findOne(sectionQuery).lean();
+  return section?._id;
+}
+
 function mapProductWithCategory(p) {
-  const categoryDoc = p.productCategoryId;
-  const productCategoryId = p.productCategoryId?._id?.toString() ?? p.productCategoryId?.toString();
-  const categoryId = p.categoryId?._id?.toString() ?? p.categoryId?.toString();
-  const subcategoryId = p.subcategoryId?._id?.toString() ?? p.subcategoryId?.toString();
-  const brandId = p.brandId?._id?.toString() ?? p.brandId?.toString();
-  const categoryName = categoryDoc?.nameAr ?? null;
+  const sectionDoc = p.productCategoryId;
+  const mainCategoryDoc = p.categoryId;
+  const subcategoryDoc = p.subcategoryId;
+  const brandDoc = p.brandId;
+  const productCategoryId = sectionDoc?._id?.toString() ?? p.productCategoryId?.toString?.() ?? (typeof p.productCategoryId === 'string' ? p.productCategoryId : undefined);
+  const categoryId = mainCategoryDoc?._id?.toString() ?? p.categoryId?.toString?.() ?? (typeof p.categoryId === 'string' ? p.categoryId : undefined);
+  const subcategoryId = subcategoryDoc?._id?.toString() ?? p.subcategoryId?.toString?.() ?? (typeof p.subcategoryId === 'string' ? p.subcategoryId : undefined);
+  const brandId = brandDoc?._id?.toString() ?? p.brandId?.toString?.() ?? (typeof p.brandId === 'string' ? p.brandId : undefined);
+  const sectionName = sectionDoc?.nameAr ?? null;
+  const mainCategoryName = mainCategoryDoc?.nameAr ?? null;
+  const subcategoryName = subcategoryDoc?.nameAr ?? null;
+  const brandName = brandDoc?.nameAr ?? null;
   const shopRef = p.shopId;
   let shopIdStr;
+  let shopName;
   let shopIsOpen = true;
   if (shopRef != null) {
     if (typeof shopRef === 'object' && shopRef._id != null) {
       shopIdStr = shopRef._id.toString();
+      shopName = shopRef.name ?? null;
       if (shopRef.isOpen === false) shopIsOpen = false;
     } else {
       shopIdStr = shopRef.toString();
     }
   }
-  const { productCategoryId: _pc, shopId: _sid, ...rest } = p;
+  const { productCategoryId: _pc, shopId: _sid, categoryId: _cid, subcategoryId: _sid2, brandId: _bid, ...rest } = p;
   const images = normalizeProductImages(p.images, p.image);
   const image = images[0];
+  const stock = p.stock != null ? Number(p.stock) : 0;
   return {
     ...rest,
     _id: p._id,
+    id: p._id?.toString?.() ?? p.id,
     image,
     images,
+    stock,
+    quantity: stock,
     categoryId: categoryId || undefined,
     subcategoryId: subcategoryId || undefined,
     brandId: brandId || undefined,
     productCategoryId: productCategoryId || undefined,
-    categoryName: categoryName || undefined,
+    mainCategoryName: mainCategoryName || undefined,
+    subcategoryName: subcategoryName || undefined,
+    brandName: brandName || undefined,
+    categoryName: sectionName || subcategoryName || brandName || mainCategoryName || undefined,
     shopId: shopIdStr,
+    shopName: shopName ?? p.shopName ?? undefined,
     shopIsOpen,
     offerPrice: p.offerPrice != null ? p.offerPrice : undefined,
-    offerEndsAt: p.offerEndsAt ? p.offerEndsAt.toISOString() : undefined,
+    offerEndsAt: p.offerEndsAt ? new Date(p.offerEndsAt).toISOString() : undefined,
   };
 }
+
+function mapProductForCatalog(p) {
+  return mapProductWithCategory(p);
+}
+
+const PRODUCT_POPULATE = [
+  { path: 'shopId', select: 'name isOpen' },
+  { path: 'productCategoryId', select: 'nameAr' },
+  { path: 'categoryId', select: 'nameAr icon' },
+  { path: 'subcategoryId', select: 'nameAr' },
+  { path: 'brandId', select: 'nameAr' },
+];
 
 /**
  * جلب منتجات من كل المحلات مع pagination (دون الاعتماد على shopId).
@@ -195,11 +293,14 @@ async function listAll(filters = {}) {
     hasOffer,
     shopId: rawShopId,
     productCategoryId: rawProductCategoryId,
+    categoryId: rawCategoryId,
+    subcategoryId: rawSubcategoryId,
+    brandId: rawBrandId,
   } = filters;
   const limitNum = Number(limit);
   const pageNum = Number(page);
 
-  const visibleShopIds = await Shop.find({ isActive: true, isHidden: { $ne: true } }).distinct('_id');
+  const visibleShopIds = await getVisibleShopIds();
   const query = { isAvailable: true, shopId: { $in: visibleShopIds } };
   if (hasOffer === true) {
     query.offerPrice = { $gt: 0 };
@@ -221,9 +322,12 @@ async function listAll(filters = {}) {
     }
   }
 
-  if (rawProductCategoryId && mongoose.Types.ObjectId.isValid(String(rawProductCategoryId))) {
-    query.productCategoryId = new mongoose.Types.ObjectId(String(rawProductCategoryId).trim());
-  }
+  applyTaxonomyFilters(query, {
+    productCategoryId: rawProductCategoryId,
+    categoryId: rawCategoryId,
+    subcategoryId: rawSubcategoryId,
+    brandId: rawBrandId,
+  });
 
   const excludeIds = Array.isArray(rawExcludeIds)
     ? rawExcludeIds
@@ -271,45 +375,68 @@ async function listAll(filters = {}) {
     },
   ];
 
-  const countQuery = { isAvailable: true };
-  if (query.shopId) countQuery.shopId = query.shopId;
-  if (query.offerPrice) countQuery.offerPrice = query.offerPrice;
-  if (query.productCategoryId) countQuery.productCategoryId = query.productCategoryId;
-  if (query.$or) countQuery.$or = query.$or;
+  const countQuery = { ...query };
+  delete countQuery._id;
   const [rawItems, total] = await Promise.all([
     Product.aggregate(pipeline),
     Product.countDocuments(countQuery),
   ]);
 
-  const items = rawItems.map((p) => {
-    const {
-      shopId,
-      shopName,
-      shopIsOpen: rawShopOpen,
-      productCategoryId,
-      categoryName,
-      offerPrice,
-      offerEndsAt,
-      image: img,
-      ...rest
-    } = p;
-    const images = normalizeProductImages(p.images, img);
-    const image = images[0];
-    return {
-      ...rest,
-      image,
-      images,
-      shopId: shopId?.toString(),
-      shopName: shopName ?? null,
-      shopIsOpen: rawShopOpen !== false,
-      productCategoryId: productCategoryId?.toString(),
-      categoryName: categoryName ?? null,
-      offerPrice: offerPrice != null ? offerPrice : undefined,
-      offerEndsAt: offerEndsAt ? new Date(offerEndsAt).toISOString() : undefined,
-    };
-  });
+  const items = rawItems.map((p) => mapProductForCatalog({
+    ...p,
+    shopId: { _id: p.shopId, name: p.shopName, isOpen: p.shopIsOpen },
+    productCategoryId: p.productCategoryId ? { _id: p.productCategoryId, nameAr: p.categoryName } : undefined,
+  }));
 
   return { items, pagination: { page: pageNum, limit: limitNum, total } };
+}
+
+/**
+ * منتجات الكتالوج العام — مرتبة حسب الأحدث مع فلترة بالقسم والفرعي.
+ */
+async function listCatalogProducts(filters = {}) {
+  const {
+    page = 1,
+    limit = 20,
+    categoryId,
+    subcategoryId,
+    brandId,
+    shopId,
+    q,
+  } = filters;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const visibleShopIds = await getVisibleShopIds();
+  const query = { isAvailable: true, shopId: { $in: visibleShopIds } };
+  applyTaxonomyFilters(query, { categoryId, subcategoryId, brandId });
+
+  if (shopId && mongoose.Types.ObjectId.isValid(String(shopId))) {
+    const sid = String(shopId).trim();
+    const allowed = new Set(visibleShopIds.map((id) => id.toString()));
+    query.shopId = allowed.has(sid) ? new mongoose.Types.ObjectId(sid) : { $in: [] };
+  }
+
+  if (q && typeof q === 'string' && q.trim()) {
+    const safe = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    query.name = new RegExp(safe, 'i');
+  }
+
+  const [rawItems, total] = await Promise.all([
+    Product.find(query)
+      .populate(PRODUCT_POPULATE)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    Product.countDocuments(query),
+  ]);
+
+  return {
+    items: rawItems.map((p) => mapProductForCatalog(p)),
+    pagination: { page: pageNum, limit: limitNum, total },
+  };
 }
 
 async function create(shopId, userId, body, userRoles = []) {
@@ -318,22 +445,13 @@ async function create(shopId, userId, body, userRoles = []) {
   const isAdmin = Array.isArray(userRoles) && userRoles.includes('admin');
   const isOwner = shop.ownerId.toString() === userId.toString();
   if (!isAdmin && !isOwner) throw forbidden('Not the shop owner');
+  await validateProductTaxonomy(body);
   if (body.productCategoryId) {
     const cat = await ProductCategory.findOne({ _id: body.productCategoryId, shopId });
     if (!cat) throw badRequest('تصنيف المنتج غير موجود أو لا يتبع هذا المحل');
   }
-  if (body.categoryId) {
-    const exists = await Category.findById(body.categoryId).lean();
-    if (!exists) throw badRequest('التصنيف الرئيسي غير موجود');
-  }
-  if (body.subcategoryId) {
-    const exists = await ProductSubcategory.findById(body.subcategoryId).lean();
-    if (!exists) throw badRequest('التصنيف الفرعي غير موجود');
-  }
-  if (body.brandId) {
-    const exists = await Brand.findById(body.brandId).lean();
-    if (!exists) throw badRequest('البراند غير موجود');
-  }
+  const resolvedSectionId = await resolveProductCategoryForTaxonomy(shopId, body);
+  const productCategoryId = body.productCategoryId || resolvedSectionId || undefined;
   const product = await Product.create({
     shopId,
     name: body.name,
@@ -345,23 +463,22 @@ async function create(shopId, userId, body, userRoles = []) {
     categoryId: body.categoryId || undefined,
     subcategoryId: body.subcategoryId || undefined,
     brandId: body.brandId || undefined,
-    productCategoryId: body.productCategoryId || undefined,
+    productCategoryId,
     offerPrice: body.offerPrice != null ? Number(body.offerPrice) : undefined,
     offerEndsAt: body.offerEndsAt ? new Date(body.offerEndsAt) : undefined,
+    stock: body.stock != null ? Number(body.stock) : 0,
     productionDate: body.productionDate ? new Date(body.productionDate) : undefined,
     expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined,
   });
   const populated = await Product.findById(product._id)
-    .populate('productCategoryId', 'nameAr')
-    .populate('shopId', 'isOpen')
+    .populate(PRODUCT_POPULATE)
     .lean();
   return mapProductWithCategory(populated);
 }
 
 async function getById(productId, shopId) {
   const product = await Product.findOne({ _id: productId, shopId })
-    .populate('productCategoryId', 'nameAr')
-    .populate('shopId', 'isOpen')
+    .populate(PRODUCT_POPULATE)
     .lean();
   if (!product) throw notFound('Product not found');
   return mapProductWithCategory(product);
@@ -429,19 +546,30 @@ async function updateById(productId, shopId, userId, body, userRoles = []) {
     const cat = await ProductCategory.findOne({ _id: body.productCategoryId, shopId });
     if (!cat) throw badRequest('تصنيف المنتج غير موجود أو لا يتبع هذا المحل');
   }
-  if (body.categoryId !== undefined && body.categoryId) {
-    const exists = await Category.findById(body.categoryId).lean();
-    if (!exists) throw badRequest('التصنيف الرئيسي غير موجود');
+  const taxonomyBody = {
+    categoryId: body.categoryId !== undefined ? body.categoryId : existing.categoryId,
+    subcategoryId: body.subcategoryId !== undefined ? body.subcategoryId : existing.subcategoryId,
+    brandId: body.brandId !== undefined ? body.brandId : existing.brandId,
+    productCategoryId: body.productCategoryId !== undefined ? body.productCategoryId : existing.productCategoryId,
+  };
+  if (body.categoryId !== undefined || body.subcategoryId !== undefined || body.brandId !== undefined) {
+    await validateProductTaxonomy(taxonomyBody);
+    if (body.categoryId === undefined && taxonomyBody.categoryId) body.categoryId = taxonomyBody.categoryId;
+    if (body.subcategoryId === undefined && taxonomyBody.subcategoryId === null) body.subcategoryId = null;
+    if (body.brandId === undefined && taxonomyBody.brandId === null) body.brandId = null;
   }
-  if (body.subcategoryId !== undefined && body.subcategoryId) {
-    const exists = await ProductSubcategory.findById(body.subcategoryId).lean();
-    if (!exists) throw badRequest('التصنيف الفرعي غير موجود');
-  }
-  if (body.brandId !== undefined && body.brandId) {
-    const exists = await Brand.findById(body.brandId).lean();
-    if (!exists) throw badRequest('البراند غير موجود');
+  if (!body.productCategoryId && body.subcategoryId) {
+    const resolved = await resolveProductCategoryForTaxonomy(shopId, {
+      categoryId: body.categoryId ?? existing.categoryId,
+      subcategoryId: body.subcategoryId,
+    });
+    if (resolved) body.productCategoryId = resolved.toString();
   }
   const updateBody = { ...body };
+  if (updateBody.quantity !== undefined && updateBody.stock === undefined) {
+    updateBody.stock = updateBody.quantity;
+  }
+  delete updateBody.quantity;
   if (updateBody.images !== undefined || updateBody.image !== undefined) {
     const normalizedImages = normalizeProductImages(updateBody.images, updateBody.image);
     updateBody.images = normalizedImages;
@@ -461,8 +589,7 @@ async function updateById(productId, shopId, userId, body, userRoles = []) {
     }
   }
   const populated = await Product.findById(product._id)
-    .populate('productCategoryId', 'nameAr')
-    .populate('shopId', 'isOpen')
+    .populate(PRODUCT_POPULATE)
     .lean();
   return mapProductWithCategory(populated);
 }
@@ -491,7 +618,7 @@ async function remove(productId, shopId, userId, userRoles = []) {
  * @param {{ page?: number, limit?: number }} pagination - page و limit (افتراضي 1، 12)
  */
 async function search(q, locationFilters = {}, pagination = {}) {
-  const { page = 1, limit = 12 } = pagination;
+  const { page = 1, limit = 12, categoryId, subcategoryId, brandId } = pagination;
   const searchQuery = (q && typeof q === 'string' ? q.trim() : '') || '';
   if (!searchQuery) {
     console.log('[productService.search] نص البحث فارغ بعد trim — إرجاع صفر نتائج', {
@@ -499,7 +626,6 @@ async function search(q, locationFilters = {}, pagination = {}) {
     });
     return { items: [], pagination: { page: 1, limit: Number(limit), total: 0 } };
   }
-  // تطبيع Unicode: البحث بكلا الشكلين NFC و NFD لضمان التطابق مع النص المخزّن بأي شكل
   const nfc = searchQuery.normalize('NFC');
   const nfd = searchQuery.normalize('NFD');
   const escapeForRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -507,11 +633,16 @@ async function search(q, locationFilters = {}, pagination = {}) {
   const patternNfd = nfd === nfc ? patternNfc : escapeForRegex(nfd);
   const regexOpt = { $regex: patternNfc, $options: 'i' };
   const regexOptNfd = patternNfd === patternNfc ? regexOpt : { $regex: patternNfd, $options: 'i' };
-  const visibleShopIds = await Shop.find({ isActive: true, isHidden: { $ne: true } }).distinct('_id');
+  const visibleShopIds = await getVisibleShopIds();
+  const baseMatch = { isAvailable: true, shopId: { $in: visibleShopIds } };
+  applyTaxonomyFilters(baseMatch, {
+    categoryId: categoryId || locationFilters.categoryId,
+    subcategoryId: subcategoryId || locationFilters.subcategoryId,
+    brandId: brandId || locationFilters.brandId,
+  });
   const query = {
     $and: [
-      { isAvailable: true },
-      { shopId: { $in: visibleShopIds } },
+      baseMatch,
       {
         $or: [
           { name: regexOpt },
@@ -523,42 +654,22 @@ async function search(q, locationFilters = {}, pagination = {}) {
     ],
   };
   void locationFilters;
-  console.log('[productService.search] نص البحث (معاينة):', searchQuery.length > 100 ? `${searchQuery.slice(0, 100)}…` : searchQuery, '| طول:', searchQuery.length);
   const skip = (Number(page) - 1) * Number(limit);
   const limitNum = Number(limit);
   const pageNum = Number(page);
   const [rawItems, total] = await Promise.all([
     Product.find(query)
-      .populate('shopId', 'name isOpen')
-      .populate('productCategoryId', 'nameAr')
+      .populate(PRODUCT_POPULATE)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
       .lean(),
     Product.countDocuments(query),
   ]);
-  console.log('[productService.search] نتيجة MongoDB:', { total, pageReturned: rawItems.length, page: pageNum, limit: limitNum });
-  if (total > 0 && rawItems.length > 0) {
-    console.log('[productService.search] أول منتج:', rawItems[0].name);
-  }
-  const items = rawItems.map((p) => {
-    const { shopId: shop, productCategoryId: catDoc, image: img, ...rest } = p;
-    const images = normalizeProductImages(p.images, img);
-    const image = images[0];
-    return {
-      ...rest,
-      image,
-      images,
-      shopId: shop?._id?.toString(),
-      shopName: shop?.name ?? null,
-      shopIsOpen: shop?.isOpen !== false,
-      productCategoryId: catDoc?._id?.toString(),
-      categoryName: catDoc?.nameAr ?? null,
-      offerPrice: p.offerPrice != null ? p.offerPrice : undefined,
-      offerEndsAt: p.offerEndsAt ? new Date(p.offerEndsAt).toISOString() : undefined,
-    };
-  });
-  return { items, pagination: { page: pageNum, limit: limitNum, total } };
+  return {
+    items: rawItems.map((p) => mapProductForCatalog(p)),
+    pagination: { page: pageNum, limit: limitNum, total },
+  };
 }
 
 /**
@@ -573,12 +684,14 @@ async function listRandomFromMultipleShops(filters = {}) {
     perShop = 2,
     hasOffer,
     productCategoryId: rawProductCategoryId,
+    categoryId: rawCategoryId,
+    subcategoryId: rawSubcategoryId,
   } = filters;
 
   const shopCountNum = Math.max(1, Math.min(Number(shopCount) || 6, 20));
   const perShopNum = Math.max(1, Math.min(Number(perShop) || 2, 10));
 
-  const visibleShopIds = await Shop.find({ isActive: true, isHidden: { $ne: true } }).distinct('_id');
+  const visibleShopIds = await getVisibleShopIds();
   const allowedShopIds = visibleShopIds;
 
   // خلط بسيط للمحلات لاختيار عشوائي بدون تكرار.
@@ -597,13 +710,14 @@ async function listRandomFromMultipleShops(filters = {}) {
         { offerEndsAt: { $gt: new Date() } },
       ];
     }
-    if (rawProductCategoryId && mongoose.Types.ObjectId.isValid(String(rawProductCategoryId))) {
-      query.productCategoryId = new mongoose.Types.ObjectId(String(rawProductCategoryId).trim());
-    }
+    applyTaxonomyFilters(query, {
+      productCategoryId: rawProductCategoryId,
+      categoryId: rawCategoryId,
+      subcategoryId: rawSubcategoryId,
+    });
 
     const rawShopProducts = await Product.find(query)
-      .populate('shopId', 'name isOpen')
-      .populate('productCategoryId', 'nameAr')
+      .populate(PRODUCT_POPULATE)
       .sort({ createdAt: -1 })
       .limit(perShopNum * 4)
       .lean();
@@ -612,21 +726,7 @@ async function listRandomFromMultipleShops(filters = {}) {
 
     const randomizedProducts = [...rawShopProducts].sort(() => Math.random() - 0.5).slice(0, perShopNum);
     for (const p of randomizedProducts) {
-      const { shopId: shop, productCategoryId: catDoc, image: img, ...rest } = p;
-      const images = normalizeProductImages(p.images, img);
-      const image = images[0];
-      items.push({
-        ...rest,
-        image,
-        images,
-        shopId: shop?._id?.toString(),
-        shopName: shop?.name ?? null,
-        shopIsOpen: shop?.isOpen !== false,
-        productCategoryId: catDoc?._id?.toString(),
-        categoryName: catDoc?.nameAr ?? null,
-        offerPrice: p.offerPrice != null ? p.offerPrice : undefined,
-        offerEndsAt: p.offerEndsAt ? new Date(p.offerEndsAt).toISOString() : undefined,
-      });
+      items.push(mapProductForCatalog(p));
     }
     usedShopIds.push(shopId.toString());
   }
@@ -823,9 +923,13 @@ async function copyProductsFromShop(targetShopId, sourceShopId, productIds, user
       image: p.image || undefined,
       images: normalizeProductImages(p.images, p.image),
       isAvailable: p.isAvailable !== false,
+      categoryId: p.categoryId || undefined,
+      subcategoryId: p.subcategoryId || undefined,
+      brandId: p.brandId || undefined,
       productCategoryId: targetCategoryId || undefined,
       offerPrice: p.offerPrice != null ? Number(p.offerPrice) : undefined,
       offerEndsAt: p.offerEndsAt ? new Date(p.offerEndsAt) : undefined,
+      stock: p.stock != null ? Number(p.stock) : 0,
       productionDate: p.productionDate ? new Date(p.productionDate) : undefined,
       expiryDate: p.expiryDate ? new Date(p.expiryDate) : undefined,
     });
@@ -838,6 +942,7 @@ async function copyProductsFromShop(targetShopId, sourceShopId, productIds, user
 module.exports = {
   listByShop,
   listAll,
+  listCatalogProducts,
   create,
   getById,
   getRecommendations,
@@ -851,4 +956,5 @@ module.exports = {
   getMissingImageMongoCondition,
   listMissingImagesByShop,
   listRandomFromMultipleShops,
+  mapProductForCatalog,
 };

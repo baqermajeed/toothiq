@@ -50,6 +50,7 @@ export function UsersPage() {
               <option value="">الكل</option>
               <option value="customer">عميل</option>
               <option value="shop">محل</option>
+              <option value="driver">سائق</option>
               <option value="admin">مدير</option>
             </select>
           </div>
@@ -109,9 +110,7 @@ export function UsersPage() {
         </>
       ) : null}
       <p>
-        <Link to="/users/new" className="btn btn-primary" style={{ display: 'inline-flex' }}>
-          + مستخدم جديد
-        </Link>
+        <Link to="/users/new">إنشاء مستخدم جديد</Link> (استخدم صفحة التفاصيل مع المسار /users/new — انظر أدناه)
       </p>
     </div>
   )

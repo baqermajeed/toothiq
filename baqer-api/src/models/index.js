@@ -5,11 +5,13 @@ const ProductCategory = require('./ProductCategory');
 const Order = require('./Order');
 const Category = require('./Category');
 const ProductSubcategory = require('./ProductSubcategory');
-const Brand = require('./Brand');
+const ProductBrand = require('./ProductBrand');
 const Banner = require('./Banner');
 const { PlatformSettings } = require('./PlatformSettings');
 const DiscountCode = require('./DiscountCode');
 const ShopReview = require('./ShopReview');
+const DriverWallet = require('./DriverWallet');
+const DriverWalletTransaction = require('./DriverWalletTransaction');
 
 module.exports = {
   User,
@@ -19,9 +21,11 @@ module.exports = {
   Order,
   Category,
   ProductSubcategory,
-  Brand,
+  ProductBrand,
   Banner,
   PlatformSettings,
   DiscountCode,
   ShopReview,
+  DriverWallet,
+  DriverWalletTransaction,
 };
