@@ -1,4 +1,5 @@
 const fcmService = require('../services/fcmService');
+const notificationService = require('../services/notificationService');
 const { User } = require('../models');
 const { ORDER_STATUS } = require('../config/constants');
 
@@ -69,8 +70,7 @@ function postponedBody(order) {
 }
 
 /**
- * إشعار العميل بأي تحديث لحالة الطلب (fire-and-forget).
- * يتخطى pending والحالة غير المعروفة.
+ * يحفظ إشعار الطلب في قاعدة البيانات ثم يحاول إرسال FCM (fire-and-forget).
  */
 function notifyCustomerOrderStatusChange(order, newStatus) {
   const status = String(newStatus || order?.status || '').trim();
@@ -81,7 +81,14 @@ function notifyCustomerOrderStatusChange(order, newStatus) {
 
   const orderId = resolveOrderId(order);
   const customerId = resolveCustomerId(order);
-  if (!customerId || !orderId) return;
+  if (!customerId || !orderId) {
+    console.warn('[Notify] skip: missing customerId/orderId', {
+      status,
+      orderId,
+      customerId: customerId ? String(customerId) : null,
+    });
+    return;
+  }
 
   let body = payload.body;
   const data = { type: payload.type, orderId };
@@ -96,20 +103,46 @@ function notifyCustomerOrderStatusChange(order, newStatus) {
     data.postponedReason = postponed.postponedReason;
   }
 
-  User.findById(customerId)
-    .select('fcmTokens')
-    .lean()
-    .then((user) => {
+  const title = APP_TITLE;
+
+  Promise.resolve()
+    .then(async () => {
+      await notificationService.createForUser({
+        userId: customerId,
+        title,
+        body,
+        type: payload.type,
+        orderId,
+        data,
+      });
+      console.log('[Notify] saved inbox', {
+        userId: String(customerId),
+        orderId,
+        type: payload.type,
+      });
+
+      const user = await User.findById(customerId).select('fcmTokens').lean();
       const tokens = user?.fcmTokens || [];
-      if (tokens.length === 0) return;
-      return fcmService.sendToTokens(tokens, {
-        title: APP_TITLE,
+      if (tokens.length === 0) {
+        console.warn('[Notify] no FCM tokens for user', String(customerId));
+        return;
+      }
+
+      const result = await fcmService.sendToTokens(tokens, {
+        title,
         body,
         data,
       });
+      console.log('[Notify] FCM result', {
+        userId: String(customerId),
+        orderId,
+        type: payload.type,
+        tokens: tokens.length,
+        ...result,
+      });
     })
     .catch((err) =>
-      console.error('[FCM] notifyCustomerOrderStatusChange:', err.message)
+      console.error('[Notify] notifyCustomerOrderStatusChange:', err.message)
     );
 }
 

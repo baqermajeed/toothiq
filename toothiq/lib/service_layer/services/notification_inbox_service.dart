@@ -4,15 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../controller/notifications_controller.dart';
+import '../../core/api/api_client.dart';
 import '../../firebase_options.dart';
 import '../../model/notification_model.dart';
 import '../../utils/storage_keys.dart';
 import 'preferences_storage.dart';
 
-/// صندوق الإشعارات المحلي — يُملأ من FCM ويُعرض في صفحة الإشعارات.
+/// صندوق الإشعارات — يُزامَن من السيرفر ويُحدَّث من FCM.
 class NotificationInboxService extends GetxService {
   /// أحمر في الهيدر عند وجود أي إشعار غير مقروء.
   final hasUnread = false.obs;
+
+  ApiClient? get _api {
+    if (!Get.isRegistered<ApiClient>()) return null;
+    return Get.find<ApiClient>();
+  }
 
   @override
   void onInit() {
@@ -44,6 +50,29 @@ class NotificationInboxService extends GetxService {
         debugPrint('[NotificationInbox] loadAll failed: $error');
       }
       return [];
+    }
+  }
+
+  /// يجلب الإشعارات من السيرفر ويحدّث الصندوق المحلي.
+  Future<List<AppNotificationModel>> syncFromServer() async {
+    final api = _api;
+    if (api == null) return loadAll();
+
+    try {
+      final result = await api.getNotifications();
+      await PreferencesStorage.instance.setJsonList(
+        StorageKeys.notificationInbox,
+        result.items.map((n) => n.toJson()).toList(growable: false),
+      );
+      hasUnread.value = result.unreadCount > 0 ||
+          result.items.any((n) => !n.isRead);
+      _refreshNotificationsController();
+      return result.items;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[NotificationInbox] syncFromServer failed: $error');
+      }
+      return loadAll();
     }
   }
 
@@ -98,6 +127,7 @@ class NotificationInboxService extends GetxService {
       StorageKeys.notificationInbox,
       current.map((n) => n.toJson()).toList(growable: false),
     );
+    await _api?.markNotificationRead(id);
     await _afterInboxChanged();
   }
 
@@ -117,11 +147,19 @@ class NotificationInboxService extends GetxService {
       StorageKeys.notificationInbox,
       updated.map((n) => n.toJson()).toList(growable: false),
     );
-    // لا نعيد تحميل الصفحة — غالباً تُغلق؛ نحدّث شارة الهيدر فقط.
+    await _api?.markAllNotificationsRead();
     await syncUnreadBadge();
   }
 
   Future<void> syncUnreadBadge() async {
+    final api = _api;
+    if (api != null) {
+      try {
+        final count = await api.getNotificationsUnreadCount();
+        hasUnread.value = count > 0;
+        return;
+      } catch (_) {}
+    }
     hasUnread.value = (await loadAll()).any((n) => !n.isRead);
   }
 

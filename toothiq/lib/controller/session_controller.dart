@@ -4,6 +4,7 @@ import '../model/auth_session_model.dart';
 import '../model/user_model.dart';
 import '../service_layer/services/app_data_refresh_service.dart';
 import '../service_layer/services/auth_service.dart';
+import '../service_layer/services/notification_inbox_service.dart';
 import '../service_layer/services/notification_service.dart';
 import '../service_layer/services/token_storage.dart';
 import '../service_layer/services/user_service.dart';
@@ -99,6 +100,9 @@ class SessionController extends GetxController {
   Future<void> _postAuthSync() async {
     AppDataRefreshService.refreshAfterAuth();
     await _syncFcmToken();
+    if (Get.isRegistered<NotificationInboxService>()) {
+      await Get.find<NotificationInboxService>().syncFromServer();
+    }
   }
 
   Future<void> _syncFcmToken() async {

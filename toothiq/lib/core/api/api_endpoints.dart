@@ -25,6 +25,12 @@ class ApiEndpoints {
   // Orders
   static const String orders = '/api/orders';
 
+  // Notifications
+  static const String notifications = '/api/notifications';
+  static const String notificationsReadAll = '/api/notifications/read-all';
+  static const String notificationsUnreadCount =
+      '/api/notifications/unread-count';
+
   static String catalogCategory(String id) => '/api/catalog/categories/$id';
   static String catalogCategorySubcategories(String id) =>
       '/api/catalog/categories/$id/subcategories';
@@ -39,4 +45,6 @@ class ApiEndpoints {
   static String shopProduct(String shopId, String id) =>
       '/api/shops/$shopId/products/$id';
   static String order(String id) => '/api/orders/$id';
+  static String notificationRead(String id) =>
+      '/api/notifications/$id/read';
 }

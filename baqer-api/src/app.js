@@ -71,6 +71,7 @@ app.use('/api/shops/:shopId/catalog', shopCatalogRoutes);
 app.use('/api/products', productSearchRoutes);
 app.use('/api/shops', shopsRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/driver', driverRoutes);
 app.use('/api/discount-codes', discountCodesRoutes);
 app.use('/api/calls', callsRoutes);

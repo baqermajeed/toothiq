@@ -24,13 +24,14 @@ class NotificationsController extends GetxController {
     isLoading.value = true;
     loadError.value = null;
     try {
-      notifications.assignAll(await _inbox.loadAll());
+      notifications.assignAll(await _inbox.syncFromServer());
       await _inbox.syncUnreadBadge();
     } catch (error) {
       loadError.value = ApiErrorHandler.loadMessage(
         error,
         fallback: 'تعذر تحميل الإشعارات',
       );
+      notifications.assignAll(await _inbox.loadAll());
     } finally {
       isLoading.value = false;
     }

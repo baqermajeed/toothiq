@@ -86,13 +86,19 @@ class AppNotificationModel {
     return AppNotificationModel(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'إشعار',
-      description: json['description']?.toString() ?? '',
+      description: json['description']?.toString() ??
+          json['body']?.toString() ??
+          '',
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
       type: json['type']?.toString(),
       orderId: json['orderId']?.toString(),
       isRead: json['isRead'] == true,
     );
+  }
+
+  factory AppNotificationModel.fromApiJson(Map<String, dynamic> json) {
+    return AppNotificationModel.fromJson(json);
   }
 
   factory AppNotificationModel.fromRemoteMessage(RemoteMessage message) {

@@ -12,6 +12,7 @@ const DiscountCode = require('./DiscountCode');
 const ShopReview = require('./ShopReview');
 const DriverWallet = require('./DriverWallet');
 const DriverWalletTransaction = require('./DriverWalletTransaction');
+const Notification = require('./Notification');
 
 module.exports = {
   User,
@@ -28,4 +29,5 @@ module.exports = {
   ShopReview,
   DriverWallet,
   DriverWalletTransaction,
+  Notification,
 };

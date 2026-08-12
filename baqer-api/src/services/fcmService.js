@@ -38,10 +38,13 @@ function init() {
  * @param {object} payload - { title?, body, data? }
  * @returns {Promise<string|null>} - message ID or null on failure
  */
-async function sendToToken(token, { title = 'Qaryp', body, data = {} }) {
+async function sendToToken(token, { title = 'ToothIQ', body, data = {} }) {
   if (!token || typeof token !== 'string') return null;
   init();
-  if (!initialized) return null;
+  if (!initialized) {
+    console.warn('[FCM] sendToToken skipped — Firebase not initialized');
+    return null;
+  }
   try {
     const message = {
       token,
@@ -66,11 +69,14 @@ async function sendToToken(token, { title = 'Qaryp', body, data = {} }) {
  * @param {object} payload - { title?, body, data? }
  * @returns {Promise<{ successCount: number, failureCount: number }>}
  */
-async function sendToTokens(tokens, { title = 'Qaryp', body, data = {} }) {
+async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
   const valid = (tokens || []).filter((t) => t && typeof t === 'string');
   if (valid.length === 0) return { successCount: 0, failureCount: 0 };
   init();
-  if (!initialized) return { successCount: 0, failureCount: valid.length };
+  if (!initialized) {
+    console.warn('[FCM] sendToTokens skipped — Firebase not initialized');
+    return { successCount: 0, failureCount: valid.length, skipped: true };
+  }
   try {
     const message = {
       tokens: valid,
@@ -82,6 +88,17 @@ async function sendToTokens(tokens, { title = 'Qaryp', body, data = {} }) {
       apns: { payload: { aps: { sound: 'default' } } },
     };
     const res = await admin.messaging().sendEachForMulticast(message);
+    if (res.failureCount > 0) {
+      res.responses.forEach((r, i) => {
+        if (!r.success) {
+          console.error('[FCM] token failed', {
+            index: i,
+            code: r.error?.code,
+            message: r.error?.message,
+          });
+        }
+      });
+    }
     return { successCount: res.successCount, failureCount: res.failureCount };
   } catch (err) {
     console.error('[FCM] sendToTokens error:', err.message);

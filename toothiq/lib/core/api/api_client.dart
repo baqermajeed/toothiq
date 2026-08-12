@@ -8,6 +8,7 @@ import '../../model/banner_model.dart';
 import '../../model/brand_model.dart';
 import '../../model/category_section_model.dart';
 import '../../model/governorate_model.dart';
+import '../../model/notification_model.dart';
 import '../../model/order_detail_model.dart';
 import '../../model/order_model.dart';
 import '../../model/paginated_result.dart';
@@ -175,6 +176,51 @@ class ApiClient {
     } catch (_) {
       // لا نفشل التطبيق عند فشل تحديث التوكن
     }
+  }
+
+  /// قائمة إشعارات المستخدم من السيرفر.
+  Future<({List<AppNotificationModel> items, int unreadCount})>
+      getNotifications({int limit = 50}) async {
+    final data = await _getSuccessData(
+      ApiEndpoints.notifications,
+      queryParameters: {'limit': limit},
+    );
+    if (data is! Map<String, dynamic>) {
+      return (items: <AppNotificationModel>[], unreadCount: 0);
+    }
+    final rawItems = data['items'];
+    final items = <AppNotificationModel>[];
+    if (rawItems is List) {
+      for (final entry in rawItems.whereType<Map<String, dynamic>>()) {
+        items.add(AppNotificationModel.fromApiJson(entry));
+      }
+    }
+    final unread = (data['unreadCount'] as num?)?.toInt() ??
+        items.where((n) => !n.isRead).length;
+    return (items: items, unreadCount: unread);
+  }
+
+  Future<int> getNotificationsUnreadCount() async {
+    try {
+      final data = await _getSuccessData(ApiEndpoints.notificationsUnreadCount);
+      if (data is Map<String, dynamic>) {
+        return (data['unreadCount'] as num?)?.toInt() ?? 0;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    try {
+      await _patchSuccessData(ApiEndpoints.notificationsReadAll);
+    } catch (_) {}
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    if (id.trim().isEmpty) return;
+    try {
+      await _patchSuccessData(ApiEndpoints.notificationRead(id));
+    } catch (_) {}
   }
 
   /// التحقق من إصدار التطبيق — عام، لا يحتاج مصادقة.
