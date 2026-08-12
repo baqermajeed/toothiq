@@ -4,13 +4,7 @@ const {
   notifyTrackingEnded,
   notifyShopNewOrder,
 } = require('../socket');
-const {
-  notifyCustomerOrderAccepted,
-  notifyCustomerOrderOnTheWay,
-  notifyCustomerOrderDelivered,
-  notifyCustomerOrderCanceled,
-} = require('../utils/fcmNotifications');
-const { notifyNewOrder, notifyOrderStatusChange } = require('../utils/telegram');
+const { notifyNewOrder } = require('../utils/telegram');
 const { ORDER_STATUS } = require('../config/constants');
 const { notifyDriversNewOrder: emitDriverNewOrder } = require('../socket');
 
@@ -102,20 +96,10 @@ async function updateStatus(req, res, next) {
       }
     }
     if (order && order.status === ORDER_STATUS.ACCEPTED && !order.driverId) {
-      notifyCustomerOrderAccepted(order);
       emitDriverNewOrder(order);
     }
     if (order && order.status === ORDER_STATUS.PREPARING && !order.driverId) {
       emitDriverNewOrder(order);
-    }
-    if (order && order.status === ORDER_STATUS.ON_THE_WAY) {
-      notifyCustomerOrderOnTheWay(order);
-    }
-    if (order && order.status === ORDER_STATUS.DELIVERED) {
-      notifyCustomerOrderDelivered(order);
-    }
-    if (order && order.status === ORDER_STATUS.CANCELED) {
-      notifyCustomerOrderCanceled(order);
     }
     const response = { success: true, data: order };
     console.log('[Order updateStatus]', {
@@ -141,7 +125,6 @@ async function updateStatus(req, res, next) {
 async function cancelByCustomer(req, res, next) {
   try {
     const order = await orderService.cancelByCustomer(req.params.id, req.userId);
-    notifyCustomerOrderCanceled(order);
     res.json({ success: true, data: order });
   } catch (err) {
     next(err);

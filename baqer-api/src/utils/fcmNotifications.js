@@ -1,83 +1,50 @@
 const fcmService = require('../services/fcmService');
 const { User } = require('../models');
+const { ORDER_STATUS } = require('../config/constants');
 
-/**
- * Notify customer that their order has been accepted and is being prepared. Fire-and-forget.
- * @param {object} order - Order document with populated customerId or customerId as ObjectId
- */
-function notifyCustomerOrderAccepted(order) {
-  const orderId = order._id?.toString?.() || String(order._id);
-  const customerId = order.customerId?._id || order.customerId;
-  if (!customerId) return;
-  User.findById(customerId)
-    .select('fcmTokens')
-    .lean()
-    .then((user) => {
-      const tokens = user?.fcmTokens || [];
-      if (tokens.length === 0) return;
-      return fcmService.sendToTokens(tokens, {
-        title: 'Qaryp',
-        body: 'جار التسوق وتحضير طلبك',
-        data: { type: 'order_accepted', orderId },
-      });
-    })
-    .catch((err) => console.error('[FCM] notifyCustomerOrderAccepted:', err.message));
+const APP_TITLE = 'ToothIQ';
+
+const STATUS_PAYLOAD = {
+  [ORDER_STATUS.ACCEPTED]: {
+    type: 'order_accepted',
+    body: 'تم قبول طلبك وجارٍ التسوق والتحضير',
+  },
+  [ORDER_STATUS.PREPARING]: {
+    type: 'order_preparing',
+    body: 'جارٍ تحضير طلبك الآن',
+  },
+  [ORDER_STATUS.ON_THE_WAY]: {
+    type: 'order_on_the_way',
+    body: 'طلبك قيد التوصيل، اضغط لتتبع الطلب على الخريطة',
+  },
+  [ORDER_STATUS.DELIVERED]: {
+    type: 'order_delivered',
+    body: 'تم إيصال طلبك بنجاح. شكراً لثقتك بنا.',
+  },
+  [ORDER_STATUS.CANCELED]: {
+    type: 'order_canceled',
+    body: 'تم إلغاء طلبك.',
+  },
+  [ORDER_STATUS.POSTPONED]: {
+    type: 'order_postponed',
+    body: 'تم تأجيل طلبك.',
+  },
+};
+
+function resolveCustomerId(order) {
+  const raw = order?.customerId;
+  if (!raw) return null;
+  if (typeof raw === 'object') {
+    return raw._id || raw.id || null;
+  }
+  return raw;
 }
 
-/**
- * Notify customer that their order is on the way. Fire-and-forget.
- * @param {object} order - Order document with populated customerId or customerId as ObjectId
- */
-function notifyCustomerOrderOnTheWay(order) {
-  const orderId = order._id?.toString?.() || String(order._id);
-  const customerId = order.customerId?._id || order.customerId;
-  if (!customerId) return;
-  User.findById(customerId)
-    .select('fcmTokens')
-    .lean()
-    .then((user) => {
-      const tokens = user?.fcmTokens || [];
-      if (tokens.length === 0) return;
-      return fcmService.sendToTokens(tokens, {
-        title: 'Qaryp',
-        body: 'طلبك قيد التوصيل، اضغط لتتبع الطلب على الخريطة',
-        data: { type: 'order_on_the_way', orderId },
-      });
-    })
-    .catch((err) => console.error('[FCM] notifyCustomerOrderOnTheWay:', err.message));
+function resolveOrderId(order) {
+  return order?._id?.toString?.() || (order?._id != null ? String(order._id) : '');
 }
 
-/**
- * Notify customer that their order has been delivered. Fire-and-forget.
- * @param {object} order - Order document with populated customerId or customerId as ObjectId
- */
-function notifyCustomerOrderDelivered(order) {
-  const orderId = order._id?.toString?.() || String(order._id);
-  const customerId = order.customerId?._id || order.customerId;
-  if (!customerId) return;
-  User.findById(customerId)
-    .select('fcmTokens')
-    .lean()
-    .then((user) => {
-      const tokens = user?.fcmTokens || [];
-      if (tokens.length === 0) return;
-      return fcmService.sendToTokens(tokens, {
-        title: 'Qaryp',
-        body: 'تم إيصال طلبك بنجاح. شكراً لثقتك بنا.',
-        data: { type: 'order_delivered', orderId },
-      });
-    })
-    .catch((err) => console.error('[FCM] notifyCustomerOrderDelivered:', err.message));
-}
-
-/**
- * Notify customer that their order was canceled, with optional reason. Fire-and-forget.
- * @param {object} order - Order document with populated customerId, optional cancelReason, and statusHistory
- */
-function notifyCustomerOrderCanceled(order) {
-  const orderId = order._id?.toString?.() || String(order._id);
-  const customerId = order.customerId?._id || order.customerId;
-  if (!customerId) return;
+function canceledBody(order) {
   const reason = (order.cancelReason || '').trim();
   const lastEntry = order.statusHistory?.length
     ? order.statusHistory[order.statusHistory.length - 1]
@@ -85,9 +52,50 @@ function notifyCustomerOrderCanceled(order) {
   const canceledByAdmin = lastEntry?.changedByRole === 'admin';
   const displayReason =
     reason || (canceledByAdmin ? 'تم رفض الطلب من الإدارة' : null);
-  const body = displayReason
-    ? `تم إلغاء طلبك. سبب الإلغاء: ${displayReason}`
-    : 'تم إلغاء طلبك.';
+  return {
+    body: displayReason
+      ? `تم إلغاء طلبك. سبب الإلغاء: ${displayReason}`
+      : 'تم إلغاء طلبك.',
+    cancelReason: displayReason || '',
+  };
+}
+
+function postponedBody(order) {
+  const reason = (order.postponedReason || '').trim();
+  return {
+    body: reason ? `تم تأجيل طلبك. السبب: ${reason}` : 'تم تأجيل طلبك.',
+    postponedReason: reason,
+  };
+}
+
+/**
+ * إشعار العميل بأي تحديث لحالة الطلب (fire-and-forget).
+ * يتخطى pending والحالة غير المعروفة.
+ */
+function notifyCustomerOrderStatusChange(order, newStatus) {
+  const status = String(newStatus || order?.status || '').trim();
+  if (!status || status === ORDER_STATUS.PENDING) return;
+
+  const payload = STATUS_PAYLOAD[status];
+  if (!payload) return;
+
+  const orderId = resolveOrderId(order);
+  const customerId = resolveCustomerId(order);
+  if (!customerId || !orderId) return;
+
+  let body = payload.body;
+  const data = { type: payload.type, orderId };
+
+  if (status === ORDER_STATUS.CANCELED) {
+    const canceled = canceledBody(order);
+    body = canceled.body;
+    data.cancelReason = canceled.cancelReason;
+  } else if (status === ORDER_STATUS.POSTPONED) {
+    const postponed = postponedBody(order);
+    body = postponed.body;
+    data.postponedReason = postponed.postponedReason;
+  }
+
   User.findById(customerId)
     .select('fcmTokens')
     .lean()
@@ -95,17 +103,46 @@ function notifyCustomerOrderCanceled(order) {
       const tokens = user?.fcmTokens || [];
       if (tokens.length === 0) return;
       return fcmService.sendToTokens(tokens, {
-        title: 'Qaryp',
+        title: APP_TITLE,
         body,
-        data: { type: 'order_canceled', orderId, cancelReason: displayReason || '' },
+        data,
       });
     })
-    .catch((err) => console.error('[FCM] notifyCustomerOrderCanceled:', err.message));
+    .catch((err) =>
+      console.error('[FCM] notifyCustomerOrderStatusChange:', err.message)
+    );
+}
+
+function notifyCustomerOrderAccepted(order) {
+  notifyCustomerOrderStatusChange(order, ORDER_STATUS.ACCEPTED);
+}
+
+function notifyCustomerOrderPreparing(order) {
+  notifyCustomerOrderStatusChange(order, ORDER_STATUS.PREPARING);
+}
+
+function notifyCustomerOrderOnTheWay(order) {
+  notifyCustomerOrderStatusChange(order, ORDER_STATUS.ON_THE_WAY);
+}
+
+function notifyCustomerOrderDelivered(order) {
+  notifyCustomerOrderStatusChange(order, ORDER_STATUS.DELIVERED);
+}
+
+function notifyCustomerOrderCanceled(order) {
+  notifyCustomerOrderStatusChange(order, ORDER_STATUS.CANCELED);
+}
+
+function notifyCustomerOrderPostponed(order) {
+  notifyCustomerOrderStatusChange(order, ORDER_STATUS.POSTPONED);
 }
 
 module.exports = {
+  notifyCustomerOrderStatusChange,
   notifyCustomerOrderAccepted,
+  notifyCustomerOrderPreparing,
   notifyCustomerOrderOnTheWay,
   notifyCustomerOrderDelivered,
   notifyCustomerOrderCanceled,
+  notifyCustomerOrderPostponed,
 };

@@ -38,11 +38,7 @@ class AppNotificationModel {
 
   NotificationIconType get iconType {
     if (type == 'app_update') return NotificationIconType.update;
-    if (type == 'order_on_the_way' ||
-        type == 'new_order' ||
-        (orderId != null && orderId!.isNotEmpty)) {
-      return NotificationIconType.order;
-    }
+    if (isOrderNotification) return NotificationIconType.order;
     return NotificationIconType.clock;
   }
 
@@ -58,10 +54,11 @@ class AppNotificationModel {
         NotificationDayGroup.older => 'أقدم',
       };
 
-  bool get isOrderNotification =>
-      orderId != null &&
-      orderId!.isNotEmpty &&
-      (type == 'order_on_the_way' || type == 'new_order' || type == null);
+  bool get isOrderNotification {
+    if (orderId == null || orderId!.isEmpty) return false;
+    if (type == null || type!.isEmpty) return true;
+    return type!.startsWith('order_') || type == 'new_order';
+  }
 
   AppNotificationModel copyWith({bool? isRead}) {
     return AppNotificationModel(
@@ -123,8 +120,18 @@ class AppNotificationModel {
 
   static String _defaultTitleForType(String? type) {
     switch (type) {
+      case 'order_accepted':
+        return 'تم قبول طلبك';
+      case 'order_preparing':
+        return 'جارٍ تحضير طلبك';
       case 'order_on_the_way':
         return 'طلبك في الطريق';
+      case 'order_delivered':
+        return 'تم توصيل طلبك';
+      case 'order_canceled':
+        return 'تم إلغاء الطلب';
+      case 'order_postponed':
+        return 'تم تأجيل الطلب';
       case 'new_order':
         return 'طلب جديد';
       default:

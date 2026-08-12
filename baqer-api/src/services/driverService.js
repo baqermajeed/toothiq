@@ -266,18 +266,17 @@ async function updateOrderStatus(orderId, driverId, { status }) {
   await order.save();
 
   const { notifyOrderStatusChange } = require('../utils/telegram');
+  const { notifyCustomerOrderStatusChange } = require('../utils/fcmNotifications');
   const updated = await populateDriverOrderQuery(Order.findById(orderId)).lean();
   notifyOrderStatusChange(updated, previousStatus, 'driver').catch((err) =>
     console.error('[Telegram] notifyOrderStatusChange:', err?.message)
   );
 
-  if (status === ORDER_STATUS.ON_THE_WAY) {
-    const { notifyCustomerOrderOnTheWay } = require('../utils/fcmNotifications');
-    notifyCustomerOrderOnTheWay(formatOrderForDriver(updated));
+  if (previousStatus !== status) {
+    notifyCustomerOrderStatusChange(updated, status);
   }
+
   if (status === ORDER_STATUS.DELIVERED) {
-    const { notifyCustomerOrderDelivered } = require('../utils/fcmNotifications');
-    notifyCustomerOrderDelivered(formatOrderForDriver(updated));
     const { notifyTrackingEnded } = require('../socket');
     notifyTrackingEnded(orderId, status);
   }

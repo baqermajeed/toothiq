@@ -125,18 +125,14 @@ class HomeController extends GetxController {
   Future<void> _loadProductsFirstPage() async {
     currentPage.value = 1;
     final category = categories[selectedCategoryIndex.value];
+    final categoryId = category.isAll ? null : category.id;
     final result = await _productService.fetchProductsPaginated(
       page: 1,
       limit: _pageSize,
-      productCategoryId: category.isAll ? null : category.id,
+      categoryId: categoryId,
     );
     products.assignAll(
-      _favoritesService.applyFavoriteState(
-        _productService.filterByCategoryId(
-          result.items,
-          category.isAll ? null : category.id,
-        ),
-      ),
+      _favoritesService.applyFavoriteState(result.items),
     );
     hasNextPage.value = result.hasNextPage;
     currentPage.value = result.page;
@@ -148,18 +144,14 @@ class HomeController extends GetxController {
     try {
       final nextPage = currentPage.value + 1;
       final category = categories[selectedCategoryIndex.value];
+      final categoryId = category.isAll ? null : category.id;
       final result = await _productService.fetchProductsPaginated(
         page: nextPage,
         limit: _pageSize,
-        productCategoryId: category.isAll ? null : category.id,
+        categoryId: categoryId,
       );
       products.addAll(
-        _favoritesService.applyFavoriteState(
-          _productService.filterByCategoryId(
-            result.items,
-            category.isAll ? null : category.id,
-          ),
-        ),
+        _favoritesService.applyFavoriteState(result.items),
       );
       hasNextPage.value = result.hasNextPage;
       currentPage.value = result.page;

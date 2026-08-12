@@ -4,6 +4,7 @@ const { ORDER_STATUS } = require('../config/constants');
 const { notFound, forbidden, badRequest } = require('../utils/errors');
 const discountCodeService = require('./discountCodeService');
 const { notifyOrderStatusChange } = require('../utils/telegram');
+const { notifyCustomerOrderStatusChange } = require('../utils/fcmNotifications');
 
 /** يُرجع السعر الفعلي للمنتج: سعر العرض إن كان نشطاً، وإلا السعر العادي. */
 function getProductEffectivePrice(product) {
@@ -715,6 +716,9 @@ async function updateStatus(orderId, userId, roles, payload) {
   notifyOrderStatusChange(updatedOrder, previousStatus, role).catch((err) =>
     console.error('[Telegram] notifyOrderStatusChange:', err?.message)
   );
+  if (previousStatus !== updates.status) {
+    notifyCustomerOrderStatusChange(updatedOrder, updates.status);
+  }
   return attachVoiceCallIds(updatedOrder);
 }
 
@@ -744,6 +748,7 @@ async function cancelByCustomer(orderId, customerId) {
   notifyOrderStatusChange(updatedOrder, previousStatus, 'customer').catch((err) =>
     console.error('[Telegram] notifyOrderStatusChange:', err?.message)
   );
+  notifyCustomerOrderStatusChange(updatedOrder, ORDER_STATUS.CANCELED);
   return attachVoiceCallIds(updatedOrder);
 }
 
