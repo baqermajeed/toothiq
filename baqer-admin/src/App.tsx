@@ -13,6 +13,7 @@ import { CategoriesPage } from './pages/CategoriesPage'
 import { DiscountCodesPage } from './pages/DiscountCodesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { BannersPage } from './pages/BannersPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { token, user, ready } = useAuth()
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="discount-codes" element={<DiscountCodesPage />} />
         <Route path="banners" element={<BannersPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -251,4 +251,6 @@ router.delete(
   bannerAdminController.remove
 );
 
+router.post('/notifications/broadcast', adminController.broadcastNotification);
+
 module.exports = router;

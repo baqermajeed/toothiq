@@ -110,7 +110,7 @@ class NotificationsPage extends GetView<NotificationsController> {
                                   in controller.byGroup(group)) ...[
                                 NotificationCardWidget(
                                   notification: item,
-                                  onTap: item.isOrderNotification
+                                  onTap: item.canOpenTarget
                                       ? () =>
                                           controller.onNotificationTap(item)
                                       : null,

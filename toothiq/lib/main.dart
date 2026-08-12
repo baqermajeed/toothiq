@@ -72,8 +72,15 @@ Future<void> _initNotifications() async {
     debugPrint('$stackTrace');
   }
 
-  localNotifications.onNotificationTap = (type, orderId) {
-    navigateFromNotificationPayload(type, orderId);
+  localNotifications.onNotificationTap = (data) {
+    navigateFromNotificationPayload(
+      data['type'],
+      orderId: data['orderId'],
+      productId: data['productId'],
+      shopId: data['shopId'],
+      storeId: data['storeId'],
+      data: data,
+    );
   };
 
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
@@ -95,12 +102,16 @@ Future<void> _initNotifications() async {
     if (title == null && body == null) return;
 
     final data = message.data;
-    final type = data['type'] as String?;
-    final orderId = data['orderId'] as String?;
     await localNotifications.showNotification(
       title: title ?? 'إشعار',
       body: body ?? '',
-      payload: jsonEncode({'type': type, 'orderId': orderId}),
+      payload: jsonEncode({
+        'type': data['type'],
+        'orderId': data['orderId'],
+        'productId': data['productId'],
+        'shopId': data['shopId'],
+        'storeId': data['storeId'],
+      }),
     );
   });
 
@@ -111,10 +122,16 @@ Future<void> _initNotifications() async {
 
 void _handleRemoteMessageNavigation(RemoteMessage message) async {
   await Get.find<NotificationInboxService>().addFromRemoteMessage(message);
-  final data = message.data;
+  final data = message.data.map(
+    (key, value) => MapEntry(key, value?.toString()),
+  );
   navigateFromNotificationPayload(
-    data['type'] as String?,
-    data['orderId'] as String?,
+    data['type'],
+    orderId: data['orderId'],
+    productId: data['productId'],
+    shopId: data['shopId'],
+    storeId: data['storeId'],
+    data: data,
   );
 }
 

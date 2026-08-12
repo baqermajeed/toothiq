@@ -348,6 +348,16 @@ async function collectDriverWallet(req, res, next) {
   }
 }
 
+async function broadcastNotification(req, res, next) {
+  try {
+    const notificationService = require('../services/notificationService');
+    const data = await notificationService.broadcastCatalogNotification(req.body);
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listUsers,
   getUserById,
@@ -373,4 +383,5 @@ module.exports = {
   updateSettings,
   getDriverWallet,
   collectDriverWallet,
+  broadcastNotification,
 };

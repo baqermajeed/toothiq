@@ -17,7 +17,7 @@ class LocalNotificationsService {
 
   int _notificationId = 0;
 
-  void Function(String? type, String? orderId)? onNotificationTap;
+  void Function(Map<String, String?> data)? onNotificationTap;
 
   Future<void> init() async {
     _plugin = FlutterLocalNotificationsPlugin();
@@ -57,10 +57,13 @@ class LocalNotificationsService {
     if (payload == null || payload.isEmpty) return;
 
     try {
-      final data = jsonDecode(payload) as Map<String, dynamic>?;
-      final type = data?['type'] as String?;
-      final orderId = data?['orderId'] as String?;
-      onNotificationTap?.call(type, orderId);
+      final decoded = jsonDecode(payload) as Map<String, dynamic>?;
+      if (decoded == null) return;
+      final data = <String, String?>{};
+      for (final entry in decoded.entries) {
+        data[entry.key] = entry.value?.toString();
+      }
+      onNotificationTap?.call(data);
     } catch (_) {}
   }
 

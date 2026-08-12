@@ -32,12 +32,12 @@ function init() {
   }
 }
 
-/**
- * Send notification to a single device.
- * @param {string} token - FCM device token
- * @param {object} payload - { title?, body, data? }
- * @returns {Promise<string|null>} - message ID or null on failure
- */
+function toDataStrings(data = {}) {
+  return Object.fromEntries(
+    Object.entries(data || {}).map(([k, v]) => [String(k), String(v == null ? '' : v)])
+  );
+}
+
 async function sendToToken(token, { title = 'ToothIQ', body, data = {} }) {
   if (!token || typeof token !== 'string') return null;
   init();
@@ -46,29 +46,19 @@ async function sendToToken(token, { title = 'ToothIQ', body, data = {} }) {
     return null;
   }
   try {
-    const message = {
+    return await admin.messaging().send({
       token,
       notification: { title, body },
-      data: Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [String(k), String(v == null ? '' : v)])
-      ),
+      data: toDataStrings(data),
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } },
-    };
-    const res = await admin.messaging().send(message);
-    return res;
+    });
   } catch (err) {
     console.error('[FCM] sendToToken error:', err.message);
     return null;
   }
 }
 
-/**
- * Send notification to multiple devices.
- * @param {string[]} tokens - FCM device tokens
- * @param {object} payload - { title?, body, data? }
- * @returns {Promise<{ successCount: number, failureCount: number }>}
- */
 async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
   const valid = (tokens || []).filter((t) => t && typeof t === 'string');
   if (valid.length === 0) return { successCount: 0, failureCount: 0 };
@@ -78,16 +68,13 @@ async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
     return { successCount: 0, failureCount: valid.length, skipped: true };
   }
   try {
-    const message = {
+    const res = await admin.messaging().sendEachForMulticast({
       tokens: valid,
       notification: { title, body },
-      data: Object.fromEntries(
-        Object.entries(data || {}).map(([k, v]) => [String(k), String(v == null ? '' : v)])
-      ),
+      data: toDataStrings(data),
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } },
-    };
-    const res = await admin.messaging().sendEachForMulticast(message);
+    });
     if (res.failureCount > 0) {
       res.responses.forEach((r, i) => {
         if (!r.success) {
@@ -106,4 +93,28 @@ async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
   }
 }
 
-module.exports = { init, sendToToken, sendToTokens };
+async function sendToTopic(topic, { title = 'ToothIQ', body, data = {} }) {
+  const name = String(topic || '').trim();
+  if (!name) return null;
+  init();
+  if (!initialized) {
+    console.warn('[FCM] sendToTopic skipped — Firebase not initialized');
+    return null;
+  }
+  try {
+    const res = await admin.messaging().send({
+      topic: name,
+      notification: { title, body },
+      data: toDataStrings(data),
+      android: { priority: 'high' },
+      apns: { payload: { aps: { sound: 'default' } } },
+    });
+    console.log('[FCM] sendToTopic ok', { topic: name, messageId: res });
+    return res;
+  } catch (err) {
+    console.error('[FCM] sendToTopic error:', err.message);
+    return null;
+  }
+}
+
+module.exports = { init, sendToToken, sendToTokens, sendToTopic };

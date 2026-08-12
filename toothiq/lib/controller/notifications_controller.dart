@@ -49,11 +49,16 @@ class NotificationsController extends GetxController {
     );
   }
 
-  /// الضغط يفتح الطلب إن وُجد — لا يعلّم الإشعار مقروءاً (القراءة عند المغادرة).
+  /// الضغط يفتح الطلب/المنتج/المتجر إن وُجد — لا يعلّم الإشعار مقروءاً (القراءة عند المغادرة).
   void onNotificationTap(AppNotificationModel item) {
-    if (item.isOrderNotification) {
-      navigateFromNotificationPayload(item.type, item.orderId);
-    }
+    if (!item.canOpenTarget) return;
+    navigateFromNotificationPayload(
+      item.type,
+      orderId: item.orderId,
+      productId: item.productId,
+      shopId: item.shopId,
+      storeId: item.storeId,
+    );
   }
 
   @override

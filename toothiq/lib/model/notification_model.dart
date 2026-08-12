@@ -5,6 +5,8 @@ enum NotificationIconType {
   clock,
   update,
   order,
+  product,
+  store,
 }
 
 enum NotificationDayGroup {
@@ -20,6 +22,9 @@ class AppNotificationModel {
   final DateTime createdAt;
   final String? type;
   final String? orderId;
+  final String? productId;
+  final String? shopId;
+  final String? storeId;
   final bool isRead;
 
   const AppNotificationModel({
@@ -29,6 +34,9 @@ class AppNotificationModel {
     required this.createdAt,
     this.type,
     this.orderId,
+    this.productId,
+    this.shopId,
+    this.storeId,
     this.isRead = false,
   });
 
@@ -38,6 +46,12 @@ class AppNotificationModel {
 
   NotificationIconType get iconType {
     if (type == 'app_update') return NotificationIconType.update;
+    if (type == 'product' || (productId != null && productId!.isNotEmpty)) {
+      return NotificationIconType.product;
+    }
+    if (type == 'store' || (storeId != null && storeId!.isNotEmpty)) {
+      return NotificationIconType.store;
+    }
     if (isOrderNotification) return NotificationIconType.order;
     return NotificationIconType.clock;
   }
@@ -46,6 +60,8 @@ class AppNotificationModel {
         NotificationIconType.clock => Icons.notifications_outlined,
         NotificationIconType.update => Icons.system_update_rounded,
         NotificationIconType.order => Icons.local_shipping_outlined,
+        NotificationIconType.product => Icons.shopping_bag_outlined,
+        NotificationIconType.store => Icons.storefront_outlined,
       };
 
   String get groupTitle => switch (group) {
@@ -60,6 +76,17 @@ class AppNotificationModel {
     return type!.startsWith('order_') || type == 'new_order';
   }
 
+  bool get isProductNotification =>
+      type == 'product' && productId != null && productId!.isNotEmpty;
+
+  bool get isStoreNotification =>
+      type == 'store' &&
+      ((storeId != null && storeId!.isNotEmpty) ||
+          (shopId != null && shopId!.isNotEmpty));
+
+  bool get canOpenTarget =>
+      isOrderNotification || isProductNotification || isStoreNotification;
+
   AppNotificationModel copyWith({bool? isRead}) {
     return AppNotificationModel(
       id: id,
@@ -68,6 +95,9 @@ class AppNotificationModel {
       createdAt: createdAt,
       type: type,
       orderId: orderId,
+      productId: productId,
+      shopId: shopId,
+      storeId: storeId,
       isRead: isRead ?? this.isRead,
     );
   }
@@ -79,10 +109,15 @@ class AppNotificationModel {
         'createdAt': createdAt.toIso8601String(),
         if (type != null) 'type': type,
         if (orderId != null) 'orderId': orderId,
+        if (productId != null) 'productId': productId,
+        if (shopId != null) 'shopId': shopId,
+        if (storeId != null) 'storeId': storeId,
         'isRead': isRead,
       };
 
   factory AppNotificationModel.fromJson(Map<String, dynamic> json) {
+    final nested = json['data'];
+    final data = nested is Map<String, dynamic> ? nested : const <String, dynamic>{};
     return AppNotificationModel(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'إشعار',
@@ -91,8 +126,11 @@ class AppNotificationModel {
           '',
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
-      type: json['type']?.toString(),
-      orderId: json['orderId']?.toString(),
+      type: json['type']?.toString() ?? data['type']?.toString(),
+      orderId: json['orderId']?.toString() ?? data['orderId']?.toString(),
+      productId: json['productId']?.toString() ?? data['productId']?.toString(),
+      shopId: json['shopId']?.toString() ?? data['shopId']?.toString(),
+      storeId: json['storeId']?.toString() ?? data['storeId']?.toString(),
       isRead: json['isRead'] == true,
     );
   }
@@ -105,10 +143,13 @@ class AppNotificationModel {
     final data = message.data;
     final type = data['type']?.toString();
     final orderId = data['orderId']?.toString();
+    final productId = data['productId']?.toString();
+    final shopId = data['shopId']?.toString();
+    final storeId = data['storeId']?.toString();
     final sentAt = message.sentTime ?? DateTime.now();
     final id = message.messageId?.trim().isNotEmpty == true
         ? message.messageId!
-        : '${type ?? 'msg'}_${orderId ?? ''}_${sentAt.millisecondsSinceEpoch}';
+        : '${type ?? 'msg'}_${orderId ?? productId ?? storeId ?? ''}_${sentAt.millisecondsSinceEpoch}';
 
     return AppNotificationModel(
       id: id,
@@ -121,6 +162,9 @@ class AppNotificationModel {
       createdAt: sentAt,
       type: type,
       orderId: orderId,
+      productId: productId,
+      shopId: shopId,
+      storeId: storeId,
     );
   }
 
@@ -140,6 +184,10 @@ class AppNotificationModel {
         return 'تم تأجيل الطلب';
       case 'new_order':
         return 'طلب جديد';
+      case 'product':
+        return 'منتج جديد';
+      case 'store':
+        return 'متجر';
       default:
         return 'إشعار';
     }

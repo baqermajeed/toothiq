@@ -166,6 +166,19 @@ export const adminApi = {
       apiFetch<Record<string, unknown>>(`/api/admin/banners/${id}`, { method: 'PATCH', body: form }),
     remove: (id: string) => apiFetch<unknown>(`/api/admin/banners/${id}`, { method: 'DELETE' }),
   },
+  notifications: {
+    broadcast: (body: {
+      title: string
+      body: string
+      type: 'product' | 'store'
+      productId?: string
+      shopId?: string
+    }) =>
+      apiFetch<Record<string, unknown>>('/api/admin/notifications/broadcast', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  },
 }
 
 export async function fetchGovernorates() {
