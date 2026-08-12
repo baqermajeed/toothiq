@@ -2,18 +2,34 @@ const Joi = require('joi');
 const taxonomyService = require('../services/productTaxonomyService');
 const { badRequest } = require('../utils/errors');
 
-const createSchema = Joi.object({
+const createSubcategorySchema = Joi.object({
   categoryId: Joi.string().trim().required(),
   nameAr: Joi.string().trim().min(1).max(100).required(),
   order: Joi.number().integer().min(0).default(0),
-  isActive: Joi.boolean().default(true),
+  isActive: Joi.boolean().truthy('true').falsy('false').default(true),
 });
 
-const updateSchema = Joi.object({
+const updateSubcategorySchema = Joi.object({
   categoryId: Joi.string().trim(),
   nameAr: Joi.string().trim().min(1).max(100),
   order: Joi.number().integer().min(0),
-  isActive: Joi.boolean(),
+  isActive: Joi.boolean().truthy('true').falsy('false'),
+}).min(1);
+
+const createBrandSchema = Joi.object({
+  categoryId: Joi.string().trim().required(),
+  nameAr: Joi.string().trim().min(1).max(100).required(),
+  image: Joi.string().trim().min(1).max(500).required(),
+  order: Joi.number().integer().min(0).default(0),
+  isActive: Joi.boolean().truthy('true').falsy('false').default(true),
+});
+
+const updateBrandSchema = Joi.object({
+  categoryId: Joi.string().trim(),
+  nameAr: Joi.string().trim().min(1).max(100),
+  image: Joi.string().trim().min(1).max(500),
+  order: Joi.number().integer().min(0),
+  isActive: Joi.boolean().truthy('true').falsy('false'),
 }).min(1);
 
 function validate(schema, body) {
@@ -36,7 +52,7 @@ async function list(req, res, next) {
 
 async function createSubcategory(req, res, next) {
   try {
-    const value = validate(createSchema, req.body);
+    const value = validate(createSubcategorySchema, req.body);
     const item = await taxonomyService.createSubcategory(value);
     res.status(201).json({ success: true, data: item });
   } catch (err) {
@@ -46,7 +62,7 @@ async function createSubcategory(req, res, next) {
 
 async function updateSubcategory(req, res, next) {
   try {
-    const value = validate(updateSchema, req.body);
+    const value = validate(updateSubcategorySchema, req.body);
     const item = await taxonomyService.updateSubcategory(req.params.id, value);
     res.json({ success: true, data: item });
   } catch (err) {
@@ -65,7 +81,7 @@ async function removeSubcategory(req, res, next) {
 
 async function createBrand(req, res, next) {
   try {
-    const value = validate(createSchema, req.body);
+    const value = validate(createBrandSchema, req.body);
     const item = await taxonomyService.createBrand(value);
     res.status(201).json({ success: true, data: item });
   } catch (err) {
@@ -75,7 +91,7 @@ async function createBrand(req, res, next) {
 
 async function updateBrand(req, res, next) {
   try {
-    const value = validate(updateSchema, req.body);
+    const value = validate(updateBrandSchema, req.body);
     const item = await taxonomyService.updateBrand(req.params.id, value);
     res.json({ success: true, data: item });
   } catch (err) {

@@ -30,6 +30,7 @@ function mapBrandRow(b, countById = {}) {
     id: b._id.toString(),
     categoryId: b.categoryId.toString(),
     nameAr: b.nameAr,
+    image: b.image || '',
     order: b.order ?? 0,
     productsCount: countById[b._id.toString()] || 0,
   };
@@ -264,6 +265,7 @@ async function getTaxonomyTree() {
       id: b._id.toString(),
       categoryId: key,
       nameAr: b.nameAr,
+      image: b.image || '',
       order: b.order ?? 0,
     });
   }
@@ -392,6 +394,7 @@ async function getShopCatalog(shopId, categoryId, opts = {}) {
     return {
       id: bid,
       nameAr: b.nameAr,
+      image: b.image || '',
       order: b.order ?? 0,
       productsCount: countByBrandId[bid] || 0,
       products: includeProducts ? (productsByBrandId[bid] || []) : undefined,

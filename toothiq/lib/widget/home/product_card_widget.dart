@@ -26,6 +26,16 @@ class ProductCardWidget extends StatelessWidget {
   /// ارتفاع الكارد بعد ScreenUtil — ليتطابق مع `mainAxisExtent` في الشبكة
   static double get cardHeight => _fixedCardHeight.h;
 
+  /// شبكة الصفحة الرئيسية — مصدر واحد لكل صفحات المنتجات.
+  static SliverGridDelegate get gridDelegate {
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      crossAxisSpacing: 12.w,
+      mainAxisSpacing: 10.h,
+      mainAxisExtent: cardHeight,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final favorites = Get.find<FavoritesService>();
@@ -34,94 +44,133 @@ class ProductCardWidget extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(_cardRadius.r),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => ProductDetailsPage.open(product),
-        borderRadius: BorderRadius.circular(_cardRadius.r),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_cardRadius.r),
-            border: Border.all(color: AppColors.cardBorder, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-          Padding(
-            padding: EdgeInsets.all(6.w),
-            child: SizedBox(
-              height: _imageHeight.h,
-              child: _ProductImageSection(
-                imageAsset: product.imageAsset,
-                isFavorite: product.isFavorite,
-                onFavoriteTap: () => favorites.toggle(product),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_cardRadius.r),
+          border: Border.all(color: AppColors.cardBorder, width: 1),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InkWell(
+                onTap: () => ProductDetailsPage.open(product),
+                borderRadius: BorderRadius.circular(_cardRadius.r),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(6.w),
+                      child: SizedBox(
+                        height: _imageHeight.h,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18.r),
+                          child: AppImage(
+                            source: product.imageAsset,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorIcon: Icons.medical_services_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            product.name,
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Expo Arabic',
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.productTitle,
+                              height: 1.2,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            product.storeName,
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Expo Arabic',
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.productStore,
+                              height: 1.2,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            product.description,
+                            textAlign: TextAlign.right,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Expo Arabic',
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.productDescription,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(10.w, 0, 10.w, 8.h),
+                      child: _ProductPriceBar(
+                        price: product.formattedPrice,
+                        onAddToCart: () {
+                          final cart = Get.isRegistered<CartController>()
+                              ? Get.find<CartController>()
+                              : Get.put(CartController(), permanent: true);
+                          cart.addProduct(product);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: 8.h),
-          Padding(
-            padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  product.name,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Expo Arabic',
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.productTitle,
-                    height: 1.2,
+            Positioned(
+              left: 16.w,
+              top: 6.w + _imageHeight.h - 32.w - 8.h,
+              child: Obx(() {
+                // الاشتراك في قائمة المفضلة ليُحدَّث شكل القلب فوراً
+                favorites.favoriteProducts.length;
+                final isFavorite = favorites.isFavorite(product.id);
+                return Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.r),
+                  elevation: 2,
+                  shadowColor: Colors.black26,
+                  child: InkWell(
+                    onTap: () => favorites.toggle(product),
+                    borderRadius: BorderRadius.circular(10.r),
+                    child: SizedBox(
+                      width: 32.w,
+                      height: 32.w,
+                      child: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: AppColors.favoriteRed,
+                        size: 18.sp,
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  product.storeName,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Expo Arabic',
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.productStore,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  product.description,
-                  textAlign: TextAlign.right,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Expo Arabic',
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.productDescription,
-                    height: 1.35,
-                  ),
-                ),
-              ],
+                );
+              }),
             ),
-          ),
-          const Spacer(),
-          Padding(
-            padding: EdgeInsets.fromLTRB(10.w, 0, 10.w, 8.h),
-            child: _ProductPriceBar(
-              price: product.formattedPrice,
-              onAddToCart: () {
-                final cart = Get.isRegistered<CartController>()
-                    ? Get.find<CartController>()
-                    : Get.put(CartController(), permanent: true);
-                cart.addProduct(product);
-              },
-            ),
-          ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -129,67 +178,6 @@ class ProductCardWidget extends StatelessWidget {
     return SizedBox(
       height: cardHeight,
       child: card,
-    );
-  }
-}
-
-class _ProductImageSection extends StatelessWidget {
-  static const double _imageRadius = 18;
-
-  final String imageAsset;
-  final bool isFavorite;
-  final VoidCallback onFavoriteTap;
-
-  const _ProductImageSection({
-    required this.imageAsset,
-    required this.isFavorite,
-    required this.onFavoriteTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      clipBehavior: Clip.none,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(_imageRadius.r),
-          child: AppImage(
-            source: imageAsset,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorIcon: Icons.medical_services_outlined,
-          ),
-        ),
-        Positioned(
-          left: 10.w,
-          bottom: 8.h,
-          child: GestureDetector(
-            onTap: onFavoriteTap,
-            child: Container(
-              width: 32.w,
-              height: 32.w,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: AppColors.favoriteRed,
-                size: 18.sp,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -153,6 +153,19 @@ class BrandProductsController extends GetxController {
     }
   }
 
+  void updateFavoriteState(String productId, bool isFavorite) {
+    void patch(RxList<ProductModel> list) {
+      final index = list.indexWhere((product) => product.id == productId);
+      if (index == -1) return;
+      list[index] = list[index].copyWith(isFavorite: isFavorite);
+    }
+
+    patch(allProducts);
+    patch(filteredProducts);
+    allProducts.refresh();
+    filteredProducts.refresh();
+  }
+
   @override
   Future<void> refresh() async {
     await loadProducts();

@@ -22,6 +22,7 @@ const discountCodeAdminController = require('../controllers/discountCodeAdminCon
 const uploadShopImage = require('../middlewares/uploadShopImage');
 const uploadBannerImage = require('../middlewares/uploadBannerImage');
 const uploadCategoryIcon = require('../middlewares/uploadCategoryIcon');
+const uploadBrandImage = require('../middlewares/uploadBrandImage');
 
 const router = express.Router();
 
@@ -141,10 +142,11 @@ router.delete(
   validateParams(objectIdParam('id')),
   productTaxonomyController.removeSubcategory
 );
-router.post('/brands', productTaxonomyController.createBrand);
+router.post('/brands', uploadBrandImage, productTaxonomyController.createBrand);
 router.patch(
   '/brands/:id',
   validateParams(objectIdParam('id')),
+  uploadBrandImage,
   productTaxonomyController.updateBrand
 );
 router.delete(

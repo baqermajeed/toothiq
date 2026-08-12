@@ -423,6 +423,19 @@ class SectionDetailController extends GetxController {
     return _productService.filterByCategoryId(items, category.filterId);
   }
 
+  void updateFavoriteState(String productId, bool isFavorite) {
+    void patch(RxList<ProductModel> list) {
+      final index = list.indexWhere((product) => product.id == productId);
+      if (index == -1) return;
+      list[index] = list[index].copyWith(isFavorite: isFavorite);
+    }
+
+    patch(sectionProducts);
+    patch(filteredProducts);
+    sectionProducts.refresh();
+    filteredProducts.refresh();
+  }
+
   @override
   Future<void> refresh() async {
     await loadSectionData();

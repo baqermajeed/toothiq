@@ -4,6 +4,7 @@ const productBrandSchema = new mongoose.Schema(
   {
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     nameAr: { type: String, required: true, trim: true },
+    image: { type: String, trim: true, default: '' },
     order: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
   },

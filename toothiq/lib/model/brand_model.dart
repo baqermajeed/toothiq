@@ -4,22 +4,39 @@ import 'product_model.dart';
 class BrandModel {
   final String id;
   final String name;
-  final String logoAsset;
+  final String imageUrl;
 
   const BrandModel({
     required this.id,
     required this.name,
-    this.logoAsset = 'assets/images/stores/store_logo.png',
+    this.imageUrl = '',
   });
+
+  /// توافق مع الاستخدامات القديمة التي كانت تقرأ `logoAsset`.
+  String get logoAsset => imageUrl;
+
+  bool get hasImage => imageUrl.trim().isNotEmpty;
 
   factory BrandModel.fromJson(Map<String, dynamic> json) {
     return BrandModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       name: json['nameAr']?.toString() ?? json['name']?.toString() ?? '',
-      logoAsset: ImageUrl.resolve(
-        json['image']?.toString() ?? json['logo']?.toString(),
-        fallback: 'assets/images/stores/store_logo.png',
+      imageUrl: ImageUrl.resolve(
+        json['image']?.toString() ?? json['logo']?.toString() ?? json['logoAsset']?.toString(),
+        fallback: '',
       ),
+    );
+  }
+
+  BrandModel copyWith({
+    String? id,
+    String? name,
+    String? imageUrl,
+  }) {
+    return BrandModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 

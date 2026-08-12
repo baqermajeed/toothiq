@@ -1,6 +1,11 @@
 import { useRef } from 'react'
 
-const presetIconModules = import.meta.glob('../assets/iconcategort/*.png', {
+const categoryPresetModules = import.meta.glob('../assets/iconcategort/*.png', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
+const brandPresetModules = import.meta.glob('../assets/brandicon/*.png', {
   eager: true,
   import: 'default',
 }) as Record<string, string>
@@ -15,16 +20,21 @@ export type CategoryIconValue =
   | { kind: 'preset'; preset: PresetCategoryIcon }
   | { kind: 'custom'; file: File; previewUrl: string }
 
-export const PRESET_CATEGORY_ICONS: PresetCategoryIcon[] = Object.entries(presetIconModules)
-  .map(([path, url]) => {
-    const fileName = path.split('/').pop() ?? path
-    return {
-      id: fileName,
-      label: fileName.replace(/\.png$/i, ''),
-      url,
-    }
-  })
-  .sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+function mapPresetModules(modules: Record<string, string>): PresetCategoryIcon[] {
+  return Object.entries(modules)
+    .map(([path, url]) => {
+      const fileName = path.split('/').pop() ?? path
+      return {
+        id: fileName,
+        label: fileName.replace(/\.png$/i, ''),
+        url,
+      }
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+}
+
+export const PRESET_CATEGORY_ICONS = mapPresetModules(categoryPresetModules)
+export const PRESET_BRAND_ICONS = mapPresetModules(brandPresetModules)
 
 export async function iconValueToFile(value: CategoryIconValue): Promise<File> {
   if (value.kind === 'custom') return value.file
@@ -37,9 +47,17 @@ type Props = {
   value: CategoryIconValue | null
   onChange: (value: CategoryIconValue | null) => void
   error?: string
+  label?: string
+  presets?: PresetCategoryIcon[]
 }
 
-export function CategoryIconPicker({ value, onChange, error }: Props) {
+export function CategoryIconPicker({
+  value,
+  onChange,
+  error,
+  label = 'أيقونة القسم *',
+  presets = PRESET_CATEGORY_ICONS,
+}: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function selectPreset(preset: PresetCategoryIcon) {
@@ -56,14 +74,14 @@ export function CategoryIconPicker({ value, onChange, error }: Props) {
 
   return (
     <div className="category-icon-picker">
-      <label className="field-label">أيقونة القسم *</label>
+      <label className="field-label">{label}</label>
       {previewUrl ? (
         <div className="category-icon-preview">
-          <img src={previewUrl} alt="أيقونة القسم المختارة" />
+          <img src={previewUrl} alt={label} />
         </div>
       ) : null}
       <div className="category-icon-grid">
-        {PRESET_CATEGORY_ICONS.map((preset) => {
+        {presets.map((preset) => {
           const selected = value?.kind === 'preset' && value.preset.id === preset.id
           return (
             <button
@@ -87,9 +105,9 @@ export function CategoryIconPicker({ value, onChange, error }: Props) {
           onChange={(e) => onCustomPicked(e.target.files?.[0] ?? null)}
         />
         <button type="button" className="btn" onClick={() => fileInputRef.current?.click()}>
-          رفع أيقونة جديدة
+          رفع صورة جديدة
         </button>
-        {value?.kind === 'custom' ? <span className="muted">تم اختيار أيقونة مخصصة</span> : null}
+        {value?.kind === 'custom' ? <span className="muted">تم اختيار صورة مخصصة</span> : null}
       </div>
       {error ? <div className="field-error">{error}</div> : null}
     </div>

@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
+import '../../controller/brand_products_controller.dart';
 import '../../controller/home_controller.dart';
+import '../../controller/section_detail_controller.dart';
 import '../../controller/store_detail_controller.dart';
 import '../../model/product_model.dart';
 import '../../utils/storage_keys.dart';
@@ -75,6 +77,18 @@ class FavoritesService extends GetxService {
     }
     if (Get.isRegistered<StoreDetailController>()) {
       Get.find<StoreDetailController>().updateFavoriteState(
+        productId,
+        isFavorite,
+      );
+    }
+    if (Get.isRegistered<SectionDetailController>()) {
+      Get.find<SectionDetailController>().updateFavoriteState(
+        productId,
+        isFavorite,
+      );
+    }
+    if (Get.isRegistered<BrandProductsController>()) {
+      Get.find<BrandProductsController>().updateFavoriteState(
         productId,
         isFavorite,
       );

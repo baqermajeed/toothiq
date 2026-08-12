@@ -11,7 +11,7 @@ import '../../view/search/search_page.dart';
 import '../../widget/app_bottom_navigation.dart';
 import '../../widget/home/category_chip_widget.dart';
 import '../../widget/home/home_banner_carousel.dart';
-import '../../widget/home/product_card_widget.dart';
+import '../../widget/home/products_grid_widget.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/search_filter_row.dart';
@@ -187,24 +187,9 @@ class _HomePageState extends State<HomePage> {
                       else
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: GridView.builder(
+                          child: ProductsGridWidget(
+                            products: home.products.toList(growable: false),
                             shrinkWrap: true,
-                            primary: false,
-                            padding: EdgeInsets.zero,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: home.products.length,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12.w,
-                              mainAxisSpacing: 10.h,
-                              mainAxisExtent: ProductCardWidget.cardHeight,
-                            ),
-                            itemBuilder: (context, index) {
-                              return ProductCardWidget(
-                                product: home.products[index],
-                              );
-                            },
                           ),
                         ),
                       AppLoadMoreFooter(

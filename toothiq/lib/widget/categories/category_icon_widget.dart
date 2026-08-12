@@ -9,50 +9,43 @@ class CategoryIconWidget extends StatelessWidget {
     super.key,
     required this.category,
     this.size,
-    this.backgroundColor,
   });
 
   final CategoryModel category;
   final double? size;
-  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
-    final boxSize = size ?? 40.w;
-    final imageSize = boxSize * 0.72;
-    final bg = backgroundColor ?? category.iconColor.withValues(alpha: 0.12);
+    final iconSize = size ?? 56.w;
 
-    return Container(
-      width: boxSize,
-      height: boxSize,
-      decoration: BoxDecoration(
-        color: bg,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: category.hasIconImage
-          ? ClipOval(
-              child: Image.network(
-                ImageUrl.resolve(category.iconUrl),
-                width: imageSize,
-                height: imageSize,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => _fallbackIcon(imageSize),
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return SizedBox(
-                    width: imageSize * 0.5,
-                    height: imageSize * 0.5,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: category.iconColor,
-                    ),
-                  );
-                },
+    if (category.hasIconImage) {
+      return Image.network(
+        ImageUrl.resolve(category.iconUrl),
+        width: iconSize,
+        height: iconSize,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _fallbackIcon(iconSize),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            width: iconSize,
+            height: iconSize,
+            child: Center(
+              child: SizedBox(
+                width: iconSize * 0.4,
+                height: iconSize * 0.4,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: category.iconColor,
+                ),
               ),
-            )
-          : _fallbackIcon(imageSize),
-    );
+            ),
+          );
+        },
+      );
+    }
+
+    return _fallbackIcon(iconSize);
   }
 
   Widget _fallbackIcon(double iconSize) {

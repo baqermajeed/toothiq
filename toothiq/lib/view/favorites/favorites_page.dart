@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import '../../service_layer/services/favorites_service.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
-import '../../widget/home/product_card_widget.dart';
+import '../../widget/home/products_grid_widget.dart';
 import '../../widget/section/section_app_bar.dart';
 
 class FavoritesPage extends StatelessWidget {
@@ -35,22 +35,11 @@ class FavoritesPage extends StatelessWidget {
             );
           }
 
-          return GridView.builder(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
+          return ProductsGridWidget(
+            products: items.toList(growable: false),
             padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12.w,
-              mainAxisSpacing: 14.h,
-              childAspectRatio: 0.55,
-            ),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final product = items[index];
-              return ProductCardWidget(product: product);
-            },
+            emptyTitle: 'لا توجد منتجات في المفضلة',
+            emptySubtitle: 'اضغط على القلب في أي منتج لإضافته هنا',
           );
         }),
       ),

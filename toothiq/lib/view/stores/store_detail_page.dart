@@ -9,6 +9,7 @@ import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/categories/category_card_widget.dart';
 import '../../widget/home/product_card_widget.dart';
+import '../../widget/home/products_grid_widget.dart';
 import '../../widget/my_text.dart';
 import '../../widget/search_filter_row.dart';
 import '../../widget/section/brand_card_widget.dart';
@@ -201,19 +202,9 @@ class _ProductsTabContent extends StatelessWidget {
             SizedBox(height: 14.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: GridView.builder(
+              child: ProductsGridWidget(
+                products: products,
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: products.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12.w,
-                  mainAxisSpacing: 14.h,
-                  childAspectRatio: 0.55,
-                ),
-                itemBuilder: (context, index) {
-                  return ProductCardWidget(product: products[index]);
-                },
               ),
             ),
             AppLoadMoreFooter(

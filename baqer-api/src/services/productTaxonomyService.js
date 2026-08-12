@@ -67,6 +67,7 @@ async function createBrand(body) {
   return ProductBrand.create({
     categoryId: body.categoryId,
     nameAr,
+    image: String(body.image || '').trim(),
     order: body.order != null ? Number(body.order) : 0,
     isActive: body.isActive !== false,
   });
@@ -82,6 +83,7 @@ async function updateBrand(id, body) {
     row.categoryId = body.categoryId;
   }
   if (body.nameAr !== undefined) row.nameAr = String(body.nameAr).trim();
+  if (body.image !== undefined) row.image = String(body.image || '').trim();
   if (body.order !== undefined) row.order = Number(body.order);
   if (body.isActive !== undefined) row.isActive = body.isActive !== false;
   await row.save();

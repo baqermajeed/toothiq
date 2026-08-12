@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/constants/brand_preset_icons.dart';
 import '../../core/constants/category_preset_icons.dart';
 
 import '../../model/auth_session_model.dart';
@@ -522,7 +523,8 @@ class ApiClient {
   Future<MultipartFile?> _multipartImageFromPath(String? imagePath) async {
     if (imagePath == null || imagePath.isEmpty) return null;
 
-    if (CategoryPresetIcons.isAssetPath(imagePath)) {
+    if (CategoryPresetIcons.isAssetPath(imagePath) ||
+        BrandPresetIcons.isAssetPath(imagePath)) {
       final data = await rootBundle.load(imagePath);
       final fileName = imagePath.split('/').last;
       return MultipartFile.fromBytes(

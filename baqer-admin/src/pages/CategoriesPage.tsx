@@ -4,6 +4,7 @@ import { assetUrl } from '../lib/api'
 import { adminApi } from '../api/admin'
 import {
   CategoryIconPicker,
+  PRESET_BRAND_ICONS,
   iconValueToFile,
   type CategoryIconValue,
 } from '../components/CategoryIconPicker'
@@ -22,6 +23,8 @@ export function CategoriesPage() {
   const [subcategoryNameAr, setSubcategoryNameAr] = useState('')
   const [brandCategoryId, setBrandCategoryId] = useState('')
   const [brandNameAr, setBrandNameAr] = useState('')
+  const [brandImage, setBrandImage] = useState<CategoryIconValue | null>(null)
+  const [brandImageError, setBrandImageError] = useState('')
 
   async function load() {
     setErr('')
@@ -109,12 +112,22 @@ export function CategoriesPage() {
   async function onCreateBrand(e: FormEvent) {
     e.preventDefault()
     setErr('')
+    setMsg('')
+    setBrandImageError('')
+    if (!brandImage) {
+      setBrandImageError('اختر صورة للبراند')
+      return
+    }
     try {
-      await adminApi.productTaxonomy.createBrand({
-        categoryId: brandCategoryId,
-        nameAr: brandNameAr,
-      })
+      const imageFile = await iconValueToFile(brandImage)
+      const form = new FormData()
+      form.append('categoryId', brandCategoryId)
+      form.append('nameAr', brandNameAr.trim())
+      form.append('isActive', 'true')
+      form.append('image', imageFile)
+      await adminApi.productTaxonomy.createBrand(form)
       setBrandNameAr('')
+      setBrandImage(null)
       setMsg('تمت إضافة البراند')
       void load()
     } catch (ex) {
@@ -188,6 +201,13 @@ export function CategoriesPage() {
           <label>اسم البراند</label>
           <input className="input" value={brandNameAr} onChange={(e) => setBrandNameAr(e.target.value)} required />
         </div>
+        <CategoryIconPicker
+          value={brandImage}
+          onChange={setBrandImage}
+          error={brandImageError}
+          label="صورة البراند *"
+          presets={PRESET_BRAND_ICONS}
+        />
         <button type="submit" className="btn btn-primary">
           إضافة
         </button>
@@ -276,7 +296,17 @@ export function CategoriesPage() {
             {brands.map((b) => (
               <tr key={`brand-${String(b._id)}`}>
                 <td>براند</td>
-                <td>—</td>
+                <td>
+                  {b.image ? (
+                    <img
+                      className="category-icon-cell"
+                      src={assetUrl(String(b.image))}
+                      alt=""
+                    />
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td>{String(b.nameAr ?? '')}</td>
                 <td>{categoryName(b.categoryId)}</td>
                 <td>{b.isActive !== false ? 'نعم' : 'لا'}</td>

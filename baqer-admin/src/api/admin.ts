@@ -135,15 +135,12 @@ export const adminApi = {
         body: JSON.stringify(body),
       }),
     removeSubcategory: (id: string) => apiFetch<unknown>(`/api/admin/product-subcategories/${id}`, { method: 'DELETE' }),
-    createBrand: (body: Record<string, unknown>) =>
-      apiFetch<Record<string, unknown>>('/api/admin/brands', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    patchBrand: (id: string, body: Record<string, unknown>) =>
+    createBrand: (form: FormData) =>
+      apiFetch<Record<string, unknown>>('/api/admin/brands', { method: 'POST', body: form }),
+    patchBrand: (id: string, body: Record<string, unknown> | FormData) =>
       apiFetch<Record<string, unknown>>(`/api/admin/brands/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(body),
+        body: body instanceof FormData ? body : JSON.stringify(body),
       }),
     removeBrand: (id: string) => apiFetch<unknown>(`/api/admin/brands/${id}`, { method: 'DELETE' }),
   },

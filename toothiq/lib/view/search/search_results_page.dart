@@ -264,12 +264,7 @@ class _SearchResultsBody extends StatelessWidget {
           SliverPadding(
             padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 24.h),
             sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12.w,
-                mainAxisSpacing: 14.h,
-                childAspectRatio: 0.55,
-              ),
+              gridDelegate: ProductCardWidget.gridDelegate,
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   if (index >= search.products.length) {

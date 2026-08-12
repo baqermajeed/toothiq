@@ -3,12 +3,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../controller/shop_catalog_controller.dart';
+import '../../core/constants/brand_preset_icons.dart';
 import '../../model/shop_brand.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/auth_text_field.dart';
 import '../../widget/my_text.dart';
 import '../../widget/shop/app_image.dart';
-import '../../widget/shop/image_picker_box.dart';
+import '../../widget/shop/brand_icon_picker.dart';
 
 class ShopBrandsPage extends StatelessWidget {
   const ShopBrandsPage({super.key});
@@ -182,12 +183,14 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   String? _logoPath;
+  String? _iconError;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.brand?.nameAr ?? '');
-    _logoPath = widget.brand?.logoPath;
+    final existing = widget.brand?.logoPath;
+    _logoPath = BrandPresetIcons.isAssetPath(existing) ? existing : null;
   }
 
   @override
@@ -197,7 +200,12 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
   }
 
   Future<void> _save() async {
+    setState(() => _iconError = null);
     if (!_formKey.currentState!.validate()) return;
+    if (!BrandPresetIcons.isAssetPath(_logoPath)) {
+      setState(() => _iconError = 'اختر أيقونة للبراند');
+      return;
+    }
     final ctrl = Get.find<ShopCatalogController>();
     if (widget.brand != null) {
       await ctrl.updateBrand(
@@ -241,14 +249,13 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
               SizedBox(height: 16.h),
               MyText(isEdit ? 'تعديل البراند' : 'إضافة براند جديد', fontSize: 17.sp),
               SizedBox(height: 20.h),
-              Center(
-                child: ImagePickerBox(
-                  label: 'شعار البراند',
-                  imagePath: _logoPath,
-                  size: 90,
-                  icon: Icons.verified_outlined,
-                  onPicked: (p) => setState(() => _logoPath = p),
-                ),
+              BrandIconPicker(
+                selectedAssetPath: _logoPath,
+                errorText: _iconError,
+                onSelected: (path) => setState(() {
+                  _logoPath = path;
+                  _iconError = null;
+                }),
               ),
               SizedBox(height: 16.h),
               AuthTextField(

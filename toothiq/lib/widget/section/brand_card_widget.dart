@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../model/brand_model.dart';
-import '../../utils/app_colors.dart';
+import '../app_image.dart';
 import '../my_text.dart';
 
 class BrandCardWidget extends StatelessWidget {
@@ -19,6 +19,7 @@ class BrandCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     const designShadow = Color(0x61659AB9);
     final radius = BorderRadius.circular(20.65.r);
+    final imageSize = 56.w;
 
     return GestureDetector(
       onTap: onTap,
@@ -43,19 +44,12 @@ class BrandCardWidget extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10.5.r),
-                  child: Image.asset(
-                    brand.logoAsset,
-                    width: 38.w,
-                    height: 38.w,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.medical_services_outlined,
-                      size: 22.sp,
-                      color: AppColors.productStore,
-                    ),
-                  ),
+                AppImage(
+                  source: brand.imageUrl,
+                  width: imageSize,
+                  height: imageSize,
+                  fit: BoxFit.contain,
+                  errorIcon: Icons.storefront_outlined,
                 ),
                 MyText(
                   brand.name,
