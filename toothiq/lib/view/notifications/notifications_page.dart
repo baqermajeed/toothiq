@@ -6,10 +6,9 @@ import '../../bindings/notifications_binding.dart';
 import '../../controller/notifications_controller.dart';
 import '../../model/notification_model.dart';
 import '../../utils/app_colors.dart';
+import '../../widget/app_back_button.dart';
 import '../../widget/common/async_state_widgets.dart';
-import '../../widget/my_text.dart';
 import '../../widget/notifications/notification_card_widget.dart';
-import '../../widget/section/section_app_bar.dart';
 
 class NotificationsPage extends GetView<NotificationsController> {
   const NotificationsPage({super.key});
@@ -21,105 +20,184 @@ class NotificationsPage extends GetView<NotificationsController> {
     );
   }
 
+  Future<void> _markReadAndLeave() async {
+    await controller.markAllAsRead();
+    if (Get.key.currentState?.canPop() ?? false) {
+      Get.back();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.settingsPageBackground,
-        appBar: const SectionAppBar(title: 'الأشعارات'),
-        body: Obx(() {
-          if (controller.isLoading.value && controller.notifications.isEmpty) {
-            return const AppLoadingState();
-          }
-
-          if (controller.loadError.value != null &&
-              controller.notifications.isEmpty) {
-            return AppErrorState(
-              message: controller.loadError.value!,
-              onRetry: controller.refresh,
-            );
-          }
-
-          if (controller.notifications.isEmpty) {
-            return const AppEmptyState(
-              title: 'لا توجد إشعارات',
-              subtitle: 'ستظهر إشعاراتك هنا عند وصولها',
-              icon: Icons.notifications_none_rounded,
-            );
-          }
-
-          return RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: controller.refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
-              ),
-              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) _markReadAndLeave();
+        },
+        child: Scaffold(
+          backgroundColor: NotificationCardMetrics.pageBackground,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _NotificationSection(
-                  title: 'اليوم',
-                  items: controller.byGroup(NotificationDayGroup.today),
-                  onTap: controller.onNotificationTap,
-                ),
-                SizedBox(height: 8.h),
-                _NotificationSection(
-                  title: 'أمس',
-                  items: controller.byGroup(NotificationDayGroup.yesterday),
-                  onTap: controller.onNotificationTap,
-                ),
-                SizedBox(height: 8.h),
-                _NotificationSection(
-                  title: 'أقدم',
-                  items: controller.byGroup(NotificationDayGroup.older),
-                  onTap: controller.onNotificationTap,
+                _NotificationsHeader(onBack: _markReadAndLeave),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.isLoading.value &&
+                        controller.notifications.isEmpty) {
+                      return const AppLoadingState();
+                    }
+
+                    if (controller.loadError.value != null &&
+                        controller.notifications.isEmpty) {
+                      return AppErrorState(
+                        message: controller.loadError.value!,
+                        onRetry: controller.refresh,
+                      );
+                    }
+
+                    if (controller.notifications.isEmpty) {
+                      return RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: controller.refresh,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          children: [
+                            SizedBox(height: 160.h),
+                            Center(
+                              child: Text(
+                                'لا توجد إشعارات',
+                                style: TextStyle(
+                                  fontFamily: 'Expo Arabic',
+                                  fontSize: 15.96.sp,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.5,
+                                  color: const Color(0xFF022B2F)
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: controller.refresh,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: EdgeInsets.fromLTRB(
+                          20.w,
+                          0,
+                          20.w,
+                          24.h + bottomInset,
+                        ),
+                        children: [
+                          for (final group in NotificationDayGroup.values) ...[
+                            if (controller.byGroup(group).isNotEmpty) ...[
+                              _GroupHeader(label: group.groupTitle),
+                              SizedBox(height: 12.h),
+                              for (final item
+                                  in controller.byGroup(group)) ...[
+                                NotificationCardWidget(
+                                  notification: item,
+                                  onTap: item.isOrderNotification
+                                      ? () =>
+                                          controller.onNotificationTap(item)
+                                      : null,
+                                ),
+                                SizedBox(height: 12.h),
+                              ],
+                              SizedBox(height: 8.h),
+                            ],
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
                 ),
               ],
             ),
-          );
-        }),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _NotificationSection extends StatelessWidget {
-  final String title;
-  final List<AppNotificationModel> items;
-  final void Function(AppNotificationModel item) onTap;
+extension on NotificationDayGroup {
+  String get groupTitle => switch (this) {
+        NotificationDayGroup.today => 'اليوم',
+        NotificationDayGroup.yesterday => 'أمس',
+        NotificationDayGroup.older => 'أقدم',
+      };
+}
 
-  const _NotificationSection({
-    required this.title,
-    required this.items,
-    required this.onTap,
-  });
+class _NotificationsHeader extends StatelessWidget {
+  const _NotificationsHeader({required this.onBack});
+
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        MyText(
-          title,
-          fontSize: 16.sp,
-          fontWeight: FontWeight.w800,
-          color: AppColors.textPrimary,
-          textAlign: TextAlign.right,
-        ),
-        SizedBox(height: 10.h),
-        ...items.map(
-          (item) => Padding(
-            padding: EdgeInsets.only(bottom: 10.h),
-            child: NotificationCardWidget(
-              notification: item,
-              onTap: () => onTap(item),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+      child: Row(
+        textDirection: TextDirection.ltr,
+        children: [
+          AppBackButton(onPressed: onBack),
+          Expanded(
+            child: Text(
+              'الأشعارات',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Expo Arabic',
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.productTitle,
+              ),
             ),
           ),
+          SizedBox(width: 34.w + 12.w),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 4.h),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Expo Arabic',
+            fontSize: 15.96.sp,
+            fontWeight: FontWeight.w700,
+            height: 1.5,
+            color: const Color(0xFF022B2F).withValues(alpha: 0.6),
+          ),
+          textAlign: TextAlign.right,
+          textDirection: TextDirection.rtl,
         ),
-      ],
+      ),
     );
   }
 }

@@ -8,7 +8,8 @@ import '../../utils/app_colors.dart';
 import '../../widget/auth_text_field.dart';
 import '../../widget/my_text.dart';
 import '../../widget/shop/app_image.dart';
-import '../../widget/shop/image_picker_box.dart';
+import '../../widget/shop/category_icon_picker.dart';
+import '../../core/constants/category_preset_icons.dart';
 
 class ShopCategoriesPage extends StatefulWidget {
   const ShopCategoriesPage({super.key});
@@ -40,7 +41,7 @@ class _ShopCategoriesPageState extends State<ShopCategoriesPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(context),
+        onPressed: () => _openAddOptions(context),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: MyText('قسم جديد', fontSize: 13.sp, color: Colors.white),
@@ -89,6 +90,139 @@ class _ShopCategoriesPageState extends State<ShopCategoriesPage> {
           },
         );
       }),
+    );
+  }
+
+  void _openAddOptions(BuildContext context) {
+    final controller = Get.find<ShopCatalogController>();
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 24.h),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            MyText('إضافة قسم للمتجر', fontSize: 17.sp),
+            SizedBox(height: 16.h),
+            ListTile(
+              leading: Icon(Icons.admin_panel_settings_outlined, color: AppColors.primary),
+              title: const Text('من أقسام الإدارة', style: TextStyle(fontFamily: 'Expo Arabic')),
+              subtitle: const Text(
+                'اختر قسماً جاهزاً من لوحة التحكم',
+                style: TextStyle(fontFamily: 'Expo Arabic'),
+              ),
+              onTap: () {
+                Get.back();
+                _openAdminCategoryPicker(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.add_circle_outline, color: AppColors.primary),
+              title: const Text('قسم مخصص', style: TextStyle(fontFamily: 'Expo Arabic')),
+              subtitle: const Text(
+                'أنشئ قسماً خاصاً بمتجرك',
+                style: TextStyle(fontFamily: 'Expo Arabic'),
+              ),
+              onTap: () {
+                Get.back();
+                _openForm(context);
+              },
+            ),
+            if (controller.availableAdminCategories.isEmpty)
+              Padding(
+                padding: EdgeInsets.only(top: 4.h),
+                child: MyText(
+                  'جميع أقسام الإدارة مضافة لمتجرك',
+                  fontSize: 11.sp,
+                  color: AppColors.textLight,
+                ),
+              ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  void _openAdminCategoryPicker(BuildContext context) {
+    final controller = Get.find<ShopCatalogController>();
+    final available = controller.availableAdminCategories;
+    if (available.isEmpty) {
+      Get.snackbar('تنبيه', 'جميع أقسام الإدارة مضافة لمتجرك بالفعل');
+      return;
+    }
+
+    Get.bottomSheet(
+      Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            MyText('اختر من أقسام الإدارة', fontSize: 17.sp),
+            SizedBox(height: 12.h),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: available.length,
+                separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                itemBuilder: (context, index) {
+                  final category = available[index];
+                  return ListTile(
+                    leading: AppImage(
+                      path: category.imagePath,
+                      width: 40.w,
+                      height: 40.w,
+                      borderRadius: BorderRadius.circular(10.r),
+                      icon: Icons.category_outlined,
+                    ),
+                    title: Text(category.nameAr, style: const TextStyle(fontFamily: 'Expo Arabic')),
+                    trailing: Icon(Icons.add, color: AppColors.primary, size: 22.sp),
+                    onTap: () async {
+                      Get.back();
+                      await controller.addAdminCategory(category.id);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 
@@ -160,7 +294,7 @@ class _CategoryCard extends StatelessWidget {
                 MyText(category.nameAr, fontSize: 14.sp),
                 SizedBox(height: 4.h),
                 MyText(
-                  '${category.productCount} منتج',
+                  category.isAdminLinked ? 'قسم إدارة' : '${category.productCount} منتج',
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w500,
                   color: AppColors.textSecondary,
@@ -168,7 +302,8 @@ class _CategoryCard extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+          if (!category.isAdminLinked)
+            IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
           IconButton(
             onPressed: onDelete,
             icon: Icon(Icons.delete_outline, color: AppColors.error, size: 22.sp),
@@ -191,13 +326,17 @@ class _CategoryFormSheet extends StatefulWidget {
 class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
-  String? _imagePath;
+  String? _selectedIconAsset;
+  String? _iconError;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.category?.nameAr ?? '');
-    _imagePath = widget.category?.imagePath;
+    final existing = widget.category?.imagePath;
+    if (existing != null && CategoryPresetIcons.isAssetPath(existing)) {
+      _selectedIconAsset = existing;
+    }
   }
 
   @override
@@ -208,13 +347,22 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final isEdit = widget.category != null;
+    if (!isEdit && _selectedIconAsset == null) {
+      setState(() => _iconError = 'اختر أيقونة للقسم');
+      return;
+    }
     final ctrl = Get.find<ShopCatalogController>();
-    if (widget.category != null) {
+    if (isEdit) {
       await ctrl.updateCategory(
-        widget.category!.copyWith(nameAr: _name.text.trim(), imagePath: _imagePath),
+        widget.category!.copyWith(nameAr: _name.text.trim()),
+        iconAssetPath: _selectedIconAsset,
       );
     } else {
-      await ctrl.addCategory(nameAr: _name.text, imagePath: _imagePath);
+      await ctrl.addCategory(
+        nameAr: _name.text.trim(),
+        iconAssetPath: _selectedIconAsset!,
+      );
     }
     Get.back();
   }
@@ -249,16 +397,15 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                 ),
               ),
               SizedBox(height: 16.h),
-              MyText(isEdit ? 'تعديل القسم' : 'إضافة قسم جديد', fontSize: 17.sp),
-              SizedBox(height: 20.h),
-              Center(
-                child: ImagePickerBox(
-                  label: 'صورة القسم (اختياري)',
-                  imagePath: _imagePath,
-                  size: 90,
-                  icon: Icons.category_outlined,
-                  onPicked: (p) => setState(() => _imagePath = p),
-                ),
+              MyText(isEdit ? 'تعديل القسم' : 'إضافة قسم مخصص', fontSize: 17.sp),
+              SizedBox(height: 16.h),
+              CategoryIconPicker(
+                selectedAssetPath: _selectedIconAsset,
+                errorText: _iconError,
+                onSelected: (assetPath) => setState(() {
+                  _selectedIconAsset = assetPath;
+                  _iconError = null;
+                }),
               ),
               SizedBox(height: 16.h),
               AuthTextField(

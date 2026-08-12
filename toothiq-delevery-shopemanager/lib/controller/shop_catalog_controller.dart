@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../core/constants/category_preset_icons.dart';
 import '../bindings/app_binding.dart';
 import '../controller/session_controller.dart';
 import '../controller/shop_products_controller.dart';
@@ -98,15 +99,91 @@ class ShopCatalogController extends GetxController {
     }
   }
 
-  Future<void> addCategory({required String nameAr, String? imagePath}) async {
-    Get.snackbar(
-      'غير متاح',
-      'إضافة الأقسام تتم من لوحة التحكم',
-    );
+  Future<void> addCategory({
+    required String nameAr,
+    required String iconAssetPath,
+  }) async {
+    final shopId = _session.shopId.value;
+    if (shopId.isEmpty) return;
+    if (!CategoryPresetIcons.isAssetPath(iconAssetPath)) {
+      Get.snackbar('تنبيه', 'اختر أيقونة للقسم');
+      return;
+    }
+
+    isSaving.value = true;
+    try {
+      final created = await _shopService.createCategory(
+        shopId: shopId,
+        nameAr: nameAr,
+        imagePath: iconAssetPath,
+      );
+      shopCategories.add(_withProductCount(_resolveCategoryImage(created)));
+      Get.snackbar('تمت الإضافة', 'تم إضافة القسم المخصص لمتجرك');
+    } catch (error) {
+      Get.snackbar('خطأ', apiErrorMessage(error));
+    } finally {
+      isSaving.value = false;
+    }
   }
 
-  Future<void> updateCategory(ShopCategory category) async {
-    Get.snackbar('غير متاح', 'تعديل الأقسام من التطبيق قيد التطوير');
+  Future<void> addAdminCategory(String parentCategoryId) async {
+    final shopId = _session.shopId.value;
+    if (shopId.isEmpty) return;
+
+    isSaving.value = true;
+    try {
+      final created = await _shopService.addAdminCategory(
+        shopId: shopId,
+        parentCategoryId: parentCategoryId,
+      );
+      shopCategories.add(_withProductCount(_resolveCategoryImage(created)));
+      Get.snackbar('تمت الإضافة', 'تم إضافة القسم من أقسام الإدارة لمتجرك');
+    } catch (error) {
+      Get.snackbar('خطأ', apiErrorMessage(error));
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /// أقسام الإدارة التي لم يُضفها المتجر بعد.
+  List<ShopCategory> get availableAdminCategories {
+    final linkedParentIds = shopCategories
+        .map((c) => c.parentCategoryId)
+        .whereType<String>()
+        .toSet();
+    return categories
+        .where((c) => !linkedParentIds.contains(c.id))
+        .toList(growable: false);
+  }
+
+  Future<void> updateCategory(
+    ShopCategory category, {
+    String? iconAssetPath,
+  }) async {
+    final shopId = _session.shopId.value;
+    if (shopId.isEmpty) return;
+    if (category.isAdminLinked) {
+      Get.snackbar('تنبيه', 'لا يمكن تعديل اسم قسم مرتبط بقسم الإدارة');
+      return;
+    }
+    isSaving.value = true;
+    try {
+      final updated = await _shopService.updateCategoryInShop(
+        shopId: shopId,
+        categoryId: category.id,
+        nameAr: category.nameAr,
+        imagePath: iconAssetPath ?? category.imagePath,
+      );
+      final index = shopCategories.indexWhere((c) => c.id == category.id);
+      if (index >= 0) {
+        shopCategories[index] = _withProductCount(_resolveCategoryImage(updated));
+      }
+      Get.snackbar('تم الحفظ', 'تم تحديث القسم بنجاح');
+    } catch (error) {
+      Get.snackbar('خطأ', apiErrorMessage(error));
+    } finally {
+      isSaving.value = false;
+    }
   }
 
   Future<void> removeCategory(String id) async {

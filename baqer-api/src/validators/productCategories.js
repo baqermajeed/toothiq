@@ -1,12 +1,20 @@
 const Joi = require('joi');
 
 const createProductCategorySchema = Joi.object({
-  nameAr: Joi.string().trim().min(1).max(100).required(),
+  nameAr: Joi.string().trim().min(1).max(100).when('parentCategoryId', {
+    is: Joi.exist().not(null, ''),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
   parentCategoryId: Joi.string().trim().allow('', null),
   subcategoryId: Joi.string().trim().allow('', null),
   order: Joi.number().integer().min(0).empty(''),
   isActive: Joi.boolean().truthy('true', '1').falsy('false', '0', ''),
-  image: Joi.string().trim().allow('', null),
+  image: Joi.string().trim().min(1).when('parentCategoryId', {
+    is: Joi.exist().not(null, ''),
+    then: Joi.optional().allow('', null),
+    otherwise: Joi.required(),
+  }),
 });
 
 const updateProductCategorySchema = Joi.object({

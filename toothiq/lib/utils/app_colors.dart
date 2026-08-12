@@ -4,6 +4,7 @@ class AppColors {
   static const Color primary = Color(0xFF14919B);
   static const Color primaryDark = Color(0xFF0E6B72);
   static const Color primaryLight = Color(0xFFE8F6F7);
+  static const Color primarySoft = Color(0xFF9FD4D9);
 
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Colors.white;
@@ -32,6 +33,8 @@ class AppColors {
   // Product card (from design)
   static const Color productTitle = Color(0xFF003D4C);
   static const Color productStore = Color(0xFF179BAE);
+  static const Color productStoreName = Color(0xFF022B2F);
+  static const Color productAccent = Color(0xFF16929E);
   static const Color productDescription = Color(0xFF555555);
   static const Color favoriteRed = Color(0xFFEF5350);
 

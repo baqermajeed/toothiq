@@ -43,7 +43,7 @@ class HomeBannerCarousel extends StatelessWidget {
               },
             ),
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 6.h),
           SmoothPageIndicator(
             controller: home.bannerPageController,
             count: banners.length,

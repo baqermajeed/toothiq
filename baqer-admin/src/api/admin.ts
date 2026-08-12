@@ -103,12 +103,12 @@ export const adminApi = {
   },
   categories: {
     list: () => apiFetch<Record<string, unknown>[]>('/api/admin/categories'),
-    create: (body: Record<string, unknown>) =>
-      apiFetch<Record<string, unknown>>('/api/admin/categories', { method: 'POST', body: JSON.stringify(body) }),
-    patch: (id: string, body: Record<string, unknown>) =>
+    create: (form: FormData) =>
+      apiFetch<Record<string, unknown>>('/api/admin/categories', { method: 'POST', body: form }),
+    patch: (id: string, body: Record<string, unknown> | FormData) =>
       apiFetch<Record<string, unknown>>(`/api/admin/categories/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(body),
+        body: body instanceof FormData ? body : JSON.stringify(body),
       }),
     remove: (id: string) => apiFetch<unknown>(`/api/admin/categories/${id}`, { method: 'DELETE' }),
     reorder: (orderedIds: string[]) =>

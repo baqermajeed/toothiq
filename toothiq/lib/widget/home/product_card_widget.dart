@@ -23,6 +23,9 @@ class ProductCardWidget extends StatelessWidget {
   static const double _fixedCardHeight = 277.56;
   static const double _imageHeight = 127.34;
 
+  /// ارتفاع الكارد بعد ScreenUtil — ليتطابق مع `mainAxisExtent` في الشبكة
+  static double get cardHeight => _fixedCardHeight.h;
+
   @override
   Widget build(BuildContext context) {
     final favorites = Get.find<FavoritesService>();
@@ -123,12 +126,9 @@ class ProductCardWidget extends StatelessWidget {
       ),
     );
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        height: _fixedCardHeight.h,
-        child: card,
-      ),
+    return SizedBox(
+      height: cardHeight,
+      child: card,
     );
   }
 }

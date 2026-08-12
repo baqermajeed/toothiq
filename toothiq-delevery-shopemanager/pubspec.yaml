@@ -46,6 +46,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/icon/
+    - assets/categaryicon/
 
   fonts:
     - family: Expo Arabic

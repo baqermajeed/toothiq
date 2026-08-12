@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
+import '../../core/constants/category_preset_icons.dart';
 
 import '../../model/auth_session_model.dart';
 import '../../model/partner_order.dart';
@@ -262,6 +265,92 @@ class ApiClient {
     );
   }
 
+  Future<ShopCategory> createShopCategory({
+    required String shopId,
+    required String nameAr,
+    String? parentCategoryId,
+    String? imagePath,
+  }) async {
+    final imagePart = await _multipartImageFromPath(imagePath);
+    if (imagePart != null) {
+      final formData = FormData.fromMap({
+        'nameAr': nameAr.trim(),
+        if (parentCategoryId != null && parentCategoryId.isNotEmpty)
+          'parentCategoryId': parentCategoryId,
+        'image': imagePart,
+      });
+      final data = await _postMultipart(
+        ApiEndpoints.shopProductCategories(shopId),
+        formData,
+      );
+      if (data is! Map<String, dynamic>) {
+        throw const ApiException('رد إنشاء القسم غير صالح');
+      }
+      return ShopCategory.fromApi(data);
+    }
+
+    if (parentCategoryId == null || parentCategoryId.isEmpty) {
+      throw const ApiException('أيقونة القسم مطلوبة');
+    }
+
+    final data = await _postSuccessData(
+      ApiEndpoints.shopProductCategories(shopId),
+      body: {'parentCategoryId': parentCategoryId},
+    );
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('رد إنشاء القسم غير صالح');
+    }
+    return ShopCategory.fromApi(data);
+  }
+
+  Future<ShopCategory> addAdminCategoryToShop({
+    required String shopId,
+    required String parentCategoryId,
+  }) async {
+    final data = await _postSuccessData(
+      ApiEndpoints.shopProductCategories(shopId),
+      body: {'parentCategoryId': parentCategoryId},
+    );
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('رد إضافة القسم غير صالح');
+    }
+    return ShopCategory.fromApi(data);
+  }
+
+  Future<ShopCategory> updateShopCategory({
+    required String shopId,
+    required String categoryId,
+    String? nameAr,
+    String? imagePath,
+  }) async {
+    final imagePart = await _multipartImageFromPath(imagePath);
+    if (imagePart != null) {
+      final formData = FormData.fromMap({
+        if (nameAr != null) 'nameAr': nameAr.trim(),
+        'image': imagePart,
+      });
+      final data = await _patchMultipart(
+        ApiEndpoints.shopProductCategory(shopId, categoryId),
+        formData,
+      );
+      if (data is! Map<String, dynamic>) {
+        throw const ApiException('رد تحديث القسم غير صالح');
+      }
+      return ShopCategory.fromApi(data);
+    }
+
+    final data = await _patchSuccessData(
+      ApiEndpoints.shopProductCategory(shopId, categoryId),
+      body: {
+        if (nameAr != null) 'nameAr': nameAr.trim(),
+      },
+    );
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('رد تحديث القسم غير صالح');
+    }
+    return ShopCategory.fromApi(data);
+  }
+
   Future<List<ShopCategory>> getCatalogCategories() async {
     final data = await _getSuccessData(ApiEndpoints.catalogCategories);
     if (data is! List) return [];
@@ -428,6 +517,25 @@ class ApiClient {
       }
     }
     handler.next(error);
+  }
+
+  Future<MultipartFile?> _multipartImageFromPath(String? imagePath) async {
+    if (imagePath == null || imagePath.isEmpty) return null;
+
+    if (CategoryPresetIcons.isAssetPath(imagePath)) {
+      final data = await rootBundle.load(imagePath);
+      final fileName = imagePath.split('/').last;
+      return MultipartFile.fromBytes(
+        data.buffer.asUint8List(),
+        filename: fileName,
+      );
+    }
+
+    if (File(imagePath).existsSync()) {
+      return MultipartFile.fromFile(imagePath);
+    }
+
+    return null;
   }
 
   Future<FormData> _productFormData({

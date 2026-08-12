@@ -16,8 +16,8 @@ class OrderCardWidget extends StatelessWidget {
     this.onTap,
   });
 
-  static const double _cardRadius = 20;
-  static const double _imageRadius = 14;
+  static const double _cardRadius = 16;
+  static const double _imageRadius = 10;
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +29,8 @@ class OrderCardWidget extends StatelessWidget {
         boxShadow: const [
           BoxShadow(
             color: AppColors.orderCardShadow,
-            blurRadius: 12,
-            offset: Offset(0, 3),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -44,7 +44,7 @@ class OrderCardWidget extends StatelessWidget {
           splashColor: AppColors.primary.withValues(alpha: 0.08),
           highlightColor: AppColors.primaryLight.withValues(alpha: 0.4),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -52,7 +52,7 @@ class OrderCardWidget extends StatelessWidget {
                   imageAsset: order.imageAsset,
                   radius: _imageRadius,
                 ),
-                SizedBox(width: 14.w),
+                SizedBox(width: 10.w),
                 Expanded(child: _OrderDetails(order: order)),
               ],
             ),
@@ -78,8 +78,8 @@ class _OrderImage extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius.r),
       child: AppImage(
         source: imageAsset,
-        width: 92.w,
-        height: 92.w,
+        width: 68.w,
+        height: 100.h,
         fit: BoxFit.cover,
         errorIcon: Icons.medical_services_rounded,
       ),
@@ -105,13 +105,13 @@ class _OrderDetails extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: 'Expo Arabic',
-            fontSize: 16.sp,
+            fontSize: 13.sp,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
-            height: 1.3,
+            height: 1.25,
           ),
         ),
-        SizedBox(height: 5.h),
+        SizedBox(height: 3.h),
         Text(
           order.storeName,
           textAlign: TextAlign.right,
@@ -119,27 +119,27 @@ class _OrderDetails extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: 'Expo Arabic',
-            fontSize: 13.sp,
+            fontSize: 11.sp,
             fontWeight: FontWeight.w600,
             color: AppColors.orderStoreName,
-            height: 1.3,
+            height: 1.25,
           ),
         ),
-        SizedBox(height: 12.h),
+        SizedBox(height: 7.h),
         const _DashedDivider(),
-        SizedBox(height: 12.h),
+        SizedBox(height: 7.h),
         Text(
           'السعر : ${order.formattedPrice}',
           textAlign: TextAlign.right,
           style: TextStyle(
             fontFamily: 'Expo Arabic',
-            fontSize: 14.sp,
+            fontSize: 12.sp,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
-            height: 1.3,
+            height: 1.25,
           ),
         ),
-        SizedBox(height: 12.h),
+        SizedBox(height: 7.h),
         _OrderStatusBadge(status: order.status),
       ],
     );
@@ -200,17 +200,17 @@ class _OrderStatusBadge extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
         color: status.backgroundColor,
-        borderRadius: BorderRadius.circular(18.r),
+        borderRadius: BorderRadius.circular(12.r),
       ),
       alignment: Alignment.center,
       child: Text(
         status.label,
         style: TextStyle(
           fontFamily: 'Expo Arabic',
-          fontSize: 13.sp,
+          fontSize: 11.sp,
           fontWeight: FontWeight.w800,
           color: status.textColor,
-          height: 1.2,
+          height: 1.15,
         ),
       ),
     );

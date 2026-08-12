@@ -1,6 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError } from '../lib/api'
+import { assetUrl } from '../lib/api'
 import { adminApi } from '../api/admin'
+import {
+  CategoryIconPicker,
+  iconValueToFile,
+  type CategoryIconValue,
+} from '../components/CategoryIconPicker'
 
 export function CategoriesPage() {
   const [categories, setCategories] = useState<Record<string, unknown>[]>([])
@@ -9,7 +15,8 @@ export function CategoriesPage() {
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [mainNameAr, setMainNameAr] = useState('')
-  const [mainIcon, setMainIcon] = useState('')
+  const [mainIcon, setMainIcon] = useState<CategoryIconValue | null>(null)
+  const [iconError, setIconError] = useState('')
   const [mainOrder, setMainOrder] = useState('0')
   const [subcategoryCategoryId, setSubcategoryCategoryId] = useState('')
   const [subcategoryNameAr, setSubcategoryNameAr] = useState('')
@@ -38,15 +45,21 @@ export function CategoriesPage() {
     e.preventDefault()
     setErr('')
     setMsg('')
+    setIconError('')
+    if (!mainIcon) {
+      setIconError('اختر أيقونة للقسم')
+      return
+    }
     try {
-      await adminApi.categories.create({
-        nameAr: mainNameAr,
-        icon: mainIcon || '',
-        order: Number(mainOrder) || 0,
-        isActive: true,
-      })
+      const iconFile = await iconValueToFile(mainIcon)
+      const form = new FormData()
+      form.append('nameAr', mainNameAr.trim())
+      form.append('order', String(Number(mainOrder) || 0))
+      form.append('isActive', 'true')
+      form.append('icon', iconFile)
+      await adminApi.categories.create(form)
       setMainNameAr('')
-      setMainIcon('')
+      setMainIcon(null)
       setMainOrder('0')
       setMsg('تم الإنشاء')
       void load()
@@ -126,10 +139,7 @@ export function CategoriesPage() {
           <label>الاسم بالعربية</label>
           <input className="input" value={mainNameAr} onChange={(e) => setMainNameAr(e.target.value)} required />
         </div>
-        <div className="field">
-          <label>أيقونة (نص اختياري)</label>
-          <input className="input" value={mainIcon} onChange={(e) => setMainIcon(e.target.value)} />
-        </div>
+        <CategoryIconPicker value={mainIcon} onChange={setMainIcon} error={iconError} />
         <div className="field">
           <label>الترتيب</label>
           <input className="input" type="number" value={mainOrder} onChange={(e) => setMainOrder(e.target.value)} />
@@ -188,6 +198,7 @@ export function CategoriesPage() {
           <thead>
             <tr>
               <th>النوع</th>
+              <th>الأيقونة</th>
               <th>الاسم</th>
               <th>التصنيف الرئيسي</th>
               <th>نشط</th>
@@ -198,6 +209,17 @@ export function CategoriesPage() {
             {categories.map((c) => (
               <tr key={String(c.id)}>
                 <td>رئيسي</td>
+                <td>
+                  {c.icon ? (
+                    <img
+                      className="category-icon-cell"
+                      src={assetUrl(String(c.icon))}
+                      alt=""
+                    />
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td>{String(c.nameAr ?? '')}</td>
                 <td>—</td>
                 <td>{c.isActive !== false ? 'نعم' : 'لا'}</td>
@@ -214,6 +236,7 @@ export function CategoriesPage() {
             {subcategories.map((s) => (
               <tr key={`sub-${String(s._id)}`}>
                 <td>فرعي</td>
+                <td>—</td>
                 <td>{String(s.nameAr ?? '')}</td>
                 <td>{categoryName(s.categoryId)}</td>
                 <td>{s.isActive !== false ? 'نعم' : 'لا'}</td>
@@ -253,6 +276,7 @@ export function CategoriesPage() {
             {brands.map((b) => (
               <tr key={`brand-${String(b._id)}`}>
                 <td>براند</td>
+                <td>—</td>
                 <td>{String(b.nameAr ?? '')}</td>
                 <td>{categoryName(b.categoryId)}</td>
                 <td>{b.isActive !== false ? 'نعم' : 'لا'}</td>

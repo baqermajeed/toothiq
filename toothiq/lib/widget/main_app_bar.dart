@@ -2,120 +2,89 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
-import '../controller/home_controller.dart';
 import '../utils/app_colors.dart';
 import '../view/basket/basket_page.dart';
 import '../view/notifications/notifications_page.dart';
+import '../service_layer/services/notification_inbox_service.dart';
 import 'cart/cart_icon.dart';
 import 'my_text.dart';
+import 'pinned_blur_gradient_background.dart';
 
-class MainAppBar extends StatefulWidget implements PreferredSizeWidget {
+/// هيدر زجاجي ضبابي للصفحات الرئيسية
+class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final ScrollController? scrollController;
   final bool showBrandLogo;
 
   static const brandLogoAsset = 'assets/images/icon/toothiqtext.png';
-  static const notificationIconAsset = 'assets/images/icon/Frame 427321658.png';
-  static const notificationNewIconAsset =
-      'assets/images/icon/Frame 427321659.png';
+  /// عند عدم وجود إشعار جديد / الكل مقروء
+  static const notificationIconAsset = 'assets/images/icon/noti11.png';
+  /// عند وجود إشعار جديد أو غير مقروء
+  static const notificationNewIconAsset = 'assets/images/icon/noti22.png';
+
+  static double toolbarHeight() => 56.h;
+  static double hideStartOffset() => 72.h;
+  static double hideAnimationRange() => 56.h;
+  static double iconSize() => 29.w;
 
   const MainAppBar({
     super.key,
     required this.title,
-    this.scrollController,
     this.showBrandLogo = false,
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(56.h);
-
-  @override
-  State<MainAppBar> createState() => _MainAppBarState();
-}
-
-class _MainAppBarState extends State<MainAppBar> {
-  bool _isScrolled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.scrollController?.addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScrollState());
-  }
-
-  @override
-  void didUpdateWidget(MainAppBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.scrollController != widget.scrollController) {
-      oldWidget.scrollController?.removeListener(_onScroll);
-      widget.scrollController?.addListener(_onScroll);
-      _updateScrollState();
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.scrollController?.removeListener(_onScroll);
-    super.dispose();
-  }
-
-  void _onScroll() => _updateScrollState();
-
-  void _updateScrollState() {
-    final controller = widget.scrollController;
-    var scrolled = false;
-    if (controller != null && controller.positions.length == 1) {
-      scrolled = controller.positions.first.pixels > 0;
-    }
-    if (scrolled == _isScrolled) return;
-    if (mounted) setState(() => _isScrolled = scrolled);
-  }
+  Size get preferredSize => Size.fromHeight(toolbarHeight());
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
-      elevation: _isScrolled ? 2 : 0,
+      elevation: 0,
       scrolledUnderElevation: 0,
-      shadowColor: AppColors.shadow,
       centerTitle: true,
-      title: widget.showBrandLogo
+      flexibleSpace: const ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(child: PinnedBlurGradientBackground()),
+            ),
+          ],
+        ),
+      ),
+      title: showBrandLogo
           ? Image.asset(
-              MainAppBar.brandLogoAsset,
+              brandLogoAsset,
               height: 22.h,
               fit: BoxFit.contain,
             )
           : MyText(
-              widget.title,
+              title,
               fontSize: 20.sp,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
       leading: IconButton(
         onPressed: () => BasketPage.open(),
-        icon: CartHeaderIcon(size: 32.w),
+        icon: CartHeaderIcon(size: MainAppBar.iconSize()),
       ),
       actions: [
         Obx(
           () {
-            final hasNotification = Get.isRegistered<HomeController>()
-                ? Get.find<HomeController>().hasNotification.value
-                : false;
+            final hasNotification =
+                Get.isRegistered<NotificationInboxService>()
+                    ? Get.find<NotificationInboxService>().hasUnread.value
+                    : false;
 
             return IconButton(
-              onPressed: () {
-                if (Get.isRegistered<HomeController>()) {
-                  Get.find<HomeController>().hasNotification.value = false;
-                }
-                NotificationsPage.open();
-              },
+              onPressed: NotificationsPage.open,
               icon: Image.asset(
                 hasNotification
-                    ? MainAppBar.notificationNewIconAsset
-                    : MainAppBar.notificationIconAsset,
-                width: 32.w,
-                height: 32.w,
+                    ? notificationNewIconAsset
+                    : notificationIconAsset,
+                width: MainAppBar.iconSize(),
+                height: MainAppBar.iconSize(),
                 fit: BoxFit.contain,
               ),
             );
@@ -123,6 +92,121 @@ class _MainAppBarState extends State<MainAppBar> {
         ),
         SizedBox(width: 4.w),
       ],
+    );
+  }
+}
+
+/// هيدر زجاجي عائم يختفي عند التمرير — للصفحة الرئيسية
+class MainGlassHeaderOverlay extends StatelessWidget {
+  const MainGlassHeaderOverlay({
+    super.key,
+    required this.scrollOffset,
+    this.showBrandLogo = true,
+    this.title = 'ToothIQ',
+  });
+
+  final double scrollOffset;
+  final bool showBrandLogo;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
+    final barHeight = topInset + MainAppBar.toolbarHeight();
+    final hideStart = MainAppBar.hideStartOffset();
+    final hideRange = MainAppBar.hideAnimationRange();
+    final hideProgress =
+        ((scrollOffset - hideStart) / hideRange).clamp(0.0, 1.0);
+    final opacity = 1.0 - hideProgress;
+
+    if (opacity <= 0) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: barHeight + 24.h,
+      child: IgnorePointer(
+        ignoring: opacity < 0.1,
+        child: Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, -12.h * hideProgress),
+            child: ClipRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: PinnedBlurGradientBackground(),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: barHeight,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: topInset),
+                      child: SizedBox(
+                        height: MainAppBar.toolbarHeight(),
+                        child: NavigationToolbar(
+                          middleSpacing: 16,
+                          leading: IconButton(
+                            onPressed: () => BasketPage.open(),
+                            icon: CartHeaderIcon(size: MainAppBar.iconSize()),
+                          ),
+                          middle: showBrandLogo
+                              ? Image.asset(
+                                  MainAppBar.brandLogoAsset,
+                                  height: 22.h,
+                                  fit: BoxFit.contain,
+                                )
+                              : MyText(
+                                  title,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Obx(
+                                () {
+                                  final hasNotification =
+                                      Get.isRegistered<
+                                              NotificationInboxService>()
+                                          ? Get.find<NotificationInboxService>()
+                                              .hasUnread
+                                              .value
+                                          : false;
+
+                                  return IconButton(
+                                    onPressed: NotificationsPage.open,
+                                    icon: Image.asset(
+                                      hasNotification
+                                          ? MainAppBar.notificationNewIconAsset
+                                          : MainAppBar.notificationIconAsset,
+                                      width: MainAppBar.iconSize(),
+                                      height: MainAppBar.iconSize(),
+                                      fit: BoxFit.contain,
+                                    ),
+                                  );
+                                },
+                              ),
+                              SizedBox(width: 4.w),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

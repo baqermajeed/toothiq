@@ -94,8 +94,15 @@ class CategoriesController extends GetxController {
           return CategoryModel(
             id: category.id,
             name: category.nameAr,
+            iconUrl: category.iconUrl,
             icon: _icons[index % _icons.length],
             iconColor: _iconColors[index % _iconColors.length],
+            source: category.isShopCategory
+                ? CategorySource.shop
+                : CategorySource.admin,
+            shopId: category.shopId,
+            productCategoryId:
+                category.isShopCategory ? category.id : null,
           );
         })
         .toList(growable: false);

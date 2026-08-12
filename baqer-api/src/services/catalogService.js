@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Category, ProductSubcategory, ProductBrand, Product, Shop } = require('../models');
+const { Category, ProductSubcategory, ProductBrand, Product, Shop, ProductCategory } = require('../models');
 const { notFound } = require('../utils/errors');
 const productService = require('./productService');
 
@@ -37,6 +37,7 @@ function mapBrandRow(b, countById = {}) {
 
 /**
  * قائمة الأقسام العامة مع عدد المنتجات المتاحة من كل المحلات.
+ * تشمل أقسام الإدارة + الأقسام المخصصة التي أضافها أصحاب المتاجر.
  */
 async function listCategories() {
   const visibleShopIds = await getVisibleShopIds();
@@ -47,13 +48,54 @@ async function listCategories() {
   ]);
   const countById = Object.fromEntries(countRows.map((r) => [r._id.toString(), r.count]));
 
-  return categories.map((c) => ({
+  const adminCategories = categories.map((c) => ({
     id: c._id.toString(),
     nameAr: c.nameAr,
     icon: c.icon || '',
     order: c.order ?? 0,
     productsCount: countById[c._id.toString()] || 0,
+    source: 'admin',
   }));
+
+  const shopCategoryCountRows = await Product.aggregate([
+    {
+      $match: {
+        isAvailable: true,
+        shopId: { $in: visibleShopIds },
+        productCategoryId: { $exists: true, $ne: null },
+      },
+    },
+    { $group: { _id: '$productCategoryId', count: { $sum: 1 } } },
+  ]);
+  const shopCategoryCountById = Object.fromEntries(
+    shopCategoryCountRows.map((r) => [r._id.toString(), r.count])
+  );
+
+  const shopCategoryIds = Object.keys(shopCategoryCountById);
+  const shopCategories =
+    shopCategoryIds.length > 0
+      ? await ProductCategory.find({
+          _id: { $in: shopCategoryIds },
+          isActive: true,
+          $or: [{ parentCategoryId: { $exists: false } }, { parentCategoryId: null }],
+        })
+          .sort({ order: 1, nameAr: 1 })
+          .lean()
+      : [];
+
+  const customCategories = shopCategories.map((c) => ({
+    id: c._id.toString(),
+    nameAr: c.nameAr,
+    icon: c.image || '',
+    order: (c.order ?? 0) + 10000,
+    productsCount: shopCategoryCountById[c._id.toString()] || 0,
+    source: 'shop',
+    shopId: c.shopId?.toString() || null,
+  }));
+
+  return [...adminCategories, ...customCategories].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.nameAr.localeCompare(b.nameAr, 'ar')
+  );
 }
 
 /**

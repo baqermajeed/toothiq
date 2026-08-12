@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
 
 import '../../utils/app_colors.dart';
+import '../app_back_button.dart';
 import '../my_text.dart';
 
 class BasketAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -34,26 +34,7 @@ class BasketAppBar extends StatelessWidget implements PreferredSizeWidget {
         color: AppColors.productTitle,
       ),
       actions: [
-        Padding(
-          padding: EdgeInsets.all(8.w),
-          child: Material(
-            color: AppColors.productStore,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: () => Get.back(),
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: 40.w,
-                height: 40.w,
-                child: Icon(
-                  Icons.chevron_right,
-                  color: Colors.white,
-                  size: 26.sp,
-                ),
-              ),
-            ),
-          ),
-        ),
+        const AppBackButton(),
         SizedBox(width: 8.w),
       ],
       leading: showClearButton

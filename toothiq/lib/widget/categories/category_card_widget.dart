@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../model/category_model.dart';
 import '../my_text.dart';
+import 'category_icon_widget.dart';
 
 class CategoryCardWidget extends StatelessWidget {
   final CategoryModel category;
@@ -42,19 +43,7 @@ class CategoryCardWidget extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 40.w,
-                  height: 40.w,
-                  decoration: BoxDecoration(
-                    color: category.iconColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    category.icon,
-                    size: 22.sp,
-                    color: category.iconColor,
-                  ),
-                ),
+                CategoryIconWidget(category: category),
                 MyText(
                   category.name,
                   fontSize: 13.93.sp,

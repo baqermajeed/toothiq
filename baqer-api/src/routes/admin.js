@@ -21,6 +21,7 @@ const {
 const discountCodeAdminController = require('../controllers/discountCodeAdminController');
 const uploadShopImage = require('../middlewares/uploadShopImage');
 const uploadBannerImage = require('../middlewares/uploadBannerImage');
+const uploadCategoryIcon = require('../middlewares/uploadCategoryIcon');
 
 const router = express.Router();
 
@@ -113,12 +114,14 @@ router.patch(
 );
 router.post(
   '/categories',
+  uploadCategoryIcon,
   validateBody(validateCreateCategory),
   categoryController.create
 );
 router.patch(
   '/categories/:id',
   validateParams(objectIdParam('id')),
+  uploadCategoryIcon,
   validateBody(validateUpdateCategory),
   categoryController.update
 );

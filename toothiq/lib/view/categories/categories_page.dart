@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../controller/categories_controller.dart';
 import '../../utils/app_colors.dart';
+import '../../widget/app_bottom_navigation.dart';
 import '../../widget/categories/category_card_widget.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/main_app_bar.dart';
@@ -18,16 +19,19 @@ class CategoriesPage extends StatelessWidget {
       Get.put(CategoriesController(), permanent: true);
     }
     final categories = Get.find<CategoriesController>();
+    final topInset =
+        MediaQuery.paddingOf(context).top + MainAppBar.toolbarHeight();
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
+        extendBodyBehindAppBar: true,
         appBar: const MainAppBar(title: 'الأقسام'),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(height: 8.h),
+            SizedBox(height: topInset + 8.h),
             SearchFilterRow(
               controller: categories.searchController,
               hintText: 'أبحث عن قسم ..',
@@ -59,7 +63,12 @@ class CategoriesPage extends StatelessWidget {
                   child: GridView.builder(
                     clipBehavior: Clip.none,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 16.h),
+                    padding: EdgeInsets.fromLTRB(
+                      16.w,
+                      6.h,
+                      16.w,
+                      AppBottomNavMetrics.floatingBarReservedHeight.h,
+                    ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       crossAxisSpacing: 12.w,

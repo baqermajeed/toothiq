@@ -203,7 +203,7 @@ class ShopProduct {
       'price': price,
       'stock': stock,
       'quantity': stock,
-      if (categoryId != null) 'categoryId': categoryId,
+      if (categoryId != null) 'productCategoryId': categoryId,
       if (brandId != null) 'brandId': brandId,
       if (apiExpiry != null) 'expiryDate': apiExpiry,
       if (origin != null && origin!.trim().isNotEmpty) 'origin': origin!.trim(),

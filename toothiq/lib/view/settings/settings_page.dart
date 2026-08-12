@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../controller/settings_controller.dart';
 import '../../utils/app_colors.dart';
+import '../../widget/app_bottom_navigation.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/my_text.dart';
 import '../favorites/favorites_page.dart';
@@ -21,14 +22,22 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Get.find<SettingsController>();
+    final topInset =
+        MediaQuery.paddingOf(context).top + MainAppBar.toolbarHeight();
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.settingsPageBackground,
+        extendBodyBehindAppBar: true,
         appBar: const MainAppBar(title: 'الأعدادات'),
         body: ListView(
-          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+          padding: EdgeInsets.fromLTRB(
+            16.w,
+            topInset + 8.h,
+            16.w,
+            AppBottomNavMetrics.floatingBarReservedHeight.h,
+          ),
           children: [
             SettingsProfileCard(controller: settings),
             SizedBox(height: 20.h),

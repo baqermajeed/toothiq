@@ -96,24 +96,35 @@ class _MainPageState extends State<MainPage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final main = Get.find<MainController>();
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Obx(
-          () => IndexedStack(
-            index: main.currentIndex.value,
-            children: const [
-              HomePage(),
-              StoresPage(),
-              CategoriesPage(),
-              OrdersPage(),
-              SettingsPage(),
-            ],
-          ),
+        extendBody: true,
+        body: Stack(
+          children: [
+            Obx(
+              () => IndexedStack(
+                index: main.currentIndex.value,
+                children: const [
+                  StoresPage(),
+                  CategoriesPage(),
+                  HomePage(),
+                  OrdersPage(),
+                  SettingsPage(),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: AppBottomNavMetrics.bottomMargin() + bottomInset,
+              child: const Center(child: AppBottomNavigation()),
+            ),
+          ],
         ),
-        bottomNavigationBar: const AppBottomNavigation(),
       ),
     );
   }

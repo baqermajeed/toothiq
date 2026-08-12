@@ -24,7 +24,6 @@ class HomeController extends GetxController {
   final bannerPageController = PageController();
   final bannerIndex = 0.obs;
   final selectedCategoryIndex = 0.obs;
-  final hasNotification = true.obs;
 
   final banners = <BannerModel>[].obs;
   final categories = <HomeCategoryModel>[const HomeCategoryModel.all()].obs;

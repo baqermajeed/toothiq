@@ -19,10 +19,18 @@ class SectionDetailPage extends StatelessWidget {
 
   const SectionDetailPage({super.key, required this.category});
 
-  static void open(CategoryModel category) {
+  static void open(
+    CategoryModel category, {
+    String? shopId,
+    String? shopName,
+  }) {
     Get.to(
       () => SectionDetailPage(category: category),
-      binding: SectionDetailBinding(category: category),
+      binding: SectionDetailBinding(
+        category: category,
+        shopId: shopId,
+        shopName: shopName,
+      ),
     );
   }
 

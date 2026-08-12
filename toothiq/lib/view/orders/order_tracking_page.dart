@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../model/order_detail_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/my_text.dart';
+import '../../widget/orders/order_detail_app_bar.dart';
 import '../../widget/primary_button.dart';
 
 /// تتبع مباشر لموقع المندوب — يتحدّث عبر WebSocket (مثل قريب).
@@ -63,12 +64,7 @@ class OrderTrackingPage extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('تتبع الطلب'),
-          backgroundColor: AppColors.background,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-        ),
+        appBar: const OrderDetailAppBar(title: 'تتبع الطلب'),
         body: Obx(() {
           final lat = driverLat.value ?? detail.driverLat;
           final lng = driverLng.value ?? detail.driverLng;

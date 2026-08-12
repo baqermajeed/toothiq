@@ -66,12 +66,14 @@ class ShopService {
     required String shopName,
     int page = 1,
     int limit = 20,
+    String? productCategoryId,
   }) {
     return _api.getShopProductsPaginated(
       shopId: shopId,
       shopName: shopName,
       page: page,
       limit: limit,
+      productCategoryId: productCategoryId,
     );
   }
 

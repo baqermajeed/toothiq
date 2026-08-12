@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../controller/stores_controller.dart';
 import '../../utils/app_colors.dart';
+import '../../widget/app_bottom_navigation.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/search_filter_row.dart';
@@ -18,16 +19,19 @@ class StoresPage extends StatelessWidget {
       Get.put(StoresController(), permanent: true);
     }
     final stores = Get.find<StoresController>();
+    final topInset =
+        MediaQuery.paddingOf(context).top + MainAppBar.toolbarHeight();
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
+        extendBodyBehindAppBar: true,
         appBar: const MainAppBar(title: 'المتاجر'),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(height: 8.h),
+            SizedBox(height: topInset + 8.h),
             SearchFilterRow(
               controller: stores.searchController,
               hintText: 'أبحث عن متجر محدد ..',
@@ -61,7 +65,12 @@ class StoresPage extends StatelessWidget {
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
-                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+                    padding: EdgeInsets.fromLTRB(
+                      16.w,
+                      0,
+                      16.w,
+                      AppBottomNavMetrics.floatingBarReservedHeight.h,
+                    ),
                     itemCount:
                         stores.filteredStores.length +
                         (stores.loadingMore.value ? 1 : 0),

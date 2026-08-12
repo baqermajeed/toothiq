@@ -12,6 +12,8 @@ class NotificationsController extends GetxController {
   final isLoading = false.obs;
   final loadError = RxnString();
 
+  bool get hasUnread => notifications.any((n) => !n.isRead);
+
   @override
   void onInit() {
     super.onInit();
@@ -23,6 +25,7 @@ class NotificationsController extends GetxController {
     loadError.value = null;
     try {
       notifications.assignAll(await _inbox.loadAll());
+      await _inbox.syncUnreadBadge();
     } catch (error) {
       loadError.value = ApiErrorHandler.loadMessage(
         error,
@@ -37,8 +40,16 @@ class NotificationsController extends GetxController {
     return notifications.where((n) => n.group == group).toList();
   }
 
-  Future<void> onNotificationTap(AppNotificationModel item) async {
-    await _inbox.markAsRead(item.id);
+  /// تعليم الكل مقروءاً عند مغادرة الصفحة (مثل Art Inspiration).
+  Future<void> markAllAsRead() async {
+    await _inbox.markAllAsRead();
+    notifications.assignAll(
+      notifications.map((n) => n.copyWith(isRead: true)).toList(),
+    );
+  }
+
+  /// الضغط يفتح الطلب إن وُجد — لا يعلّم الإشعار مقروءاً (القراءة عند المغادرة).
+  void onNotificationTap(AppNotificationModel item) {
     if (item.isOrderNotification) {
       navigateFromNotificationPayload(item.type, item.orderId);
     }

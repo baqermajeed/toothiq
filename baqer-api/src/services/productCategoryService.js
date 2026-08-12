@@ -6,6 +6,23 @@ const Category = require('../models/Category');
 const ProductSubcategory = require('../models/ProductSubcategory');
 const { notFound, forbidden } = require('../utils/errors');
 
+function mapProductCategoryRow(c, parentById = {}) {
+  const parentId = c.parentCategoryId?.toString() || null;
+  const parent = parentId ? parentById[parentId] : null;
+  return {
+    id: c._id?.toString() || c.id,
+    shopId: c.shopId?.toString(),
+    parentCategoryId: parentId,
+    subcategoryId: c.subcategoryId?.toString() || null,
+    nameAr: c.nameAr,
+    order: c.order ?? 0,
+    isActive: c.isActive !== false,
+    image: c.image || parent?.icon || null,
+    source: parentId ? 'admin' : 'shop',
+    parentNameAr: parent?.nameAr || null,
+  };
+}
+
 /**
  * List product categories for a shop. For public/admin: active only when activeOnly is true.
  * @param {string} shopId
@@ -26,16 +43,23 @@ async function listByShop(shopId, opts = {}) {
   const items = await ProductCategory.find(query)
     .sort({ order: 1, nameAr: 1 })
     .lean();
-  const mappedItems = items.map((c) => ({
-    id: c._id.toString(),
-    shopId: c.shopId?.toString(),
-    parentCategoryId: c.parentCategoryId?.toString() || null,
-    subcategoryId: c.subcategoryId?.toString() || null,
-    nameAr: c.nameAr,
-    order: c.order ?? 0,
-    isActive: c.isActive !== false,
-    image: c.image || null,
-  }));
+
+  const parentIds = [
+    ...new Set(
+      items
+        .map((c) => c.parentCategoryId?.toString())
+        .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+    ),
+  ];
+  const parentCategories =
+    parentIds.length > 0
+      ? await Category.find({ _id: { $in: parentIds } }).lean()
+      : [];
+  const parentById = Object.fromEntries(
+    parentCategories.map((cat) => [cat._id.toString(), cat])
+  );
+
+  const mappedItems = items.map((c) => mapProductCategoryRow(c, parentById));
 
   if (!grouped) return mappedItems;
 
@@ -155,21 +179,46 @@ async function create(shopId, userId, body, userRoles = []) {
   const isOwner = shop.ownerId.toString() === userId.toString();
   if (!isAdmin && !isOwner) throw forbidden('Not the shop owner');
   await validateSectionTaxonomy(body);
+
+  let parentCategory = null;
   if (body.parentCategoryId) {
-    const parent = await Category.findById(body.parentCategoryId).lean();
-    if (!parent) {
+    parentCategory = await Category.findById(body.parentCategoryId).lean();
+    if (!parentCategory) {
       const { badRequest } = require('../utils/errors');
       throw badRequest('الفئة الرئيسية غير موجودة');
     }
+    const existing = await ProductCategory.findOne({
+      shopId,
+      parentCategoryId: body.parentCategoryId,
+      isActive: true,
+    }).lean();
+    if (existing) {
+      const { badRequest } = require('../utils/errors');
+      throw badRequest('هذا القسم مضاف مسبقاً لمتجرك');
+    }
   }
+
+  const nameAr = (body.nameAr || parentCategory?.nameAr || '').trim();
+  if (!nameAr) {
+    const { badRequest } = require('../utils/errors');
+    throw badRequest('اسم القسم مطلوب');
+  }
+
+  const imageValue = body.image ? String(body.image).trim() : '';
+  const resolvedImage = imageValue || (parentCategory?.icon ? String(parentCategory.icon).trim() : '');
+  if (!resolvedImage) {
+    const { badRequest } = require('../utils/errors');
+    throw badRequest('أيقونة القسم مطلوبة');
+  }
+
   const category = await ProductCategory.create({
     shopId,
     parentCategoryId: body.parentCategoryId || undefined,
     subcategoryId: body.subcategoryId || undefined,
-    nameAr: (body.nameAr || '').trim(),
+    nameAr,
     order: body.order != null ? Number(body.order) : 0,
     isActive: body.isActive !== false,
-    image: body.image ? String(body.image).trim() : undefined,
+    image: resolvedImage,
   });
   return category;
 }

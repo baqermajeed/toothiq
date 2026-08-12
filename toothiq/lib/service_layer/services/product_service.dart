@@ -24,12 +24,14 @@ class ProductService {
     int page = 1,
     int limit = 12,
     String? productCategoryId,
+    String? categoryId,
     String? brandId,
   }) {
     return _api.getProducts(
       page: page,
       limit: limit,
       productCategoryId: productCategoryId,
+      categoryId: categoryId,
       brandId: brandId,
     );
   }

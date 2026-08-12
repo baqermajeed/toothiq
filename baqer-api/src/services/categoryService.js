@@ -37,11 +37,13 @@ async function getCategoryNames() {
 /** Create category (admin). */
 async function create(body) {
   const { nameAr, icon, order } = body;
+  const iconValue = (icon || '').trim();
+  if (!iconValue) throw badRequest('أيقونة القسم مطلوبة');
   const existing = await Category.findOne({ nameAr: (nameAr || '').trim() });
   if (existing) throw badRequest('تصنيف بنفس الاسم موجود مسبقاً');
   const category = await Category.create({
     nameAr: (nameAr || '').trim(),
-    icon: (icon || '').trim(),
+    icon: iconValue,
     order: order != null ? Number(order) : 0,
     isActive: body.isActive !== false,
   });

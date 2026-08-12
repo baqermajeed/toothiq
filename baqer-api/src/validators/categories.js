@@ -8,14 +8,14 @@ const objectIdString = Joi.string().custom((value, helpers) => {
 
 const createCategorySchema = Joi.object({
   nameAr: Joi.string().trim().min(1).max(100).required(),
-  icon: Joi.string().trim().max(50).allow('').default(''),
+  icon: Joi.string().trim().min(1).max(500).required(),
   order: Joi.number().integer().min(0),
   isActive: Joi.boolean(),
 });
 
 const updateCategorySchema = Joi.object({
   nameAr: Joi.string().trim().min(1).max(100),
-  icon: Joi.string().trim().max(50).allow(''),
+  icon: Joi.string().trim().min(1).max(500),
   order: Joi.number().integer().min(0),
   isActive: Joi.boolean(),
 }).min(1);

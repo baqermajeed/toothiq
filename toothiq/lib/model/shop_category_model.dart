@@ -4,15 +4,25 @@ import 'category_section_model.dart';
 class ShopCategoryModel {
   final String id;
   final String nameAr;
+  final String? iconUrl;
   final List<CategorySectionModel> sections;
   final List<BrandModel> brands;
+  final String source;
+  final String? shopId;
+  final String? parentCategoryId;
 
   const ShopCategoryModel({
     required this.id,
     required this.nameAr,
+    this.iconUrl,
     this.sections = const [],
     this.brands = const [],
+    this.source = 'admin',
+    this.shopId,
+    this.parentCategoryId,
   });
+
+  bool get isShopCategory => source == 'shop';
 
   factory ShopCategoryModel.fromJson(Map<String, dynamic> json) {
     final sections = [
@@ -28,8 +38,12 @@ class ShopCategoryModel {
     return ShopCategoryModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       nameAr: json['nameAr']?.toString() ?? json['name']?.toString() ?? '',
+      iconUrl: _readIconUrl(json),
       sections: sections,
       brands: brands,
+      source: json['source']?.toString() ?? 'admin',
+      shopId: json['shopId']?.toString(),
+      parentCategoryId: json['parentCategoryId']?.toString(),
     );
   }
 
@@ -69,6 +83,14 @@ class ShopCategoryModel {
       }
     }
     return brands;
+  }
+
+  static String? _readIconUrl(Map<String, dynamic> json) {
+    for (final key in ['icon', 'image']) {
+      final value = json[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
   }
 
   static bool _isBrandType(String? type) {

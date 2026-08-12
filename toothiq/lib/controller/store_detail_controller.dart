@@ -143,7 +143,11 @@ class StoreDetailController extends GetxController {
   }
 
   void onCategoryTap(CategoryModel category) {
-    SectionDetailPage.open(category);
+    SectionDetailPage.open(
+      category,
+      shopId: viewStore.id,
+      shopName: viewStore.name,
+    );
   }
 
   void onBrandTap(BrandModel brand) {
@@ -157,7 +161,7 @@ class StoreDetailController extends GetxController {
       final storeId = store.id;
       final results = await Future.wait([
         _shopService.getShopById(storeId),
-        _shopService.fetchShopProductCategories(storeId, grouped: true),
+        _shopService.fetchShopProductCategories(storeId, grouped: false),
         _shopService.fetchShopReviews(storeId),
       ]);
 
@@ -252,8 +256,14 @@ class StoreDetailController extends GetxController {
           return CategoryModel(
             id: item.id,
             name: item.nameAr,
+            iconUrl: item.iconUrl,
             icon: _icons[idx % _icons.length],
             iconColor: _iconColors[idx % _iconColors.length],
+            source: item.isShopCategory && item.parentCategoryId == null
+                ? CategorySource.shop
+                : CategorySource.admin,
+            shopId: store.id,
+            productCategoryId: item.id,
           );
         })
         .toList(growable: false);

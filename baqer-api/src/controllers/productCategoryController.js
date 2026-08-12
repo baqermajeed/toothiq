@@ -69,6 +69,7 @@ async function create(req, res, next) {
         order: category.order,
         isActive: category.isActive,
         image: category.image || null,
+        source: category.parentCategoryId ? 'admin' : 'shop',
       },
     });
   } catch (err) {

@@ -294,18 +294,18 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     );
                   }
 
-                  final categories = catalog.categories;
+                  final categories = catalog.shopCategories;
                   final selectedCategory = _pickValidId(
                     _categoryId,
                     categories.map((c) => c.id),
                   );
 
                   return _DropdownField<String>(
-                    label: 'القسم',
+                    label: 'قسم المتجر',
                     value: selectedCategory,
                     hint: categories.isEmpty
-                        ? 'لا توجد أقسام متاحة'
-                        : 'اختر القسم',
+                        ? 'أضف أقساماً لمتجرك أولاً'
+                        : 'اختر قسم المتجر',
                     items: categories
                         .map(
                           (c) => DropdownMenuItem(

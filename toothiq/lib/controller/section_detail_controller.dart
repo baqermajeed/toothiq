@@ -14,16 +14,33 @@ import '../service_layer/services/category_service.dart';
 import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/product_service.dart';
 import '../service_layer/services/section_detail_cache_service.dart';
+import '../service_layer/services/shop_service.dart';
 
 class SectionDetailController extends GetxController {
-  SectionDetailController({required this.category});
+  SectionDetailController({
+    required this.category,
+    this.shopId,
+    this.shopName,
+  });
 
   final CategoryModel category;
+  final String? shopId;
+  final String? shopName;
   final ProductService _productService = Get.find<ProductService>();
   final BrandService _brandService = Get.find<BrandService>();
   final CategoryService _categoryService = Get.find<CategoryService>();
+  final ShopService _shopService = Get.find<ShopService>();
   final FavoritesService _favoritesService = Get.find<FavoritesService>();
   final SectionDetailCacheService _cache = Get.find<SectionDetailCacheService>();
+
+  bool get _isShopScoped =>
+      shopId != null && shopId!.isNotEmpty && category.productCategoryId != null;
+
+  bool get _useProductCategoryFilter =>
+      _isShopScoped || category.isShopCategory;
+
+  String get _cacheKey =>
+      _isShopScoped ? '$shopId:${category.filterId}' : category.filterId;
 
   final searchController = TextEditingController();
   final selectedTabIndex = 0.obs;
@@ -147,7 +164,7 @@ class SectionDetailController extends GetxController {
   }
 
   void _initFromCacheOrLoad() {
-    final cached = _cache.get(category.id);
+    final cached = _cache.get(_cacheKey);
     if (cached != null) {
       _restoreFromCache(cached);
       _refreshInBackground();
@@ -170,7 +187,7 @@ class SectionDetailController extends GetxController {
 
   void _saveToCache() {
     _cache.put(
-      category.id,
+      _cacheKey,
       SectionDetailCacheEntry(
         products: List<ProductModel>.from(sectionProducts),
         subSections: List<CategorySectionModel>.from(subSections),
@@ -259,21 +276,38 @@ class SectionDetailController extends GetxController {
     }
 
     try {
-      final results = await Future.wait([
-        _productService.fetchProductsPaginated(
+      if (_isShopScoped) {
+        final productsResult = await _shopService.fetchShopProductsPaginated(
+          shopId: shopId!,
+          shopName: shopName ?? '',
           page: 1,
           limit: _pageSize,
-          productCategoryId: category.id,
-        ),
-        _categoryService.fetchCategoryCatalog(category.id),
+          productCategoryId: category.filterId,
+        );
+        final products = _favoritesService.applyFavoriteState(productsResult.items);
+        sectionProducts.assignAll(products);
+        subSections.clear();
+        await _syncBrandsFromProducts(products);
+        _onSearch();
+        hasNextPage.value = productsResult.hasNextPage;
+        currentPage.value = productsResult.page;
+        loadError.value = null;
+        _saveToCache();
+        return;
+      }
+
+      final filterId = category.filterId;
+      final results = await Future.wait([
+        _fetchProductsPage(1),
+        if (!_isShopScoped && !category.isShopCategory)
+          _categoryService.fetchCategoryCatalog(filterId)
+        else
+          Future.value(CategoryCatalogModel.empty),
       ]);
 
       final productsResult = results[0] as PaginatedResult<ProductModel>;
       final catalog = results[1] as CategoryCatalogModel;
-      final products = _productService.filterByCategoryId(
-        productsResult.items,
-        category.id,
-      );
+      final products = _normalizeProducts(productsResult.items);
 
       sectionProducts.assignAll(_favoritesService.applyFavoriteState(products));
       await _applyCatalog(catalog, products);
@@ -339,22 +373,15 @@ class SectionDetailController extends GetxController {
     loadingMore.value = true;
     try {
       final nextPage = currentPage.value + 1;
-      final result = await _productService.fetchProductsPaginated(
-        page: nextPage,
-        limit: _pageSize,
-        productCategoryId: category.id,
-      );
-      final products = _productService.filterByCategoryId(
-        result.items,
-        category.id,
-      );
+      final result = await _fetchProductsPage(nextPage);
+      final products = _normalizeProducts(result.items);
       sectionProducts.addAll(_favoritesService.applyFavoriteState(products));
       _mergeBrandsFromProducts(products);
 
-      if (subSections.isEmpty) {
+      if (subSections.isEmpty && !_isShopScoped && !category.isShopCategory) {
         subSections.assignAll(
           _categoryService.namedSectionsFromProducts(
-            categoryId: category.id,
+            categoryId: category.filterId,
             products: sectionProducts,
           ),
         );
@@ -369,6 +396,31 @@ class SectionDetailController extends GetxController {
     } finally {
       loadingMore.value = false;
     }
+  }
+
+  Future<PaginatedResult<ProductModel>> _fetchProductsPage(int page) {
+    if (_isShopScoped) {
+      return _shopService.fetchShopProductsPaginated(
+        shopId: shopId!,
+        shopName: shopName ?? '',
+        page: page,
+        limit: _pageSize,
+        productCategoryId: category.filterId,
+      );
+    }
+
+    final filterId = category.filterId;
+    return _productService.fetchProductsPaginated(
+      page: page,
+      limit: _pageSize,
+      productCategoryId: _useProductCategoryFilter ? filterId : null,
+      categoryId: _useProductCategoryFilter ? null : filterId,
+    );
+  }
+
+  List<ProductModel> _normalizeProducts(List<ProductModel> items) {
+    if (_isShopScoped || _useProductCategoryFilter) return items;
+    return _productService.filterByCategoryId(items, category.filterId);
   }
 
   @override

@@ -11,6 +11,15 @@ import 'preferences_storage.dart';
 
 /// صندوق الإشعارات المحلي — يُملأ من FCM ويُعرض في صفحة الإشعارات.
 class NotificationInboxService extends GetxService {
+  /// أحمر في الهيدر عند وجود أي إشعار غير مقروء.
+  final hasUnread = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    syncUnreadBadge();
+  }
+
   Future<List<AppNotificationModel>> loadAll() async {
     try {
       final raw = PreferencesStorage.instance.getJsonList(
@@ -76,7 +85,7 @@ class NotificationInboxService extends GetxService {
       updated.map((n) => n.toJson()).toList(growable: false),
     );
 
-    _refreshNotificationsController();
+    await _afterInboxChanged();
   }
 
   Future<void> markAsRead(String id) async {
@@ -89,7 +98,36 @@ class NotificationInboxService extends GetxService {
       StorageKeys.notificationInbox,
       current.map((n) => n.toJson()).toList(growable: false),
     );
+    await _afterInboxChanged();
+  }
+
+  /// يعلّم كل الإشعارات مقروءة — يُستدعى عند مغادرة صفحة الإشعارات.
+  Future<void> markAllAsRead() async {
+    final current = await loadAll();
+    if (current.isEmpty || current.every((n) => n.isRead)) {
+      await syncUnreadBadge();
+      return;
+    }
+
+    final updated = current
+        .map((n) => n.isRead ? n : n.copyWith(isRead: true))
+        .toList(growable: false);
+
+    await PreferencesStorage.instance.setJsonList(
+      StorageKeys.notificationInbox,
+      updated.map((n) => n.toJson()).toList(growable: false),
+    );
+    // لا نعيد تحميل الصفحة — غالباً تُغلق؛ نحدّث شارة الهيدر فقط.
+    await syncUnreadBadge();
+  }
+
+  Future<void> syncUnreadBadge() async {
+    hasUnread.value = (await loadAll()).any((n) => !n.isRead);
+  }
+
+  Future<void> _afterInboxChanged() async {
     _refreshNotificationsController();
+    await syncUnreadBadge();
   }
 
   void _refreshNotificationsController() {

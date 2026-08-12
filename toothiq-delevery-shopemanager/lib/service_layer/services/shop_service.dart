@@ -100,6 +100,44 @@ class ShopService {
     return _api.removeShopCategory(shopId: shopId, categoryId: categoryId);
   }
 
+  Future<ShopCategory> createCategory({
+    required String shopId,
+    required String nameAr,
+    String? parentCategoryId,
+    String? imagePath,
+  }) {
+    return _api.createShopCategory(
+      shopId: shopId,
+      nameAr: nameAr,
+      parentCategoryId: parentCategoryId,
+      imagePath: imagePath,
+    );
+  }
+
+  Future<ShopCategory> addAdminCategory({
+    required String shopId,
+    required String parentCategoryId,
+  }) {
+    return _api.addAdminCategoryToShop(
+      shopId: shopId,
+      parentCategoryId: parentCategoryId,
+    );
+  }
+
+  Future<ShopCategory> updateCategoryInShop({
+    required String shopId,
+    required String categoryId,
+    String? nameAr,
+    String? imagePath,
+  }) {
+    return _api.updateShopCategory(
+      shopId: shopId,
+      categoryId: categoryId,
+      nameAr: nameAr,
+      imagePath: imagePath,
+    );
+  }
+
   Future<({List<ShopCategory> categories, List<ShopBrand> brands})>
   fetchCatalogTree() {
     return _api.getCatalogTree();

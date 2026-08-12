@@ -17,6 +17,13 @@ productCategorySchema.index({ shopId: 1 });
 productCategorySchema.index({ shopId: 1, parentCategoryId: 1 });
 productCategorySchema.index({ shopId: 1, subcategoryId: 1 });
 productCategorySchema.index({ shopId: 1, order: 1, isActive: 1 });
+productCategorySchema.index(
+  { shopId: 1, parentCategoryId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { parentCategoryId: { $type: 'objectId' } },
+  }
+);
 
 const ProductCategory = mongoose.model('ProductCategory', productCategorySchema);
 module.exports = ProductCategory;

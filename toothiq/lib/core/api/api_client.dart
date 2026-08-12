@@ -373,6 +373,7 @@ class ApiClient {
     int page = 1,
     int limit = 12,
     String? productCategoryId,
+    String? categoryId,
     String? brandId,
   }) async {
     final data = await _getSuccessData(
@@ -381,7 +382,8 @@ class ApiClient {
         'page': page,
         'limit': limit,
         if (productCategoryId != null && productCategoryId.isNotEmpty)
-          'categoryId': productCategoryId,
+          'productCategoryId': productCategoryId,
+        if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
         if (brandId != null && brandId.isNotEmpty) 'brandId': brandId,
       },
     );
@@ -471,10 +473,16 @@ class ApiClient {
     required String shopName,
     int page = 1,
     int limit = 20,
+    String? productCategoryId,
   }) async {
     final data = await _getSuccessData(
       ApiEndpoints.shopProducts(shopId),
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (productCategoryId != null && productCategoryId.isNotEmpty)
+          'productCategoryId': productCategoryId,
+      },
     );
     if (data is! Map<String, dynamic>) {
       return PaginatedResult(items: const [], page: 1, limit: limit, total: 0);

@@ -6,6 +6,7 @@ import '../../bindings/product_details_binding.dart';
 import '../../controller/product_details_controller.dart';
 import '../../model/product_model.dart';
 import '../../utils/app_colors.dart';
+import '../../widget/app_back_button.dart';
 import '../../widget/app_image.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/my_text.dart';
@@ -27,29 +28,40 @@ class ProductDetailsPage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: _ProductDetailsBottomBar.barGreen,
         appBar: _ProductDetailsAppBar(controller: ctrl),
         body: Obx(() {
           final product = ctrl.product;
 
           if (ctrl.isLoading.value && product.name.isEmpty) {
-            return const AppLoadingState();
+            return const ColoredBox(
+              color: AppColors.background,
+              child: AppLoadingState(),
+            );
           }
 
           if (ctrl.loadError.value != null && product.name.isEmpty) {
-            return AppErrorState(
-              message: ctrl.loadError.value!,
-              onRetry: () => ctrl.loadProductDetail(),
+            return ColoredBox(
+              color: AppColors.background,
+              child: AppErrorState(
+                message: ctrl.loadError.value!,
+                onRetry: () => ctrl.loadProductDetail(),
+              ),
             );
           }
 
           if (product.name.isEmpty) {
-            return const AppEmptyState(title: 'المنتج غير متوفر');
+            return const ColoredBox(
+              color: AppColors.background,
+              child: AppEmptyState(title: 'المنتج غير متوفر'),
+            );
           }
 
-          return Column(
+          return Stack(
+            fit: StackFit.expand,
             children: [
-              Expanded(
+              ColoredBox(
+                color: AppColors.background,
                 child: RefreshIndicator(
                   color: AppColors.primary,
                   onRefresh: ctrl.refresh,
@@ -57,7 +69,7 @@ class ProductDetailsPage extends StatelessWidget {
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
-                    padding: EdgeInsets.only(bottom: 16.h),
+                    padding: EdgeInsets.only(bottom: 130.h),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -83,10 +95,11 @@ class ProductDetailsPage extends StatelessWidget {
                               SizedBox(height: 16.h),
                               MyText(
                                 product.name,
-                                fontSize: 20.sp,
+                                fontSize: 16.sp,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.productTitle,
+                                color: AppColors.productStoreName,
                                 textAlign: TextAlign.right,
+                                height: 1.0,
                               ),
                               SizedBox(height: 14.h),
                               _PriceQuantityRow(controller: ctrl),
@@ -94,21 +107,22 @@ class ProductDetailsPage extends StatelessWidget {
                               MyText(
                                 'وصف المنتج',
                                 fontSize: 16.sp,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.productStore,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.productStoreName,
                                 textAlign: TextAlign.right,
+                                height: 1.5,
                               ),
                               SizedBox(height: 8.h),
                               Text(
                                 product.detailsDescription.isEmpty
                                     ? 'لا يوجد وصف لهذا المنتج.'
                                     : product.detailsDescription,
-                                textAlign: TextAlign.right,
+                                textAlign: TextAlign.justify,
                                 style: TextStyle(
                                   fontFamily: 'Expo Arabic',
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.productDescription,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
                                   height: 1.6,
                                 ),
                               ),
@@ -130,7 +144,12 @@ class ProductDetailsPage extends StatelessWidget {
                   ),
                 ),
               ),
-              _ProductDetailsBottomBar(controller: ctrl),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _ProductDetailsBottomBar(controller: ctrl),
+              ),
             ],
           );
         }),
@@ -156,13 +175,8 @@ class _ProductDetailsAppBar extends StatelessWidget
       centerTitle: true,
       automaticallyImplyLeading: false,
       leading: Obx(
-        () => _CircleIconButton(
-          icon: controller.isFavorite.value
-              ? Icons.favorite
-              : Icons.favorite_border,
-          iconColor: controller.isFavorite.value
-              ? AppColors.favoriteRed
-              : Colors.white,
+        () => _FavoriteIconButton(
+          isFavorite: controller.isFavorite.value,
           onTap: controller.toggleFavorite,
         ),
       ),
@@ -173,38 +187,58 @@ class _ProductDetailsAppBar extends StatelessWidget
         color: AppColors.productTitle,
       ),
       actions: [
-        _CircleIconButton(icon: Icons.chevron_right, onTap: () => Get.back()),
+        const AppBackButton(),
         SizedBox(width: 8.w),
       ],
     );
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
-  final IconData icon;
+class _FavoriteIconButton extends StatelessWidget {
+  final bool isFavorite;
   final VoidCallback onTap;
-  final Color? iconColor;
 
-  const _CircleIconButton({
-    required this.icon,
+  const _FavoriteIconButton({
+    required this.isFavorite,
     required this.onTap,
-    this.iconColor,
   });
+
+  static const Color _fill = Color(0xFF16929E);
+  static const Color _shadow = Color(0xFF659AB9);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(8.w),
-      child: Material(
-        color: AppColors.productStore,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: SizedBox(
-            width: 40.w,
-            height: 40.w,
-            child: Icon(icon, color: iconColor ?? Colors.white, size: 24.sp),
+      padding: EdgeInsetsDirectional.only(start: 12.w),
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: _fill,
+            borderRadius: BorderRadius.circular(10.r),
+            boxShadow: [
+              BoxShadow(
+                color: _shadow.withValues(alpha: 0.38),
+                blurRadius: 3.76,
+                offset: Offset.zero,
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(10.r),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(10.r),
+              child: SizedBox(
+                width: 34.w,
+                height: 30.h,
+                child: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: Colors.white,
+                  size: 24.sp,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -219,6 +253,55 @@ class _ProductGallerySection extends StatelessWidget {
   final ProductDetailsController controller;
 
   const _ProductGallerySection({required this.controller});
+
+  void _showProductImageDialog(String imageSource) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 48.h),
+        child: Stack(
+          children: [
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16.r),
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: AppImage(
+                    source: imageSource,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.45),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: Get.back,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: 40.w,
+                    height: 40.w,
+                    child: Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 22.sp,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      barrierColor: Colors.black.withValues(alpha: 0.85),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,17 +358,23 @@ class _ProductGallerySection extends StatelessWidget {
                 Positioned(
                   right: 10.w,
                   bottom: 10.h,
-                  child: Container(
-                    width: 36.w,
-                    height: 36.w,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.open_in_full_rounded,
-                      size: 18.sp,
-                      color: AppColors.productStore,
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      onTap: () => _showProductImageDialog(
+                        images[selectedIndex],
+                      ),
+                      customBorder: const CircleBorder(),
+                      child: SizedBox(
+                        width: 36.w,
+                        height: 36.w,
+                        child: Icon(
+                          Icons.open_in_full_rounded,
+                          size: 18.sp,
+                          color: AppColors.productStore,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -391,9 +480,11 @@ class _StoreLinkBar extends StatelessWidget {
               children: [
                 MyText(
                   storeName,
-                  fontSize: 15.sp,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.productStore,
+                  color: AppColors.productStoreName,
+                  textAlign: TextAlign.right,
+                  height: 1.42,
                 ),
                 const Spacer(),
                 Transform.rotate(
@@ -426,7 +517,8 @@ class _PriceQuantityRow extends StatelessWidget {
           controller.product.formattedPrice,
           fontSize: 18.sp,
           fontWeight: FontWeight.w800,
-          color: AppColors.productStore,
+          color: AppColors.productAccent,
+          height: 1.0,
         ),
         const Spacer(),
         Obx(
@@ -454,29 +546,22 @@ class _QuantitySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: AppColors.productStore.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _QtyButton(icon: Icons.remove, onTap: onDecrement),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            child: MyText(
-              '$quantity',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w800,
-              color: AppColors.productStore,
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _QtyButton(icon: Icons.remove, onTap: onDecrement),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          child: MyText(
+            '$quantity',
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w800,
+            color: Colors.black,
+            height: 1.0,
           ),
-          _QtyButton(icon: Icons.add, onTap: onIncrement),
-        ],
-      ),
+        ),
+        _QtyButton(icon: Icons.add, onTap: onIncrement),
+      ],
     );
   }
 }
@@ -490,15 +575,15 @@ class _QtyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.productStore,
-      borderRadius: BorderRadius.circular(10.r),
+      color: AppColors.productAccent,
+      borderRadius: BorderRadius.circular(11.r),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10.r),
+        borderRadius: BorderRadius.circular(11.r),
         child: SizedBox(
-          width: 36.w,
-          height: 36.w,
-          child: Icon(icon, color: Colors.white, size: 20.sp),
+          width: 28.w,
+          height: 25.h,
+          child: Icon(icon, color: Colors.white, size: 16.sp),
         ),
       ),
     );
@@ -510,65 +595,115 @@ class _ProductDetailsBottomBar extends StatelessWidget {
 
   const _ProductDetailsBottomBar({required this.controller});
 
+  static const Color barGreen = Color(0xFF0D3136);
+  /// `#FFFEFB` — يجب كتابة الـ alpha صراحةً (`FF`) وإلا اللون يكون شفافاً.
+  static const Color _cream = Color(0xFFFFFEFB);
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
-      decoration: BoxDecoration(
-        color: AppColors.bottomNavBackground,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24.r),
-          topRight: Radius.circular(24.r),
-        ),
+    final topRadius = Radius.circular(24.r);
+
+    return Material(
+      color: barGreen,
+      borderRadius: BorderRadius.only(
+        topLeft: topRadius,
+        topRight: topRadius,
       ),
+      clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 50.h,
-                child: ElevatedButton(
-                  onPressed: controller.buyNow,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r),
+        minimum: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
+          child: SizedBox(
+            height: 51.h,
+            width: double.infinity,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final buyNowWidth = constraints.maxWidth * 0.58;
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // كونتينر أضافة للسلة
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: _cream.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: controller.addToCart,
+                            borderRadius: BorderRadius.circular(20.r),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: constraints.maxWidth * 0.42,
+                                child: MyText(
+                                  'أضافة للسلة',
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: MyText(
-                    'شراء مباشر',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.productTitle,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: SizedBox(
-                height: 50.h,
-                child: OutlinedButton(
-                  onPressed: controller.addToCart,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r),
+                    // كونتينر شراء مباشر الأبيض
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      width: buyNowWidth,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: _cream,
+                          borderRadius: BorderRadius.circular(20.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF3A3F41)
+                                  .withValues(alpha: 0.16),
+                              offset: const Offset(0, 21.94),
+                              blurRadius: 87.77,
+                              spreadRadius: -3.99,
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFF3A3F41)
+                                  .withValues(alpha: 0.16),
+                              offset: const Offset(0, 9.97),
+                              blurRadius: 27.93,
+                              spreadRadius: -5.98,
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: _cream,
+                          borderRadius: BorderRadius.circular(20.r),
+                          child: InkWell(
+                            onTap: controller.buyNow,
+                            borderRadius: BorderRadius.circular(20.r),
+                            child: Center(
+                              child: MyText(
+                                'شراء مباشر',
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                                color: barGreen,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: MyText(
-                    'أضافة للسلة',
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+                  ],
+                );
+              },
             ),
-          ],
+          ),
         ),
       ),
     );
