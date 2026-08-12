@@ -37,6 +37,12 @@ class NotificationsController extends GetxController {
     }
   }
 
+  /// تحديث القائمة من المحلي فقط (بعد وصول FCM) بدون مسح ما وصل من Push.
+  Future<void> reloadFromLocal() async {
+    notifications.assignAll(await _inbox.loadAll());
+    await _inbox.syncUnreadBadge();
+  }
+
   List<AppNotificationModel> byGroup(NotificationDayGroup group) {
     return notifications.where((n) => n.group == group).toList();
   }

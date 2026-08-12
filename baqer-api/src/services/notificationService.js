@@ -124,8 +124,11 @@ async function broadcastCatalogNotification({
   };
 
   const customers = await User.find({
-    roles: ROLES.CUSTOMER,
     isActive: { $ne: false },
+    $or: [
+      { roles: ROLES.CUSTOMER },
+      { fcmTokens: { $exists: true, $ne: [] } },
+    ],
   })
     .select('_id +fcmTokens')
     .lean();
