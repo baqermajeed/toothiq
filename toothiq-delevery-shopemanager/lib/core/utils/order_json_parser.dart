@@ -117,6 +117,11 @@ abstract final class OrderJsonParser {
 
   static (double?, double?) readCoordinates(dynamic location) {
     if (location is! Map<String, dynamic>) return (null, null);
+    final latDirect = location['lat'];
+    final lngDirect = location['lng'];
+    if (latDirect is num && lngDirect is num) {
+      return (latDirect.toDouble(), lngDirect.toDouble());
+    }
     final coords = location['coordinates'];
     if (coords is! List || coords.length < 2) return (null, null);
     final lng = (coords[0] is num) ? (coords[0] as num).toDouble() : null;

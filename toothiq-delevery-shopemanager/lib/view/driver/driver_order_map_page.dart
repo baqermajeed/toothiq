@@ -89,9 +89,7 @@ class _DriverOrderMapPageState extends State<DriverOrderMapPage> {
           Expanded(
             flex: 4,
             child: Obx(() {
-              final live = controller.orders
-                      .firstWhereOrNull((o) => o.id == order.id) ??
-                  order;
+              final live = controller.findOrder(order.id) ?? order;
 
               return SingleChildScrollView(
                 padding: EdgeInsets.all(16.w),

@@ -173,8 +173,9 @@ class PartnerOrder {
 
   factory PartnerOrder.fromApi(Map<String, dynamic> json) {
     final shopMap = OrderJsonParser.shopMap(json);
-    final customer = json['customerId'];
-    final customerMap = customer is Map<String, dynamic> ? customer : null;
+    final customerRaw = json['customerId'] ?? json['customer'];
+    final customerMap =
+        customerRaw is Map<String, dynamic> ? customerRaw : null;
     final deliveryLocation = json['deliveryLocation'];
     final (customerLat, customerLng) =
         OrderJsonParser.readCoordinates(deliveryLocation);
@@ -182,8 +183,8 @@ class PartnerOrder {
       shopMap?['location'],
     );
 
-    var deliveryAddress = '';
-    if (deliveryLocation is Map<String, dynamic>) {
+    var deliveryAddress = json['deliveryAddress']?.toString().trim() ?? '';
+    if (deliveryAddress.isEmpty && deliveryLocation is Map<String, dynamic>) {
       deliveryAddress = deliveryLocation['address']?.toString() ??
           deliveryLocation['governorate']?.toString() ??
           '';
@@ -218,8 +219,12 @@ class PartnerOrder {
     return PartnerOrder(
       id: orderId,
       orderNumber: orderNumber,
-      customerName: customerMap?['name']?.toString() ?? 'عميل',
-      customerPhone: customerMap?['phone']?.toString() ?? '',
+      customerName: customerMap?['name']?.toString() ??
+          json['customerName']?.toString() ??
+          'عميل',
+      customerPhone: customerMap?['phone']?.toString() ??
+          json['customerPhone']?.toString() ??
+          '',
       shopName: OrderJsonParser.storeName(json) ?? 'المتجر',
       shopAddress: _shopAddress(shopMap),
       customerAddress:
@@ -241,6 +246,8 @@ class PartnerOrder {
 
   static String _shopAddress(Map<String, dynamic>? shopMap) {
     if (shopMap == null) return 'غير متوفر';
+    final direct = shopMap['address']?.toString().trim();
+    if (direct != null && direct.isNotEmpty) return direct;
     final location = shopMap['location'];
     if (location is Map<String, dynamic>) {
       final address = location['address']?.toString().trim();

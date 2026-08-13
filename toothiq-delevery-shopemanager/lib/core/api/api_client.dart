@@ -487,6 +487,57 @@ class ApiClient {
     return getOrderById(orderId);
   }
 
+  Future<List<PartnerOrder>> getDriverOrders({
+    required String tab,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final data = await _getSuccessData(
+      ApiEndpoints.driverOrders,
+      queryParameters: {
+        'tab': tab,
+        'page': page,
+        'limit': limit,
+      },
+    );
+
+    List<dynamic> rawItems;
+    if (data is List) {
+      rawItems = data;
+    } else if (data is Map<String, dynamic> && data['items'] is List) {
+      rawItems = data['items'] as List;
+    } else {
+      return [];
+    }
+
+    return rawItems
+        .whereType<Map<String, dynamic>>()
+        .map(PartnerOrder.fromApi)
+        .toList(growable: false);
+  }
+
+  Future<PartnerOrder> acceptDriverOrder(String orderId) async {
+    final data = await _postSuccessData(ApiEndpoints.driverAcceptOrder(orderId));
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('رد قبول الطلب غير صالح');
+    }
+    return PartnerOrder.fromApi(data);
+  }
+
+  Future<PartnerOrder> updateDriverOrderStatus({
+    required String orderId,
+    required String status,
+  }) async {
+    final data = await _patchSuccessData(
+      ApiEndpoints.driverOrderStatus(orderId),
+      body: {'status': status},
+    );
+    if (data is Map<String, dynamic>) {
+      return PartnerOrder.fromApi(data);
+    }
+    throw const ApiException('رد تحديث حالة الطلب غير صالح');
+  }
+
   // ─── HTTP helpers ────────────────────────────────────────────────────────
 
   Future<void> _onRequest(

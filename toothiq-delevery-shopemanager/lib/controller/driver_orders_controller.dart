@@ -20,9 +20,10 @@ class DriverOrdersController extends GetxController {
   final OrderService _orderService;
   final DriverTrackingSocketService _socketService;
 
-  final orders = <PartnerOrder>[].obs;
+  final pendingOrders = <PartnerOrder>[].obs;
+  final inProgressOrders = <PartnerOrder>[].obs;
+  final finishedOrders = <PartnerOrder>[].obs;
   final selectedTab = DriverOrderTab.pending.obs;
-  final acceptedOrderIds = <String>{}.obs;
   final pickedUpOrderIds = <String>{}.obs;
   final activeOrderId = RxnString();
   final isSharingLocation = false.obs;
@@ -49,9 +50,15 @@ class DriverOrdersController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      final list = await _orderService.fetchOrders();
-      orders.assignAll(list);
-      _syncAcceptedFromOrders();
+      final results = await Future.wait([
+        _orderService.fetchDriverOrders(tab: 'pending'),
+        _orderService.fetchDriverOrders(tab: 'in_progress'),
+        _orderService.fetchDriverOrders(tab: 'completed'),
+      ]);
+      pendingOrders.assignAll(results[0]);
+      inProgressOrders.assignAll(results[1]);
+      finishedOrders.assignAll(results[2]);
+      _syncPickedUpFromOrders();
     } catch (error) {
       errorMessage.value = apiErrorMessage(error);
     } finally {
@@ -60,39 +67,6 @@ class DriverOrdersController extends GetxController {
   }
 
   void changeTab(DriverOrderTab tab) => selectedTab.value = tab;
-
-  List<PartnerOrder> get pendingOrders => orders
-      .where(
-        (o) =>
-            o.status == PartnerOrderStatus.pending ||
-            o.status == PartnerOrderStatus.accepted ||
-            o.status == PartnerOrderStatus.preparing,
-      )
-      .where(
-        (o) =>
-            !pickedUpOrderIds.contains(o.id) &&
-            o.status != PartnerOrderStatus.onTheWay,
-      )
-      .toList()
-    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-  List<PartnerOrder> get inProgressOrders => orders
-      .where(
-        (o) =>
-            o.status == PartnerOrderStatus.onTheWay ||
-            pickedUpOrderIds.contains(o.id),
-      )
-      .toList()
-    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-  List<PartnerOrder> get finishedOrders => orders
-      .where(
-        (o) =>
-            o.status == PartnerOrderStatus.delivered ||
-            o.status == PartnerOrderStatus.canceled,
-      )
-      .toList()
-    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   List<PartnerOrder> get currentTabOrders {
     switch (selectedTab.value) {
@@ -116,24 +90,35 @@ class DriverOrdersController extends GetxController {
     }
   }
 
+  PartnerOrder? findOrder(String id) {
+    return pendingOrders.firstWhereOrNull((o) => o.id == id) ??
+        inProgressOrders.firstWhereOrNull((o) => o.id == id) ??
+        finishedOrders.firstWhereOrNull((o) => o.id == id);
+  }
+
   PartnerOrder? get activeOrder {
     final id = activeOrderId.value;
     if (id == null) return null;
-    return orders.firstWhereOrNull((o) => o.id == id);
+    return findOrder(id);
   }
 
-  bool isPickedUp(String orderId) => pickedUpOrderIds.contains(orderId);
+  bool isPickedUp(String orderId) =>
+      pickedUpOrderIds.contains(orderId) ||
+      inProgressOrders.any(
+        (o) => o.id == orderId && o.status == PartnerOrderStatus.onTheWay,
+      );
 
   Future<void> acceptOrder(String orderId) async {
     try {
-      final updated = await _orderService.updateStatus(
-        orderId: orderId,
-        status: PartnerOrderStatus.accepted.apiValue,
-      );
-      acceptedOrderIds.add(orderId);
-      _replaceOrder(updated);
+      final updated = await _orderService.acceptDriverOrder(orderId);
+      pendingOrders.removeWhere((o) => o.id == orderId);
+      _upsert(inProgressOrders, updated);
+      if (updated.status == PartnerOrderStatus.onTheWay) {
+        pickedUpOrderIds.add(orderId);
+        activeOrderId.value = orderId;
+      }
       selectedTab.value = DriverOrderTab.inProgress;
-      acceptedOrderIds.refresh();
+      pickedUpOrderIds.refresh();
     } catch (error) {
       Get.snackbar('خطأ', apiErrorMessage(error));
     }
@@ -141,12 +126,12 @@ class DriverOrdersController extends GetxController {
 
   Future<void> markPickedUp(String orderId) async {
     try {
-      final updated = await _orderService.updateStatus(
+      final updated = await _orderService.updateDriverStatus(
         orderId: orderId,
         status: PartnerOrderStatus.onTheWay.apiValue,
       );
       pickedUpOrderIds.add(orderId);
-      _replaceOrder(updated);
+      _upsert(inProgressOrders, updated);
       activeOrderId.value = orderId;
       pickedUpOrderIds.refresh();
 
@@ -159,11 +144,12 @@ class DriverOrdersController extends GetxController {
 
   Future<void> completeDelivery(String orderId) async {
     try {
-      final updated = await _orderService.updateStatus(
+      final updated = await _orderService.updateDriverStatus(
         orderId: orderId,
         status: PartnerOrderStatus.delivered.apiValue,
       );
-      _replaceOrder(updated);
+      inProgressOrders.removeWhere((o) => o.id == orderId);
+      _upsert(finishedOrders, updated);
       if (activeOrderId.value == orderId) {
         activeOrderId.value = null;
         _stopSharing();
@@ -176,27 +162,22 @@ class DriverOrdersController extends GetxController {
 
   Future<void> startDelivery(String orderId) => markPickedUp(orderId);
 
-  void _replaceOrder(PartnerOrder order) {
-    final index = orders.indexWhere((o) => o.id == order.id);
+  void _upsert(RxList<PartnerOrder> list, PartnerOrder order) {
+    final index = list.indexWhere((o) => o.id == order.id);
     if (index >= 0) {
-      orders[index] = order;
+      list[index] = order;
     } else {
-      orders.insert(0, order);
+      list.insert(0, order);
     }
-    orders.refresh();
+    list.refresh();
   }
 
-  void _syncAcceptedFromOrders() {
-    acceptedOrderIds.clear();
+  void _syncPickedUpFromOrders() {
     pickedUpOrderIds.clear();
-    for (final order in orders) {
+    for (final order in inProgressOrders) {
       if (order.status == PartnerOrderStatus.onTheWay) {
-        acceptedOrderIds.add(order.id);
         pickedUpOrderIds.add(order.id);
         activeOrderId.value ??= order.id;
-      } else if (order.status == PartnerOrderStatus.accepted ||
-          order.status == PartnerOrderStatus.preparing) {
-        acceptedOrderIds.add(order.id);
       }
     }
   }

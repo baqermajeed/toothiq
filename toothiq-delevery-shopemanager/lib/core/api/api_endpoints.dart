@@ -22,4 +22,10 @@ class ApiEndpoints {
   static const String orders = '/api/orders';
   static String order(String id) => '/api/orders/$id';
   static String orderStatus(String id) => '/api/orders/$id/status';
+
+  // Driver orders
+  static const String driverOrders = '/api/driver/orders';
+  static String driverOrder(String id) => '/api/driver/orders/$id';
+  static String driverAcceptOrder(String id) => '/api/driver/orders/$id/accept';
+  static String driverOrderStatus(String id) => '/api/driver/orders/$id/status';
 }

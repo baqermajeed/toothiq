@@ -68,36 +68,64 @@ class DriverOrdersPage extends StatelessWidget {
           _StageTabBar(controller: controller),
           Expanded(
             child: Obx(() {
-              final list = controller.currentTabOrders;
-              if (list.isEmpty) {
-                return _EmptyState(tab: controller.selectedTab.value);
+              if (controller.isLoading.value &&
+                  controller.currentTabOrders.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
               }
 
-              return ListView.separated(
-                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
-                itemCount: list.length,
-                separatorBuilder: (context, index) => SizedBox(height: 14.h),
-                itemBuilder: (context, index) {
-                  final order = list[index];
-                  return DriverOrderCard(
-                    order: order,
-                    tab: controller.selectedTab.value,
-                    isPickedUp: controller.isPickedUp(order.id),
-                    onAccept: () async {
-                      await controller.acceptOrder(order.id);
-                      Get.snackbar('تم', 'تم قبول الطلب بنجاح');
-                    },
-                    onPickup: () async {
-                      await controller.markPickedUp(order.id);
-                      Get.snackbar('الاستلام', 'تم تأكيد استلام الطلب من المتجر');
-                    },
-                    onDeliver: () async {
-                      await controller.completeDelivery(order.id);
-                      Get.snackbar('تم', 'تم تسليم الطلب بنجاح');
-                    },
-                    onDetails: () => showDriverOrderDetailSheet(order),
-                  );
-                },
+              if (controller.errorMessage.value.isNotEmpty &&
+                  controller.currentTabOrders.isEmpty) {
+                return _ErrorState(
+                  message: controller.errorMessage.value,
+                  onRetry: controller.loadOrders,
+                );
+              }
+
+              final list = controller.currentTabOrders;
+              if (list.isEmpty) {
+                return RefreshIndicator(
+                  onRefresh: controller.loadOrders,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: 80.h),
+                      _EmptyState(tab: controller.selectedTab.value),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: controller.loadOrders,
+                child: ListView.separated(
+                  padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
+                  itemCount: list.length,
+                  separatorBuilder: (context, index) => SizedBox(height: 14.h),
+                  itemBuilder: (context, index) {
+                    final order = list[index];
+                    return DriverOrderCard(
+                      order: order,
+                      tab: controller.selectedTab.value,
+                      isPickedUp: controller.isPickedUp(order.id),
+                      onAccept: () async {
+                        await controller.acceptOrder(order.id);
+                        Get.snackbar('تم', 'تم قبول الطلب بنجاح');
+                      },
+                      onPickup: () async {
+                        await controller.markPickedUp(order.id);
+                        Get.snackbar(
+                          'الاستلام',
+                          'تم تأكيد استلام الطلب من المتجر',
+                        );
+                      },
+                      onDeliver: () async {
+                        await controller.completeDelivery(order.id);
+                        Get.snackbar('تم', 'تم تسليم الطلب بنجاح');
+                      },
+                      onDetails: () => showDriverOrderDetailSheet(order),
+                    );
+                  },
+                ),
               );
             }),
           ),
@@ -207,6 +235,41 @@ class _TabItem extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 40.sp, color: AppColors.error),
+            SizedBox(height: 12.h),
+            MyText(
+              message,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16.h),
+            TextButton(
+              onPressed: onRetry,
+              child: MyText('إعادة المحاولة', fontSize: 13.sp, color: AppColors.primary),
+            ),
+          ],
         ),
       ),
     );

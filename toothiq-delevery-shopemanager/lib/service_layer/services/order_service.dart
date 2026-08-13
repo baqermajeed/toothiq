@@ -20,4 +20,19 @@ class OrderService {
   }) {
     return _api.updateOrderStatus(orderId: orderId, status: status);
   }
+
+  Future<List<PartnerOrder>> fetchDriverOrders({required String tab}) {
+    return _api.getDriverOrders(tab: tab);
+  }
+
+  Future<PartnerOrder> acceptDriverOrder(String orderId) {
+    return _api.acceptDriverOrder(orderId);
+  }
+
+  Future<PartnerOrder> updateDriverStatus({
+    required String orderId,
+    required String status,
+  }) {
+    return _api.updateDriverOrderStatus(orderId: orderId, status: status);
+  }
 }

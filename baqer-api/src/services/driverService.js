@@ -13,8 +13,12 @@ const STATUS_LABELS = {
   [ORDER_STATUS.POSTPONED]: 'مؤجل',
 };
 
-/** حالات تظهر في تبويب «قيد الانتظار»: مقبولة من المتجر بلا سائق */
-const PENDING_DRIVER_STATUSES = [ORDER_STATUS.ACCEPTED, ORDER_STATUS.PREPARING];
+/** حالات تظهر في تبويب «قيد الانتظار»: جاهزة من المتجر ولم يلتقطها سائق */
+const PENDING_DRIVER_STATUSES = [
+  ORDER_STATUS.ACCEPTED,
+  ORDER_STATUS.PREPARING,
+  ORDER_STATUS.ON_THE_WAY,
+];
 
 /** حالات تبويب «قيد التنفيذ» بعد قبول السائق */
 const IN_PROGRESS_DRIVER_STATUSES = [
@@ -242,9 +246,7 @@ async function updateOrderStatus(orderId, driverId, { status }) {
   }
 
   const allowed = {
-    [ORDER_STATUS.ON_THE_WAY]: IN_PROGRESS_DRIVER_STATUSES.filter(
-      (s) => s !== ORDER_STATUS.ON_THE_WAY
-    ),
+    [ORDER_STATUS.ON_THE_WAY]: IN_PROGRESS_DRIVER_STATUSES,
     [ORDER_STATUS.DELIVERED]: [ORDER_STATUS.ON_THE_WAY, ORDER_STATUS.PREPARING, ORDER_STATUS.ACCEPTED],
     [ORDER_STATUS.CANCELED]: IN_PROGRESS_DRIVER_STATUSES,
   };
