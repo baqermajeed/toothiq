@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 class AuthLogoPlaceholder extends StatelessWidget {
   final double size;
 
-  static const assetPath = 'assets/images/icon/toothiqlogo.png';
+  static const assetPath = 'assets/images/icon/toothiq_logo_auth.png';
 
   const AuthLogoPlaceholder({super.key, this.size = 140});
 

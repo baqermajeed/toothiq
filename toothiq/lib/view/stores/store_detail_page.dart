@@ -12,7 +12,6 @@ import '../../widget/home/product_card_widget.dart';
 import '../../widget/home/products_grid_widget.dart';
 import '../../widget/my_text.dart';
 import '../../widget/search_filter_row.dart';
-import '../../widget/section/brand_card_widget.dart';
 import '../../widget/app_image.dart';
 import '../../widget/stores/store_about_tab_content.dart';
 import '../../widget/stores/store_detail_app_bar.dart';
@@ -45,7 +44,7 @@ class StoreDetailPage extends GetView<StoreDetailController> {
         resizeToAvoidBottomInset: true,
         body: Obx(() {
           final tab = controller.selectedTabIndex.value;
-          final showReviews = tab == 3;
+          final showReviews = tab == 2;
           final store = controller.viewStore;
 
           return Column(
@@ -111,10 +110,8 @@ class _StoreTabContent extends StatelessWidget {
       case 1:
         return _SectionsTabContent(controller: controller);
       case 2:
-        return _BrandsTabContent(controller: controller);
-      case 3:
         return _ReviewsTabContent(controller: controller);
-      case 4:
+      case 3:
         return StoreAboutTabContent(controller: controller);
       default:
         return const SizedBox.shrink();
@@ -271,69 +268,6 @@ class _SectionsTabContent extends StatelessWidget {
                   return CategoryCardWidget(
                     category: category,
                     onTap: () => controller.onCategoryTap(category),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-}
-
-class _BrandsTabContent extends StatelessWidget {
-  final StoreDetailController controller;
-
-  const _BrandsTabContent({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final brands = controller.filteredBrands;
-      if (brands.isEmpty) {
-        return Center(
-          child: MyText(
-            'لا توجد براندات متاحة',
-            fontSize: 15.sp,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-            textAlign: TextAlign.center,
-          ),
-        );
-      }
-
-      return SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.only(bottom: 24.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(height: 16.h),
-            SearchFilterRow(
-              controller: controller.searchController,
-              hintText: 'أبحث عن براند محدد ..',
-              onFilterTap: () {},
-            ),
-            SizedBox(height: 16.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: GridView.builder(
-                clipBehavior: Clip.none,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 12.w,
-                  mainAxisSpacing: 12.h,
-                  childAspectRatio: 1.11,
-                ),
-                itemCount: brands.length,
-                itemBuilder: (context, index) {
-                  final brand = brands[index];
-                  return BrandCardWidget(
-                    brand: brand,
-                    onTap: () => controller.onBrandTap(brand),
                   );
                 },
               ),

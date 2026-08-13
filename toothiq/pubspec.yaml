@@ -21,6 +21,8 @@ dependencies:
   package_info_plus: ^8.1.1
   url_launcher: ^6.3.1
   smooth_page_indicator: ^1.1.0
+  carousel_slider: ^5.0.0
+  flutter_animate: ^4.5.2
   socket_io_client: ^2.0.3+1
   custom_refresh_indicator: ^4.0.1
   firebase_core: ^3.6.0

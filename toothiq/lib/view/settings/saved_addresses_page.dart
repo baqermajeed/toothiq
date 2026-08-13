@@ -7,7 +7,7 @@ import '../../controller/saved_addresses_controller.dart';
 import '../../model/delivery_address_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/basket/basket_bottom_bar.dart';
-import '../../widget/common/async_state_widgets.dart';
+import '../../widget/my_text.dart';
 import '../../widget/section/section_app_bar.dart';
 import '../../widget/settings/address_form_bottom_sheet.dart';
 import '../../widget/settings/saved_address_card_widget.dart';
@@ -75,10 +75,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
             children: [
               Expanded(
                 child: isEmpty
-                    ? const AppEmptyState(
-                        title: 'لا توجد عناوين محفوظة',
-                        icon: Icons.location_on_outlined,
-                      )
+                    ? const _SavedAddressesEmptyState()
                     : ListView.separated(
                         padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
                         physics: const BouncingScrollPhysics(),
@@ -158,5 +155,38 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     await controller.setCurrentAddress(address.id);
     if (!mounted) return;
     Get.back(result: address);
+  }
+}
+
+class _SavedAddressesEmptyState extends StatelessWidget {
+  const _SavedAddressesEmptyState();
+
+  static const _illustration = 'assets/images/icon/Framedfsdf.png';
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              _illustration,
+              width: 260.w,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(height: 20.h),
+            MyText(
+              'لا توجد عناوين محفوظة',
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w800,
+              color: AppColors.productTitle,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

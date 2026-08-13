@@ -14,8 +14,6 @@ import '../../widget/basket/basket_app_bar.dart';
 import '../../widget/basket/basket_bottom_bar.dart';
 import '../../widget/basket/basket_item_card.dart';
 import '../../widget/cart/cart_confirm_dialog.dart';
-import '../../widget/cart/cart_icon.dart';
-import '../../widget/common/async_state_widgets.dart';
 import '../../widget/my_text.dart';
 import '../../widget/orders/order_info_card.dart';
 
@@ -48,13 +46,7 @@ class BasketPage extends GetView<CartController> {
             children: [
               Expanded(
                 child: isEmpty
-                    ? AppEmptyState(
-                        title: 'السلة فارغة ! أضف أول منتج الآن',
-                        iconWidget: CartIcon(
-                          size: 62.sp,
-                          color: AppColors.textLight,
-                        ),
-                      )
+                    ? const _BasketEmptyState()
                     : RefreshIndicator(
                         color: AppColors.primary,
                         onRefresh: () async {
@@ -78,6 +70,39 @@ class BasketPage extends GetView<CartController> {
   void _onCompletePurchase() {
     CheckoutBinding().dependencies();
     Get.find<CheckoutController>().startCheckout();
+  }
+}
+
+class _BasketEmptyState extends StatelessWidget {
+  const _BasketEmptyState();
+
+  static const _illustration = 'assets/images/icon/Frame.png';
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              _illustration,
+              width: 260.w,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(height: 20.h),
+            MyText(
+              'السلة فارغة ! أضف أول منتج الآن',
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w800,
+              color: AppColors.productTitle,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

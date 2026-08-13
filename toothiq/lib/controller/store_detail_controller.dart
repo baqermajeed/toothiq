@@ -13,7 +13,6 @@ import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/shop_service.dart';
 import '../view/auth/login_page.dart';
 import '../widget/common/app_toast.dart';
-import '../view/section/brand_products_page.dart';
 import '../view/section/section_detail_page.dart';
 import 'session_controller.dart';
 
@@ -47,7 +46,6 @@ class StoreDetailController extends GetxController {
   static const tabs = [
     'المنتجات',
     'الأقسام',
-    'البراندات',
     'تقييم المتجر',
     'عن المتجر',
   ];
@@ -101,15 +99,6 @@ class StoreDetailController extends GetxController {
           );
         }
         break;
-      case 2:
-        if (query.isEmpty) {
-          filteredBrands.assignAll(brands);
-        } else {
-          filteredBrands.assignAll(
-            brands.where((b) => b.name.contains(query)).toList(),
-          );
-        }
-        break;
       default:
         break;
     }
@@ -148,10 +137,6 @@ class StoreDetailController extends GetxController {
       shopId: viewStore.id,
       shopName: viewStore.name,
     );
-  }
-
-  void onBrandTap(BrandModel brand) {
-    BrandProductsPage.open(brand: brand, initialProducts: filteredProducts);
   }
 
   Future<void> loadStoreData() async {
