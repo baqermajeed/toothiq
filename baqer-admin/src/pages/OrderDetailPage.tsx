@@ -124,6 +124,9 @@ export function OrderDetailPage() {
                 </option>
               ))}
             </select>
+            <p className="muted" style={{ marginTop: '0.4rem' }}>
+              «في الطريق» تُحدَّث عادة من تطبيق السائق عند الاستلام. المتجر يحوّل الطلب إلى «قيد التحضير» فقط.
+            </p>
           </div>
           <div className="field">
             <label>سبب الإلغاء (إن وُجد)</label>

@@ -239,7 +239,7 @@ function canChangeStatus(currentStatus, newStatus, role, _orderDriverId, _userId
     return role === 'shop';
   }
   if (newStatus === ORDER_STATUS.ACCEPTED || newStatus === ORDER_STATUS.PREPARING) return role === 'shop';
-  if (newStatus === ORDER_STATUS.ON_THE_WAY) return role === 'shop';
+  if (newStatus === ORDER_STATUS.ON_THE_WAY) return role === 'driver';
   if (newStatus === ORDER_STATUS.POSTPONED) return role === 'shop' || role === 'admin';
   if (newStatus === ORDER_STATUS.DELIVERED) {
     return role === 'shop';
@@ -673,6 +673,9 @@ async function updateStatus(orderId, userId, roles, payload) {
     if (payload.status === ORDER_STATUS.CANCELED) {
       msg = `لا يمكن إلغاء الطلب في الحالة الحالية (${currentAr}).`;
       code = 'CANCEL_NOT_ALLOWED';
+    } else if (payload.status === ORDER_STATUS.ON_THE_WAY && role !== 'driver') {
+      msg = 'حالة «في الطريق» تتغيّر من تطبيق السائق عند استلام الطلب فقط.';
+      code = 'ON_THE_WAY_NOT_ALLOWED';
     } else if (
       payload.status === ORDER_STATUS.DELIVERED &&
       role !== 'shop' &&

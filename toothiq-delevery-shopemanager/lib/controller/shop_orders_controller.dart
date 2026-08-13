@@ -79,7 +79,7 @@ class ShopOrdersController extends GetxController {
         orderId: id,
         status: PartnerOrderStatus.accepted.apiValue,
       );
-      _replaceOrder(updated.copyWith(status: PartnerOrderStatus.preparing));
+      _replaceOrder(updated);
     } catch (error) {
       Get.snackbar('خطأ', apiErrorMessage(error));
     }
@@ -101,7 +101,7 @@ class ShopOrdersController extends GetxController {
     try {
       final updated = await _orderService.updateStatus(
         orderId: id,
-        status: PartnerOrderStatus.onTheWay.apiValue,
+        status: PartnerOrderStatus.preparing.apiValue,
       );
       _replaceOrder(updated);
     } catch (error) {

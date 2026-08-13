@@ -89,18 +89,33 @@ class ShopOrderDetailPage extends StatelessWidget {
                 child: MyText('رفض الطلب', fontSize: 15.sp, color: AppColors.error),
               ),
             ],
-            if (live.status == PartnerOrderStatus.preparing ||
-                live.status == PartnerOrderStatus.accepted) ...[
+            if (live.status == PartnerOrderStatus.accepted) ...[
               ElevatedButton(
                 onPressed: () async {
                   await controller.markReadyForDelivery(live.id);
-                  Get.snackbar('تم', 'الطلب جاهز للتوصيل');
+                  Get.snackbar('تم', 'الطلب جاهز وبانتظار السائق');
                 },
                 style: _primaryBtn(),
                 child: MyText(
                   'جاهز للتوصيل',
                   fontSize: 15.sp,
                   color: Colors.white,
+                ),
+              ),
+            ],
+            if (live.status == PartnerOrderStatus.preparing) ...[
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 14.w),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(14.r),
+                ),
+                child: MyText(
+                  'الطلب جاهز وبانتظار استلام السائق',
+                  fontSize: 13.sp,
+                  color: AppColors.primary,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
