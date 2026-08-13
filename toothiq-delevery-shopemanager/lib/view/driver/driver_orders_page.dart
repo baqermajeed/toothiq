@@ -81,6 +81,7 @@ class DriverOrdersPage extends StatelessWidget {
                 );
               }
 
+              final _ = controller.pickedUpOrderIds.length;
               final list = controller.currentTabOrders;
               if (list.isEmpty) {
                 return RefreshIndicator(
@@ -107,6 +108,7 @@ class DriverOrdersPage extends StatelessWidget {
                       order: order,
                       tab: controller.selectedTab.value,
                       isPickedUp: controller.isPickedUp(order.id),
+                      canDeliver: controller.canDeliver(order.id),
                       onAccept: () async {
                         await controller.acceptOrder(order.id);
                         Get.snackbar('تم', 'تم قبول الطلب بنجاح');
@@ -163,6 +165,13 @@ class _StageTabBar extends StatelessWidget {
                   onTap: () => controller.changeTab(DriverOrderTab.inProgress),
                 ),
                 _TabItem(
+                  label: 'المستلمة',
+                  count: controller.countForTab(DriverOrderTab.pickedUp),
+                  selected:
+                      controller.selectedTab.value == DriverOrderTab.pickedUp,
+                  onTap: () => controller.changeTab(DriverOrderTab.pickedUp),
+                ),
+                _TabItem(
                   label: 'المنتهية',
                   count: controller.countForTab(DriverOrderTab.finished),
                   selected: controller.selectedTab.value == DriverOrderTab.finished,
@@ -211,9 +220,11 @@ class _TabItem extends StatelessWidget {
             children: [
               MyText(
                 label,
-                fontSize: 13.sp,
+                fontSize: 11.sp,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: selected ? AppColors.primary : AppColors.textSecondary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               if (count > 0) ...[
                 SizedBox(height: 4.h),
@@ -287,6 +298,8 @@ class _EmptyState extends StatelessWidget {
         return 'لا توجد طلبات واردة حالياً';
       case DriverOrderTab.inProgress:
         return 'لا توجد طلبات قيد التنفيذ';
+      case DriverOrderTab.pickedUp:
+        return 'لا توجد طلبات مستلمة';
       case DriverOrderTab.finished:
         return 'لا توجد طلبات منتهية';
     }
@@ -298,6 +311,8 @@ class _EmptyState extends StatelessWidget {
         return Icons.inbox_outlined;
       case DriverOrderTab.inProgress:
         return Icons.local_shipping_outlined;
+      case DriverOrderTab.pickedUp:
+        return Icons.inventory_2_outlined;
       case DriverOrderTab.finished:
         return Icons.task_alt_outlined;
     }

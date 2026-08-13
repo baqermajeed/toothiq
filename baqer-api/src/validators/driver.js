@@ -7,7 +7,7 @@ const listDriverOrdersQuerySchema = Joi.object({
     .valid(...Object.values(DRIVER_ORDER_TABS))
     .required()
     .messages({
-      'any.only': 'التبويب يجب أن يكون pending أو in_progress أو completed',
+      'any.only': 'التبويب يجب أن يكون pending أو in_progress أو picked_up أو completed',
       'any.required': 'معامل tab مطلوب',
     }),
   page: Joi.alternatives().try(Joi.number(), Joi.string()).optional().custom((v) => {

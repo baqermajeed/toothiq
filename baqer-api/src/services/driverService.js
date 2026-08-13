@@ -20,13 +20,15 @@ const PENDING_DRIVER_STATUSES = [
   ORDER_STATUS.ON_THE_WAY,
 ];
 
-/** حالات تبويب «قيد التنفيذ» بعد قبول السائق */
+/** حالات تبويب «قيد التنفيذ» بعد قبول السائق وقبل الاستلام */
 const IN_PROGRESS_DRIVER_STATUSES = [
   ORDER_STATUS.ACCEPTED,
   ORDER_STATUS.PREPARING,
-  ORDER_STATUS.ON_THE_WAY,
   ORDER_STATUS.POSTPONED,
 ];
+
+/** حالات تبويب «المستلمة» بعد استلام السائق من المتجر */
+const PICKED_UP_DRIVER_STATUSES = [ORDER_STATUS.ON_THE_WAY];
 
 const COMPLETED_DRIVER_STATUSES = [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELED];
 
@@ -143,13 +145,22 @@ function buildTabQuery(tab, driverId) {
       status: { $in: IN_PROGRESS_DRIVER_STATUSES },
     };
   }
+  if (tab === DRIVER_ORDER_TABS.PICKED_UP) {
+    return {
+      driverId: driverOid,
+      status: { $in: PICKED_UP_DRIVER_STATUSES },
+    };
+  }
   if (tab === DRIVER_ORDER_TABS.COMPLETED) {
     return {
       driverId: driverOid,
       status: { $in: COMPLETED_DRIVER_STATUSES },
     };
   }
-  throw badRequest('تبويب غير صالح. استخدم pending أو in_progress أو completed', 'INVALID_TAB');
+  throw badRequest(
+    'تبويب غير صالح. استخدم pending أو in_progress أو picked_up أو completed',
+    'INVALID_TAB',
+  );
 }
 
 function populateDriverOrderQuery(query) {
@@ -184,14 +195,16 @@ async function listOrders(driverId, { tab, page = 1, limit = 20 } = {}) {
 }
 
 async function getCounts(driverId) {
-  const [pending, inProgress, completed] = await Promise.all([
+  const [pending, inProgress, pickedUp, completed] = await Promise.all([
     Order.countDocuments(buildTabQuery(DRIVER_ORDER_TABS.PENDING, driverId)),
     Order.countDocuments(buildTabQuery(DRIVER_ORDER_TABS.IN_PROGRESS, driverId)),
+    Order.countDocuments(buildTabQuery(DRIVER_ORDER_TABS.PICKED_UP, driverId)),
     Order.countDocuments(buildTabQuery(DRIVER_ORDER_TABS.COMPLETED, driverId)),
   ]);
   return {
     pending,
     in_progress: inProgress,
+    picked_up: pickedUp,
     completed,
   };
 }
@@ -246,9 +259,15 @@ async function updateOrderStatus(orderId, driverId, { status }) {
   }
 
   const allowed = {
-    [ORDER_STATUS.ON_THE_WAY]: IN_PROGRESS_DRIVER_STATUSES,
+    [ORDER_STATUS.ON_THE_WAY]: [
+      ...IN_PROGRESS_DRIVER_STATUSES,
+      ORDER_STATUS.ON_THE_WAY,
+    ],
     [ORDER_STATUS.DELIVERED]: [ORDER_STATUS.ON_THE_WAY, ORDER_STATUS.PREPARING, ORDER_STATUS.ACCEPTED],
-    [ORDER_STATUS.CANCELED]: IN_PROGRESS_DRIVER_STATUSES,
+    [ORDER_STATUS.CANCELED]: [
+      ...IN_PROGRESS_DRIVER_STATUSES,
+      ORDER_STATUS.ON_THE_WAY,
+    ],
   };
 
   const current = order.status;
@@ -295,5 +314,6 @@ module.exports = {
   updateOrderStatus,
   PENDING_DRIVER_STATUSES,
   IN_PROGRESS_DRIVER_STATUSES,
+  PICKED_UP_DRIVER_STATUSES,
   COMPLETED_DRIVER_STATUSES,
 };

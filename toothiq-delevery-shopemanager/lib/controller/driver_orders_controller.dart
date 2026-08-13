@@ -8,7 +8,7 @@ import '../model/partner_order.dart';
 import '../service_layer/services/driver_tracking_socket_service.dart';
 import '../service_layer/services/order_service.dart';
 
-enum DriverOrderTab { pending, inProgress, finished }
+enum DriverOrderTab { pending, inProgress, pickedUp, finished }
 
 class DriverOrdersController extends GetxController {
   DriverOrdersController({
@@ -22,6 +22,7 @@ class DriverOrdersController extends GetxController {
 
   final pendingOrders = <PartnerOrder>[].obs;
   final inProgressOrders = <PartnerOrder>[].obs;
+  final pickedUpOrders = <PartnerOrder>[].obs;
   final finishedOrders = <PartnerOrder>[].obs;
   final selectedTab = DriverOrderTab.pending.obs;
   final pickedUpOrderIds = <String>{}.obs;
@@ -53,11 +54,13 @@ class DriverOrdersController extends GetxController {
       final results = await Future.wait([
         _orderService.fetchDriverOrders(tab: 'pending'),
         _orderService.fetchDriverOrders(tab: 'in_progress'),
+        _orderService.fetchDriverOrders(tab: 'picked_up'),
         _orderService.fetchDriverOrders(tab: 'completed'),
       ]);
       pendingOrders.assignAll(results[0]);
       inProgressOrders.assignAll(results[1]);
-      finishedOrders.assignAll(results[2]);
+      pickedUpOrders.assignAll(results[2]);
+      finishedOrders.assignAll(results[3]);
       _syncPickedUpFromOrders();
     } catch (error) {
       errorMessage.value = apiErrorMessage(error);
@@ -74,6 +77,8 @@ class DriverOrdersController extends GetxController {
         return pendingOrders;
       case DriverOrderTab.inProgress:
         return inProgressOrders;
+      case DriverOrderTab.pickedUp:
+        return pickedUpOrders;
       case DriverOrderTab.finished:
         return finishedOrders;
     }
@@ -85,6 +90,8 @@ class DriverOrdersController extends GetxController {
         return pendingOrders.length;
       case DriverOrderTab.inProgress:
         return inProgressOrders.length;
+      case DriverOrderTab.pickedUp:
+        return pickedUpOrders.length;
       case DriverOrderTab.finished:
         return finishedOrders.length;
     }
@@ -93,6 +100,7 @@ class DriverOrdersController extends GetxController {
   PartnerOrder? findOrder(String id) {
     return pendingOrders.firstWhereOrNull((o) => o.id == id) ??
         inProgressOrders.firstWhereOrNull((o) => o.id == id) ??
+        pickedUpOrders.firstWhereOrNull((o) => o.id == id) ??
         finishedOrders.firstWhereOrNull((o) => o.id == id);
   }
 
@@ -102,23 +110,19 @@ class DriverOrdersController extends GetxController {
     return findOrder(id);
   }
 
-  bool isPickedUp(String orderId) =>
-      pickedUpOrderIds.contains(orderId) ||
-      inProgressOrders.any(
-        (o) => o.id == orderId && o.status == PartnerOrderStatus.onTheWay,
-      );
+  bool isPickedUp(String orderId) => pickedUpOrderIds.contains(orderId);
+
+  bool canDeliver(String orderId) {
+    if (pickedUpOrderIds.contains(orderId)) return true;
+    return findOrder(orderId)?.status == PartnerOrderStatus.onTheWay;
+  }
 
   Future<void> acceptOrder(String orderId) async {
     try {
       final updated = await _orderService.acceptDriverOrder(orderId);
       pendingOrders.removeWhere((o) => o.id == orderId);
       _upsert(inProgressOrders, updated);
-      if (updated.status == PartnerOrderStatus.onTheWay) {
-        pickedUpOrderIds.add(orderId);
-        activeOrderId.value = orderId;
-      }
       selectedTab.value = DriverOrderTab.inProgress;
-      pickedUpOrderIds.refresh();
     } catch (error) {
       Get.snackbar('خطأ', apiErrorMessage(error));
     }
@@ -131,9 +135,11 @@ class DriverOrdersController extends GetxController {
         status: PartnerOrderStatus.onTheWay.apiValue,
       );
       pickedUpOrderIds.add(orderId);
-      _upsert(inProgressOrders, updated);
+      inProgressOrders.removeWhere((o) => o.id == orderId);
+      _upsert(pickedUpOrders, updated);
       activeOrderId.value = orderId;
       pickedUpOrderIds.refresh();
+      selectedTab.value = DriverOrderTab.pickedUp;
 
       await _socketService.connect();
       await _startSharing(orderId);
@@ -149,6 +155,7 @@ class DriverOrdersController extends GetxController {
         status: PartnerOrderStatus.delivered.apiValue,
       );
       inProgressOrders.removeWhere((o) => o.id == orderId);
+      pickedUpOrders.removeWhere((o) => o.id == orderId);
       _upsert(finishedOrders, updated);
       if (activeOrderId.value == orderId) {
         activeOrderId.value = null;
@@ -174,12 +181,11 @@ class DriverOrdersController extends GetxController {
 
   void _syncPickedUpFromOrders() {
     pickedUpOrderIds.clear();
-    for (final order in inProgressOrders) {
-      if (order.status == PartnerOrderStatus.onTheWay) {
-        pickedUpOrderIds.add(order.id);
-        activeOrderId.value ??= order.id;
-      }
+    for (final order in pickedUpOrders) {
+      pickedUpOrderIds.add(order.id);
+      activeOrderId.value ??= order.id;
     }
+    pickedUpOrderIds.refresh();
   }
 
   Future<void> _startSharing(String orderId) async {

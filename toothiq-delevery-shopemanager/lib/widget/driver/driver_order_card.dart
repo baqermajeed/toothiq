@@ -13,6 +13,7 @@ class DriverOrderCard extends StatelessWidget {
     required this.order,
     required this.tab,
     required this.isPickedUp,
+    this.canDeliver = false,
     this.onAccept,
     this.onPickup,
     this.onDeliver,
@@ -22,6 +23,7 @@ class DriverOrderCard extends StatelessWidget {
   final PartnerOrder order;
   final DriverOrderTab tab;
   final bool isPickedUp;
+  final bool canDeliver;
   final VoidCallback? onAccept;
   final VoidCallback? onPickup;
   final VoidCallback? onDeliver;
@@ -180,27 +182,16 @@ class DriverOrderCard extends StatelessWidget {
           onPressed: onAccept,
         );
       case DriverOrderTab.inProgress:
-        return Row(
-          children: [
-            Expanded(
-              child: _SecondaryActionButton(
-                label: 'الاستلام',
-                icon: Icons.inventory_2_outlined,
-                enabled: !isPickedUp,
-                onPressed: isPickedUp ? null : onPickup,
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Expanded(
-              child: _PrimaryActionButton(
-                label: 'التوصيل',
-                icon: Icons.location_on_outlined,
-                compact: true,
-                enabled: isPickedUp,
-                onPressed: isPickedUp ? onDeliver : null,
-              ),
-            ),
-          ],
+        return _PrimaryActionButton(
+          label: 'الاستلام',
+          icon: Icons.inventory_2_outlined,
+          onPressed: onPickup,
+        );
+      case DriverOrderTab.pickedUp:
+        return _PrimaryActionButton(
+          label: 'التوصيل',
+          icon: Icons.location_on_outlined,
+          onPressed: onDeliver,
         );
       case DriverOrderTab.finished:
         return const SizedBox.shrink();

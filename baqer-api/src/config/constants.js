@@ -8,6 +8,7 @@ const ROLES = Object.freeze({
 const DRIVER_ORDER_TABS = Object.freeze({
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
+  PICKED_UP: 'picked_up',
   COMPLETED: 'completed',
 });
 
