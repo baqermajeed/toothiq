@@ -47,7 +47,9 @@ async function listCategories() {
     { $match: baseProductMatch(visibleShopIds) },
     { $group: { _id: '$categoryId', count: { $sum: 1 } } },
   ]);
-  const countById = Object.fromEntries(countRows.map((r) => [r._id.toString(), r.count]));
+  const countById = Object.fromEntries(
+    countRows.filter((r) => r._id).map((r) => [r._id.toString(), r.count])
+  );
 
   const adminCategories = categories.map((c) => ({
     id: c._id.toString(),
@@ -58,25 +60,10 @@ async function listCategories() {
     source: 'admin',
   }));
 
-  const shopCategoryCountRows = await Product.aggregate([
-    {
-      $match: {
-        isAvailable: true,
-        shopId: { $in: visibleShopIds },
-        productCategoryId: { $exists: true, $ne: null },
-      },
-    },
-    { $group: { _id: '$productCategoryId', count: { $sum: 1 } } },
-  ]);
-  const shopCategoryCountById = Object.fromEntries(
-    shopCategoryCountRows.map((r) => [r._id.toString(), r.count])
-  );
-
-  const shopCategoryIds = Object.keys(shopCategoryCountById);
-  const shopCategories =
-    shopCategoryIds.length > 0
+  const customShopCategories =
+    visibleShopIds.length > 0
       ? await ProductCategory.find({
-          _id: { $in: shopCategoryIds },
+          shopId: { $in: visibleShopIds },
           isActive: true,
           $or: [{ parentCategoryId: { $exists: false } }, { parentCategoryId: null }],
         })
@@ -84,19 +71,35 @@ async function listCategories() {
           .lean()
       : [];
 
-  const customCategories = shopCategories.map((c) => ({
+  const customIds = customShopCategories.map((c) => c._id);
+  const shopCountRows =
+    customIds.length > 0
+      ? await Product.aggregate([
+          {
+            $match: {
+              isAvailable: true,
+              shopId: { $in: visibleShopIds },
+              productCategoryId: { $in: customIds },
+            },
+          },
+          { $group: { _id: '$productCategoryId', count: { $sum: 1 } } },
+        ])
+      : [];
+  const shopCountById = Object.fromEntries(
+    shopCountRows.filter((r) => r._id).map((r) => [r._id.toString(), r.count])
+  );
+
+  const customCategories = customShopCategories.map((c) => ({
     id: c._id.toString(),
     nameAr: c.nameAr,
     icon: c.image || '',
-    order: (c.order ?? 0) + 10000,
-    productsCount: shopCategoryCountById[c._id.toString()] || 0,
+    order: c.order ?? 0,
+    productsCount: shopCountById[c._id.toString()] || 0,
     source: 'shop',
     shopId: c.shopId?.toString() || null,
   }));
 
-  return [...adminCategories, ...customCategories].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.nameAr.localeCompare(b.nameAr, 'ar')
-  );
+  return [...adminCategories, ...customCategories];
 }
 
 /**
@@ -107,19 +110,26 @@ async function getCategoryDetail(categoryId) {
     throw notFound('التصنيف غير موجود');
   }
   const category = await Category.findOne({ _id: categoryId, isActive: true }).lean();
-  if (!category) throw notFound('التصنيف غير موجود');
+  if (!category) {
+    return getShopCustomCategoryDetail(categoryId);
+  }
 
   const visibleShopIds = await getVisibleShopIds();
-  const catOid = new mongoose.Types.ObjectId(String(categoryId));
+  const categoryMatch = await productService.expandAdminCategoryMatch(categoryId);
+  const productMatch = {
+    isAvailable: true,
+    shopId: { $in: visibleShopIds },
+    ...(categoryMatch.length === 1 ? categoryMatch[0] : { $or: categoryMatch }),
+  };
 
   const [totalProducts, subCountRows, brandCountRows] = await Promise.all([
-    Product.countDocuments({ ...baseProductMatch(visibleShopIds), categoryId: catOid }),
+    Product.countDocuments(productMatch),
     Product.aggregate([
-      { $match: { ...baseProductMatch(visibleShopIds), categoryId: catOid, subcategoryId: { $exists: true, $ne: null } } },
+      { $match: { ...productMatch, subcategoryId: { $exists: true, $ne: null } } },
       { $group: { _id: '$subcategoryId', count: { $sum: 1 } } },
     ]),
     Product.aggregate([
-      { $match: { ...baseProductMatch(visibleShopIds), categoryId: catOid, brandId: { $exists: true, $ne: null } } },
+      { $match: { ...productMatch, brandId: { $exists: true, $ne: null } } },
       { $group: { _id: '$brandId', count: { $sum: 1 } } },
     ]),
   ]);
@@ -149,6 +159,59 @@ async function getCategoryDetail(categoryId) {
     order: category.order ?? 0,
     productsCount: totalProducts,
     subcategories: subcategories.map((s) => mapSubcategoryRow(s, countBySubId)),
+    brands: brands.map((b) => mapBrandRow(b, countByBrandId)),
+  };
+}
+
+async function getShopCustomCategoryDetail(categoryId) {
+  const shopCategory = await ProductCategory.findOne({
+    _id: categoryId,
+    isActive: true,
+    $or: [{ parentCategoryId: { $exists: false } }, { parentCategoryId: null }],
+  }).lean();
+  if (!shopCategory) throw notFound('التصنيف غير موجود');
+
+  const shop = await Shop.findOne({
+    _id: shopCategory.shopId,
+    isActive: true,
+    isHidden: { $ne: true },
+  }).lean();
+  if (!shop) throw notFound('التصنيف غير موجود');
+
+  const productMatch = {
+    isAvailable: true,
+    shopId: shop._id,
+    productCategoryId: shopCategory._id,
+  };
+
+  const [totalProducts, brandCountRows] = await Promise.all([
+    Product.countDocuments(productMatch),
+    Product.aggregate([
+      { $match: { ...productMatch, brandId: { $exists: true, $ne: null } } },
+      { $group: { _id: '$brandId', count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const brandIdsWithProducts = brandCountRows.map((r) => r._id);
+  const countByBrandId = Object.fromEntries(
+    brandCountRows.map((r) => [r._id.toString(), r.count])
+  );
+  const brands =
+    brandIdsWithProducts.length > 0
+      ? await ProductBrand.find({ _id: { $in: brandIdsWithProducts }, isActive: true })
+          .sort({ order: 1, nameAr: 1 })
+          .lean()
+      : [];
+
+  return {
+    id: shopCategory._id.toString(),
+    nameAr: shopCategory.nameAr,
+    icon: shopCategory.image || '',
+    order: shopCategory.order ?? 0,
+    productsCount: totalProducts,
+    source: 'shop',
+    shopId: shop._id.toString(),
+    subcategories: [],
     brands: brands.map((b) => mapBrandRow(b, countByBrandId)),
   };
 }
@@ -300,12 +363,17 @@ async function getShopCatalog(shopId, categoryId, opts = {}) {
   if (!category) throw notFound('التصنيف غير موجود');
 
   const shopOid = new mongoose.Types.ObjectId(String(shopId));
-  const catOid = new mongoose.Types.ObjectId(String(categoryId));
   const includeProducts = opts.includeProducts === true;
   const includeUnavailable = opts.includeUnavailable === true;
 
-  const productQuery = { shopId: shopOid, categoryId: catOid };
+  const productQuery = { shopId: shopOid };
   if (!includeUnavailable) productQuery.isAvailable = true;
+  const categoryMatch = await productService.expandAdminCategoryMatch(categoryId, shopId);
+  if (categoryMatch.length === 1) {
+    Object.assign(productQuery, categoryMatch[0]);
+  } else if (categoryMatch.length > 1) {
+    productQuery.$or = categoryMatch;
+  }
 
   const [subCountRows, brandCountRows, allProductsCount] = await Promise.all([
     Product.aggregate([

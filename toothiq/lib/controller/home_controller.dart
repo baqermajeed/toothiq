@@ -83,8 +83,11 @@ class HomeController extends GetxController {
     final mapped = apiCategories
         .where((category) => category.nameAr.isNotEmpty)
         .map(
-          (category) =>
-              HomeCategoryModel(id: category.id, name: category.nameAr),
+          (category) => HomeCategoryModel(
+            id: category.id,
+            name: category.nameAr,
+            isShopCategory: category.isShopCategory,
+          ),
         )
         .toList();
 
@@ -129,7 +132,8 @@ class HomeController extends GetxController {
     final result = await _productService.fetchProductsPaginated(
       page: 1,
       limit: _pageSize,
-      categoryId: categoryId,
+      productCategoryId: category.isShopCategory ? categoryId : null,
+      categoryId: category.isShopCategory ? null : categoryId,
     );
     products.assignAll(
       _favoritesService.applyFavoriteState(result.items),
@@ -148,7 +152,8 @@ class HomeController extends GetxController {
       final result = await _productService.fetchProductsPaginated(
         page: nextPage,
         limit: _pageSize,
-        categoryId: categoryId,
+        productCategoryId: category.isShopCategory ? categoryId : null,
+        categoryId: category.isShopCategory ? null : categoryId,
       );
       products.addAll(
         _favoritesService.applyFavoriteState(result.items),

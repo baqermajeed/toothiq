@@ -64,6 +64,7 @@ class CategoriesController extends GetxController {
     try {
       final data = await _categoryService.fetchCategories();
       final mapped = _toCategoryCards(data);
+      mapped.sort(_comparePublicCategories);
       allCategories.assignAll(mapped);
       filteredCategories.assignAll(mapped);
     } on ApiException catch (error) {
@@ -103,12 +104,23 @@ class CategoriesController extends GetxController {
             shopId: category.shopId,
             productCategoryId:
                 category.isShopCategory ? category.id : null,
+            parentCategoryId: category.parentCategoryId,
           );
         })
         .toList(growable: false);
   }
 
+  int _comparePublicCategories(CategoryModel a, CategoryModel b) {
+    if (a.source != b.source) {
+      return a.source == CategorySource.admin ? -1 : 1;
+    }
+    return a.name.compareTo(b.name);
+  }
+
   void onCategoryTap(CategoryModel category) {
-    SectionDetailPage.open(category);
+    SectionDetailPage.open(
+      category,
+      shopId: category.shopId,
+    );
   }
 }

@@ -106,7 +106,6 @@ async function listByShop(shopId, opts = {}) {
     const safe = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     query.name = new RegExp(safe, 'i');
   }
-  applyTaxonomyFilters(query, { productCategoryId, categoryId, subcategoryId, brandId });
   if (hasOffer === true) {
     query.offerPrice = { $exists: true, $ne: null, $gt: 0 };
     query.$or = [
@@ -115,6 +114,7 @@ async function listByShop(shopId, opts = {}) {
       { offerEndsAt: { $gt: new Date() } },
     ];
   }
+  await applyTaxonomyFilters(query, { productCategoryId, categoryId, subcategoryId, brandId }, shopId);
 
   const sort = { createdAt: -1 };
 
@@ -145,19 +145,102 @@ async function getVisibleShopIds() {
   return Shop.find({ isActive: true, isHidden: { $ne: true } }).distinct('_id');
 }
 
-function applyTaxonomyFilters(query, filters = {}) {
+function toObjectId(id) {
+  return new mongoose.Types.ObjectId(String(id).trim());
+}
+
+function isObjectId(id) {
+  return id != null && mongoose.Types.ObjectId.isValid(String(id));
+}
+
+function shopScope(shopId) {
+  return isObjectId(shopId) ? { shopId: toObjectId(shopId) } : {};
+}
+
+function pushAndClause(query, clause) {
+  if (query.$or) {
+    const existingOr = query.$or;
+    delete query.$or;
+    query.$and = [...(query.$and || []), { $or: existingOr }];
+  }
+  if (query.$and) {
+    query.$and.push(clause);
+    return;
+  }
+  query.$and = [clause];
+}
+
+function applyOrMatch(query, orClause) {
+  if (!Array.isArray(orClause) || orClause.length === 0) return;
+  if (orClause.length === 1) {
+    const [only] = orClause;
+    const clashes = Object.keys(only).some((key) => query[key] !== undefined);
+    if (!clashes && !query.$or) {
+      Object.assign(query, only);
+      return;
+    }
+  }
+  pushAndClause(query, { $or: orClause });
+}
+
+/**
+ * قسم متجر: المنتجات المرتبطة بالقسم نفسه أو بقسم الإدارة الأب.
+ * إذا كان المعرّف قسم إدارة: المنتجات ذات categoryId أو أقسام المتجر المرتبطة به.
+ */
+async function expandProductCategoryMatch(productCategoryId, shopId) {
+  const oid = toObjectId(productCategoryId);
+  const section = await ProductCategory.findOne({ _id: oid, ...shopScope(shopId) }).lean();
+  const or = [{ productCategoryId: oid }];
+  if (section?.parentCategoryId) {
+    or.push({ categoryId: section.parentCategoryId });
+    return or;
+  }
+  if (!section) {
+    or.push({ categoryId: oid });
+    const linked = await ProductCategory.find({
+      parentCategoryId: oid,
+      ...shopScope(shopId),
+    })
+      .select('_id')
+      .lean();
+    if (linked.length > 0) {
+      or.push({ productCategoryId: { $in: linked.map((item) => item._id) } });
+    }
+  }
+  return or;
+}
+
+/**
+ * قسم إدارة: المنتجات ذات categoryId أو المرتبطة بأقسام المتجر التابعة له.
+ */
+async function expandAdminCategoryMatch(categoryId, shopId) {
+  const oid = toObjectId(categoryId);
+  const linked = await ProductCategory.find({
+    parentCategoryId: oid,
+    ...shopScope(shopId),
+  })
+    .select('_id')
+    .lean();
+  const or = [{ categoryId: oid }];
+  if (linked.length > 0) {
+    or.push({ productCategoryId: { $in: linked.map((item) => item._id) } });
+  }
+  return or;
+}
+
+async function applyTaxonomyFilters(query, filters = {}, shopId) {
   const { categoryId, subcategoryId, brandId, productCategoryId } = filters;
-  if (categoryId && mongoose.Types.ObjectId.isValid(String(categoryId))) {
-    query.categoryId = new mongoose.Types.ObjectId(String(categoryId).trim());
+  if (isObjectId(subcategoryId)) {
+    query.subcategoryId = toObjectId(subcategoryId);
   }
-  if (subcategoryId && mongoose.Types.ObjectId.isValid(String(subcategoryId))) {
-    query.subcategoryId = new mongoose.Types.ObjectId(String(subcategoryId).trim());
+  if (isObjectId(brandId)) {
+    query.brandId = toObjectId(brandId);
   }
-  if (brandId && mongoose.Types.ObjectId.isValid(String(brandId))) {
-    query.brandId = new mongoose.Types.ObjectId(String(brandId).trim());
+  if (isObjectId(productCategoryId)) {
+    applyOrMatch(query, await expandProductCategoryMatch(productCategoryId, shopId));
   }
-  if (productCategoryId && mongoose.Types.ObjectId.isValid(String(productCategoryId))) {
-    query.productCategoryId = new mongoose.Types.ObjectId(String(productCategoryId).trim());
+  if (isObjectId(categoryId)) {
+    applyOrMatch(query, await expandAdminCategoryMatch(categoryId, shopId));
   }
 }
 
@@ -322,12 +405,12 @@ async function listAll(filters = {}) {
     }
   }
 
-  applyTaxonomyFilters(query, {
+  await applyTaxonomyFilters(query, {
     productCategoryId: rawProductCategoryId,
     categoryId: rawCategoryId,
     subcategoryId: rawSubcategoryId,
     brandId: rawBrandId,
-  });
+  }, rawShopId);
 
   const excludeIds = Array.isArray(rawExcludeIds)
     ? rawExcludeIds
@@ -410,7 +493,7 @@ async function listCatalogProducts(filters = {}) {
 
   const visibleShopIds = await getVisibleShopIds();
   const query = { isAvailable: true, shopId: { $in: visibleShopIds } };
-  applyTaxonomyFilters(query, { categoryId, subcategoryId, brandId });
+  await applyTaxonomyFilters(query, { categoryId, subcategoryId, brandId }, shopId);
 
   if (shopId && mongoose.Types.ObjectId.isValid(String(shopId))) {
     const sid = String(shopId).trim();
@@ -449,6 +532,9 @@ async function create(shopId, userId, body, userRoles = []) {
   if (body.productCategoryId) {
     const cat = await ProductCategory.findOne({ _id: body.productCategoryId, shopId });
     if (!cat) throw badRequest('تصنيف المنتج غير موجود أو لا يتبع هذا المحل');
+    if (!body.categoryId && cat.parentCategoryId) {
+      body.categoryId = cat.parentCategoryId.toString();
+    }
   }
   const resolvedSectionId = await resolveProductCategoryForTaxonomy(shopId, body);
   const productCategoryId = body.productCategoryId || resolvedSectionId || undefined;
@@ -545,6 +631,9 @@ async function updateById(productId, shopId, userId, body, userRoles = []) {
   if (body.productCategoryId !== undefined && body.productCategoryId) {
     const cat = await ProductCategory.findOne({ _id: body.productCategoryId, shopId });
     if (!cat) throw badRequest('تصنيف المنتج غير موجود أو لا يتبع هذا المحل');
+    if (!body.categoryId && cat.parentCategoryId) {
+      body.categoryId = cat.parentCategoryId.toString();
+    }
   }
   const taxonomyBody = {
     categoryId: body.categoryId !== undefined ? body.categoryId : existing.categoryId,
@@ -635,7 +724,7 @@ async function search(q, locationFilters = {}, pagination = {}) {
   const regexOptNfd = patternNfd === patternNfc ? regexOpt : { $regex: patternNfd, $options: 'i' };
   const visibleShopIds = await getVisibleShopIds();
   const baseMatch = { isAvailable: true, shopId: { $in: visibleShopIds } };
-  applyTaxonomyFilters(baseMatch, {
+  await applyTaxonomyFilters(baseMatch, {
     categoryId: categoryId || locationFilters.categoryId,
     subcategoryId: subcategoryId || locationFilters.subcategoryId,
     brandId: brandId || locationFilters.brandId,
@@ -710,11 +799,11 @@ async function listRandomFromMultipleShops(filters = {}) {
         { offerEndsAt: { $gt: new Date() } },
       ];
     }
-    applyTaxonomyFilters(query, {
+    await applyTaxonomyFilters(query, {
       productCategoryId: rawProductCategoryId,
       categoryId: rawCategoryId,
       subcategoryId: rawSubcategoryId,
-    });
+    }, shopId);
 
     const rawShopProducts = await Product.find(query)
       .populate(PRODUCT_POPULATE)
@@ -957,4 +1046,5 @@ module.exports = {
   listMissingImagesByShop,
   listRandomFromMultipleShops,
   mapProductForCatalog,
+  expandAdminCategoryMatch,
 };

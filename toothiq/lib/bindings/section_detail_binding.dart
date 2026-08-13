@@ -16,8 +16,11 @@ class SectionDetailBinding extends Bindings {
 
   @override
   void dependencies() {
-    Get.lazyPut<SectionDetailController>(
-      () => SectionDetailController(
+    if (Get.isRegistered<SectionDetailController>()) {
+      Get.delete<SectionDetailController>(force: true);
+    }
+    Get.put(
+      SectionDetailController(
         category: category,
         shopId: shopId,
         shopName: shopName,

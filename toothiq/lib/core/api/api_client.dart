@@ -520,6 +520,7 @@ class ApiClient {
     int page = 1,
     int limit = 20,
     String? productCategoryId,
+    String? categoryId,
   }) async {
     final data = await _getSuccessData(
       ApiEndpoints.shopProducts(shopId),
@@ -528,6 +529,7 @@ class ApiClient {
         'limit': limit,
         if (productCategoryId != null && productCategoryId.isNotEmpty)
           'productCategoryId': productCategoryId,
+        if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
       },
     );
     if (data is! Map<String, dynamic>) {

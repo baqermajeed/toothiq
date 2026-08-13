@@ -11,6 +11,7 @@ class CategoryModel {
   final CategorySource source;
   final String? shopId;
   final String? productCategoryId;
+  final String? parentCategoryId;
 
   const CategoryModel({
     required this.id,
@@ -21,6 +22,7 @@ class CategoryModel {
     this.source = CategorySource.admin,
     this.shopId,
     this.productCategoryId,
+    this.parentCategoryId,
   });
 
   bool get hasIconImage => iconUrl != null && iconUrl!.trim().isNotEmpty;

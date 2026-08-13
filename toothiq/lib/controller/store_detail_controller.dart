@@ -175,7 +175,12 @@ class StoreDetailController extends GetxController {
       filteredCategories.assignAll(categoryCards);
 
       final mappedBrands = await _shopService.fetchShopBrands(
-        categoryIds: shopCategories.map((c) => c.id).toList(growable: false),
+        categoryIds: shopCategories
+            .map((c) => c.parentCategoryId)
+            .whereType<String>()
+            .where((id) => id.isNotEmpty)
+            .toSet()
+            .toList(growable: false),
         products: products,
         shopCategories: shopCategories,
       );
@@ -264,6 +269,7 @@ class StoreDetailController extends GetxController {
                 : CategorySource.admin,
             shopId: store.id,
             productCategoryId: item.id,
+            parentCategoryId: item.parentCategoryId,
           );
         })
         .toList(growable: false);

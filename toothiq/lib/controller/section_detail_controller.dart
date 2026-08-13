@@ -33,8 +33,7 @@ class SectionDetailController extends GetxController {
   final FavoritesService _favoritesService = Get.find<FavoritesService>();
   final SectionDetailCacheService _cache = Get.find<SectionDetailCacheService>();
 
-  bool get _isShopScoped =>
-      shopId != null && shopId!.isNotEmpty && category.productCategoryId != null;
+  bool get _isShopScoped => shopId != null && shopId!.isNotEmpty;
 
   bool get _useProductCategoryFilter =>
       _isShopScoped || category.isShopCategory;
@@ -222,18 +221,40 @@ class SectionDetailController extends GetxController {
     await _syncBrandsFromProducts(products);
   }
 
+  String? get _adminCategoryIdForBrands {
+    final parent = category.parentCategoryId?.trim();
+    if (parent != null && parent.isNotEmpty) return parent;
+    if (!_isShopScoped && !category.isShopCategory) return category.id;
+    return null;
+  }
+
   Future<void> _syncBrandsFromProducts(List<ProductModel> products) async {
-    try {
-      final apiBrands = await _brandService.fetchBrandsByCategory(category.id);
-      if (apiBrands.isNotEmpty) {
-        _applyBrands(apiBrands);
-        return;
+    final fromProducts = _brandService.brandsFromProducts(products);
+    final adminCategoryId = _adminCategoryIdForBrands;
+
+    if (adminCategoryId != null && adminCategoryId.isNotEmpty) {
+      try {
+        final apiBrands = await _brandService.fetchBrandsByCategory(
+          adminCategoryId,
+        );
+        if (apiBrands.isNotEmpty) {
+          final usedIds = fromProducts.map((brand) => brand.id).toSet();
+          if (usedIds.isEmpty) {
+            _applyBrands(apiBrands);
+            return;
+          }
+          final matched = apiBrands
+              .where((brand) => usedIds.contains(brand.id))
+              .toList(growable: false);
+          _applyBrands(matched.isNotEmpty ? matched : fromProducts);
+          return;
+        }
+      } catch (_) {
+        // نكمل باستخراج البراندات من المنتجات.
       }
-    } catch (_) {
-      // نكمل باستخراج البراندات من المنتجات.
     }
 
-    _applyBrands(_brandService.brandsFromProducts(products));
+    _applyBrands(fromProducts);
   }
 
   void _applyBrands(List<BrandModel> mappedBrands) {

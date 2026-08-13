@@ -109,8 +109,8 @@ class ProductModel {
       galleryAssets: gallery,
       expirationDate: _formatDate(json['expiryDate']),
       shopId: json['shopId']?.toString(),
-      productCategoryId: _readRefId(json['categoryId']) ??
-          _readRefId(json['productCategoryId']),
+      productCategoryId: _readRefId(json['productCategoryId']) ??
+          _readRefId(json['categoryId']),
       subcategoryId: _readRefId(json['subcategoryId']),
       subcategoryName: _readSubcategoryName(json),
       brandId: _readRefId(json['brandId']),
@@ -143,8 +143,8 @@ class ProductModel {
       galleryAssets: gallery,
       expirationDate: _formatDate(json['expiryDate']),
       shopId: shopId,
-      productCategoryId: _readRefId(json['categoryId']) ??
-          _readRefId(json['productCategoryId']),
+      productCategoryId: _readRefId(json['productCategoryId']) ??
+          _readRefId(json['categoryId']),
       subcategoryId: _readRefId(json['subcategoryId']),
       subcategoryName: _readSubcategoryName(json),
       brandId: _readRefId(json['brandId']),

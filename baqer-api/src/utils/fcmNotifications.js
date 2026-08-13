@@ -16,7 +16,7 @@ const STATUS_PAYLOAD = {
   },
   [ORDER_STATUS.ON_THE_WAY]: {
     type: 'order_on_the_way',
-    body: 'طلبك قيد التوصيل، اضغط لتتبع الطلب على الخريطة',
+    body: 'طلبك قيد التوصيل , الطلب في طريقه اليك',
   },
   [ORDER_STATUS.DELIVERED]: {
     type: 'order_delivered',
