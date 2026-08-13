@@ -5,12 +5,13 @@ import 'package:get/get.dart';
 import '../../bindings/notifications_binding.dart';
 import '../../controller/notifications_controller.dart';
 import '../../model/notification_model.dart';
+import '../../service_layer/services/notification_inbox_service.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/app_back_button.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/notifications/notification_card_widget.dart';
 
-class NotificationsPage extends GetView<NotificationsController> {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
   static void open() {
@@ -20,8 +21,26 @@ class NotificationsPage extends GetView<NotificationsController> {
     );
   }
 
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  bool _leaving = false;
+
+  /// Mark read via the permanent inbox service — never via GetView.controller,
+  /// which GetX may already have deleted while leaving (e.g. after product → back).
   Future<void> _markReadAndLeave() async {
-    await controller.markAllAsRead();
+    if (_leaving) return;
+    _leaving = true;
+    try {
+      if (Get.isRegistered<NotificationInboxService>()) {
+        await Get.find<NotificationInboxService>().markAllAsRead();
+      }
+    } catch (_) {
+      // Leave even if mark-read fails.
+    }
+    if (!mounted) return;
     if (Get.key.currentState?.canPop() ?? false) {
       Get.back();
     }
@@ -30,6 +49,7 @@ class NotificationsPage extends GetView<NotificationsController> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final controller = Get.find<NotificationsController>();
 
     return Directionality(
       textDirection: TextDirection.rtl,

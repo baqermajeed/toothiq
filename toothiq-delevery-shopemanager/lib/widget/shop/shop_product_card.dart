@@ -27,189 +27,101 @@ class ShopProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final outOfStock = product.stock <= 0;
+
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18.r),
-      elevation: 0,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18.r),
-        child: Container(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18.r),
             border: Border.all(color: AppColors.cardBorder),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: AppColors.shadow,
                 blurRadius: 8,
-                offset: const Offset(0, 2),
+                offset: Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Stack(
-                children: [
-                  GestureDetector(
-                    onTap: onImageTap ?? onTap,
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 108.h,
-                      child: AppImage(
-                        path: product.primaryImage,
-                        width: double.infinity,
-                        height: 108.h,
-                        fit: BoxFit.cover,
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(18.r)),
-                        icon: Icons.medical_services_outlined,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10.h,
-                    right: 10.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: product.isAvailable
-                            ? AppColors.success.withValues(alpha: 0.92)
-                            : AppColors.error.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: MyText(
-                        product.isAvailable ? 'متاح' : 'مخفي',
-                        fontSize: 10.sp,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  if (product.brandName != null)
-                    Positioned(
-                      bottom: 10.h,
-                      left: 10.w,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: MyText(
-                          product.brandName!,
-                          fontSize: 10.sp,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                ],
+              _ImageHeader(
+                product: product,
+                onTap: onImageTap ?? onTap,
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    MyText(
-                      product.name,
-                      fontSize: 13.sp,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (product.description.isNotEmpty) ...[
-                      SizedBox(height: 3.h),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       MyText(
-                        product.description,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                        maxLines: 1,
+                        product.name,
+                        fontSize: 13.sp,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                        height: 1.25,
                       ),
-                    ],
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: MyText(
-                            product.formattedPrice,
-                            fontSize: 13.sp,
-                            color: AppColors.primary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 13.sp,
-                          color: AppColors.textSecondary,
-                        ),
-                        SizedBox(width: 3.w),
-                        MyText(
-                          '${product.stock}',
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ),
-                      ],
-                    ),
-                    if (product.categoryName != null) ...[
-                      SizedBox(height: 4.h),
-                      Row(
+                      const Spacer(),
+                      MyText(
+                        product.formattedPrice,
+                        fontSize: 14.sp,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(height: 6.h),
+                      Wrap(
+                        spacing: 6.w,
+                        runSpacing: 4.h,
                         children: [
-                          Icon(
-                            Icons.category_outlined,
-                            size: 12.sp,
-                            color: AppColors.primary,
+                          _MetaChip(
+                            icon: Icons.inventory_2_outlined,
+                            label: outOfStock ? 'نفد' : '${product.stock}',
+                            color: outOfStock
+                                ? AppColors.error
+                                : AppColors.textSecondary,
                           ),
-                          SizedBox(width: 3.w),
-                          Expanded(
-                            child: MyText(
-                              product.categoryName!,
-                              fontSize: 9.sp,
-                              fontWeight: FontWeight.w600,
+                          if (product.categoryName != null)
+                            _MetaChip(
+                              icon: Icons.category_outlined,
+                              label: product.categoryName!,
                               color: AppColors.primary,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
                         ],
                       ),
+                      SizedBox(height: 8.h),
                     ],
-                    SizedBox(height: 8.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionChip(
-                            icon: product.isAvailable
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            label: product.isAvailable ? 'إخفاء' : 'إظهار',
-                            onTap: onToggle,
-                          ),
-                        ),
-                        SizedBox(width: 6.w),
-                        Expanded(
-                          child: _ActionChip(
-                            icon: Icons.edit_outlined,
-                            label: 'تعديل',
-                            onTap: onEdit,
-                          ),
-                        ),
-                        SizedBox(width: 4.w),
-                        GestureDetector(
-                          onTap: onDelete,
-                          child: Padding(
-                            padding: EdgeInsets.all(4.w),
-                            child: Icon(
-                              Icons.delete_outline,
-                              color: AppColors.error,
-                              size: 18.sp,
-                            ),
-                          ),
-                        ),
-                      ],
+                  ),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: AppColors.cardBorder)),
+                ),
+                child: Row(
+                  children: [
+                    _IconAction(
+                      icon: product.isAvailable
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      tooltip: product.isAvailable ? 'إخفاء' : 'إظهار',
+                      onTap: onToggle,
+                    ),
+                    _IconAction(
+                      icon: Icons.edit_outlined,
+                      tooltip: 'تعديل',
+                      onTap: onEdit,
+                    ),
+                    _IconAction(
+                      icon: Icons.delete_outline,
+                      tooltip: 'حذف',
+                      color: AppColors.error,
+                      onTap: onDelete,
                     ),
                   ],
                 ),
@@ -222,45 +134,148 @@ class ShopProductCard extends StatelessWidget {
   }
 }
 
-class _ActionChip extends StatelessWidget {
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    this.onTap,
-  });
+class _ImageHeader extends StatelessWidget {
+  const _ImageHeader({required this.product, this.onTap});
 
-  final IconData icon;
-  final String label;
+  final ShopProduct product;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 5.h),
-        decoration: BoxDecoration(
-          color: AppColors.pageBackground,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
+      child: SizedBox(
+        height: 118.h,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Icon(icon, size: 13.sp, color: AppColors.textSecondary),
-            SizedBox(width: 3.w),
-            Flexible(
-              child: MyText(
-                label,
-                fontSize: 9.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            Opacity(
+              opacity: product.isAvailable ? 1 : 0.55,
+              child: AppImage(
+                path: product.primaryImage,
+                width: double.infinity,
+                height: 118.h,
+                fit: BoxFit.cover,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(17.r)),
+                icon: Icons.medical_services_outlined,
               ),
             ),
+            Positioned(
+              top: 8.h,
+              right: 8.w,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: product.isAvailable
+                      ? AppColors.success.withValues(alpha: 0.92)
+                      : AppColors.warning.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: MyText(
+                  product.isAvailable ? 'متاح' : 'مخفي',
+                  fontSize: 10.sp,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            if (product.brandName != null)
+              Positioned(
+                bottom: 8.h,
+                left: 8.w,
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: 110.w),
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: MyText(
+                    product.brandName!,
+                    fontSize: 10.sp,
+                    color: Colors.white,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11.sp, color: color),
+          SizedBox(width: 3.w),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 72.w),
+            child: MyText(
+              label,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+              color: color,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IconAction extends StatelessWidget {
+  const _IconAction({
+    required this.icon,
+    required this.tooltip,
+    this.color,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final Color? color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.h),
+            child: Icon(
+              icon,
+              size: 20.sp,
+              color: color ?? AppColors.textSecondary,
+            ),
+          ),
         ),
       ),
     );
@@ -285,7 +300,10 @@ void confirmDeleteProduct(ShopProduct product, VoidCallback onConfirm) {
             Get.back();
             onConfirm();
           },
-          child: const Text('حذف', style: TextStyle(fontFamily: 'Expo Arabic', color: AppColors.error)),
+          child: const Text(
+            'حذف',
+            style: TextStyle(fontFamily: 'Expo Arabic', color: AppColors.error),
+          ),
         ),
       ],
     ),

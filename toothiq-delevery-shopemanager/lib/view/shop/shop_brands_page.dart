@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../controller/shop_catalog_controller.dart';
+import '../../controller/shop_products_controller.dart';
 import '../../core/constants/brand_preset_icons.dart';
 import '../../model/shop_brand.dart';
 import '../../utils/app_colors.dart';
@@ -10,6 +11,7 @@ import '../../widget/auth_text_field.dart';
 import '../../widget/my_text.dart';
 import '../../widget/shop/app_image.dart';
 import '../../widget/shop/brand_icon_picker.dart';
+import 'shop_filtered_products_page.dart';
 
 class ShopBrandsPage extends StatelessWidget {
   const ShopBrandsPage({super.key});
@@ -34,6 +36,8 @@ class ShopBrandsPage extends StatelessWidget {
         label: MyText('براند جديد', fontSize: 13.sp, color: Colors.white),
       ),
       body: Obx(() {
+        final productsCtrl = Get.find<ShopProductsController>();
+        final _ = productsCtrl.products.length;
         final list = controller.brands;
         if (list.isEmpty) {
           return Center(
@@ -65,13 +69,18 @@ class ShopBrandsPage extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 12.h,
             crossAxisSpacing: 12.w,
-            childAspectRatio: 0.95,
+            childAspectRatio: 0.82,
           ),
           itemCount: list.length,
           itemBuilder: (context, index) {
             final brand = list[index];
             return _BrandCard(
               brand: brand,
+              productCount: productsCtrl.countInBrand(brand.id),
+              onTap: () => ShopFilteredProductsPage.open(
+                title: brand.nameAr,
+                brand: brand,
+              ),
               onEdit: () => _openForm(context, brand: brand),
               onDelete: () => _confirmDelete(brand),
             );
@@ -115,56 +124,88 @@ class ShopBrandsPage extends StatelessWidget {
 class _BrandCard extends StatelessWidget {
   const _BrandCard({
     required this.brand,
+    required this.productCount,
+    required this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final ShopBrand brand;
+  final int productCount;
+  final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(18.r),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: [
-          BoxShadow(color: AppColors.shadow, blurRadius: 6, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        children: [
-          AppImage(
-            path: brand.logoPath,
-            width: 64.w,
-            height: 64.w,
-            borderRadius: BorderRadius.circular(16.r),
-            icon: Icons.verified_outlined,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 6.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(color: AppColors.cardBorder),
+            boxShadow: [
+              BoxShadow(color: AppColors.shadow, blurRadius: 6, offset: const Offset(0, 2)),
+            ],
           ),
-          SizedBox(height: 10.h),
-          MyText(brand.nameAr, fontSize: 13.sp, maxLines: 2, textAlign: TextAlign.center),
-          SizedBox(height: 4.h),
-          MyText(
-            '${brand.productCount} منتج',
-            fontSize: 10.sp,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          ),
-          const Spacer(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
             children: [
-              IconButton(onPressed: onEdit, icon: Icon(Icons.edit_outlined, size: 20.sp)),
-              IconButton(
-                onPressed: onDelete,
-                icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20.sp),
+              AppImage(
+                path: brand.logoPath,
+                width: 56.w,
+                height: 56.w,
+                borderRadius: BorderRadius.circular(16.r),
+                icon: Icons.verified_outlined,
+              ),
+              SizedBox(height: 8.h),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    MyText(
+                      brand.nameAr,
+                      fontSize: 13.sp,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 2.h),
+                    MyText(
+                      '$productCount منتج',
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: onEdit,
+                    visualDensity: VisualDensity.compact,
+                    constraints: BoxConstraints(minWidth: 36.w, minHeight: 36.h),
+                    padding: EdgeInsets.zero,
+                    icon: Icon(Icons.edit_outlined, size: 20.sp),
+                  ),
+                  IconButton(
+                    onPressed: onDelete,
+                    visualDensity: VisualDensity.compact,
+                    constraints: BoxConstraints(minWidth: 36.w, minHeight: 36.h),
+                    padding: EdgeInsets.zero,
+                    icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20.sp),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -222,62 +263,80 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
     final ctrl = Get.find<ShopCatalogController>();
     final isEdit = widget.brand != null;
 
-    return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBorder,
-                    borderRadius: BorderRadius.circular(4.r),
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final maxHeight = MediaQuery.sizeOf(context).height - keyboard;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight * 0.92),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 20.h),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBorder,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(height: 16.h),
-              MyText(isEdit ? 'تعديل البراند' : 'إضافة براند جديد', fontSize: 17.sp),
-              SizedBox(height: 20.h),
-              BrandIconPicker(
-                selectedAssetPath: _logoPath,
-                errorText: _iconError,
-                onSelected: (path) => setState(() {
-                  _logoPath = path;
-                  _iconError = null;
-                }),
-              ),
-              SizedBox(height: 16.h),
-              AuthTextField(
-                controller: _name,
-                label: 'اسم البراند',
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'أدخل اسم البراند' : null,
-              ),
-              SizedBox(height: 20.h),
-              Obx(
-                () => ElevatedButton(
-                  onPressed: ctrl.isSaving.value ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 50.h),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
+                  SizedBox(height: 16.h),
+                  MyText(
+                    isEdit ? 'تعديل البراند' : 'إضافة براند جديد',
+                    fontSize: 17.sp,
                   ),
-                  child: MyText(isEdit ? 'حفظ التعديلات' : 'إضافة البراند', fontSize: 14.sp, color: Colors.white),
-                ),
+                  SizedBox(height: 20.h),
+                  BrandIconPicker(
+                    selectedAssetPath: _logoPath,
+                    errorText: _iconError,
+                    onSelected: (path) => setState(() {
+                      _logoPath = path;
+                      _iconError = null;
+                    }),
+                  ),
+                  SizedBox(height: 16.h),
+                  AuthTextField(
+                    controller: _name,
+                    label: 'اسم البراند',
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'أدخل اسم البراند' : null,
+                  ),
+                  SizedBox(height: 20.h),
+                  Obx(
+                    () => ElevatedButton(
+                      onPressed: ctrl.isSaving.value ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: Size(double.infinity, 50.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: MyText(
+                        isEdit ? 'حفظ التعديلات' : 'إضافة البراند',
+                        fontSize: 14.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

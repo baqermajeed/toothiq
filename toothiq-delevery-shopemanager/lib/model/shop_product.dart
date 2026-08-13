@@ -137,8 +137,8 @@ class ShopProduct {
       stock: _readStock(json),
       imagePath: image,
       galleryPaths: gallery,
-      categoryId: _readRefId(json['categoryId']) ??
-          _readRefId(json['productCategoryId']),
+      categoryId: _readRefId(json['productCategoryId']) ??
+          _readRefId(json['categoryId']),
       categoryName: _readName(json, 'category') ??
           _readName(json, 'productCategory'),
       brandId: _readRefId(json['brandId']),

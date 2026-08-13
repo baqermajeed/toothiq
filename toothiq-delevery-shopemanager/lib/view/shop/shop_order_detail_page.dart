@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../controller/shop_orders_controller.dart';
+import '../../core/utils/phone_validator.dart';
 import '../../model/partner_order.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/my_text.dart';
@@ -113,10 +114,37 @@ class ShopOrderDetailPage extends StatelessWidget {
                 foregroundColor: AppColors.primary,
               ),
             ),
+            SizedBox(height: 10.h),
+            OutlinedButton.icon(
+              onPressed: () => _openWhatsApp(live.customerPhone),
+              icon: const Icon(Icons.chat),
+              label: MyText('مراسلة عبر واتساب', fontSize: 14.sp),
+              style: OutlinedButton.styleFrom(
+                minimumSize: Size(double.infinity, 48.h),
+                foregroundColor: const Color(0xFF25D366),
+                side: const BorderSide(color: Color(0xFF25D366)),
+              ),
+            ),
           ],
         );
       }),
     );
+  }
+
+  Future<void> _openWhatsApp(String phone) async {
+    if (phone.trim().isEmpty) {
+      Get.snackbar('تنبيه', 'لا يوجد رقم هاتف للزبون');
+      return;
+    }
+    final number = PhoneValidator.toWhatsAppNumber(phone);
+    final uri = Uri.parse('https://wa.me/$number');
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
+      Get.snackbar('خطأ', 'تعذر فتح واتساب');
+    }
   }
 
   ButtonStyle _primaryBtn() => ElevatedButton.styleFrom(

@@ -6,6 +6,56 @@ const Category = require('../models/Category');
 const ProductSubcategory = require('../models/ProductSubcategory');
 const { notFound, forbidden } = require('../utils/errors');
 
+async function attachProductCounts(shopId, mappedItems) {
+  if (!mappedItems.length || !mongoose.Types.ObjectId.isValid(String(shopId))) {
+    return mappedItems.map((s) => ({ ...s, productCount: 0, productsCount: 0 }));
+  }
+
+  const sectionIds = mappedItems
+    .map((s) => s.id)
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  const parentIds = mappedItems
+    .map((s) => s.parentCategoryId)
+    .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  const shopOid = new mongoose.Types.ObjectId(String(shopId));
+  const orFilters = [];
+  if (sectionIds.length > 0) orFilters.push({ productCategoryId: { $in: sectionIds } });
+  if (parentIds.length > 0) orFilters.push({ categoryId: { $in: parentIds } });
+
+  const rows =
+    orFilters.length > 0
+      ? await Product.aggregate([
+          { $match: { shopId: shopOid, $or: orFilters } },
+          {
+            $group: {
+              _id: {
+                productCategoryId: '$productCategoryId',
+                categoryId: '$categoryId',
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+      : [];
+
+  const bySectionId = {};
+  const byParentId = {};
+  for (const row of rows) {
+    const sectionId = row._id?.productCategoryId?.toString();
+    const parentId = row._id?.categoryId?.toString();
+    if (sectionId) bySectionId[sectionId] = (bySectionId[sectionId] || 0) + row.count;
+    if (parentId) byParentId[parentId] = (byParentId[parentId] || 0) + row.count;
+  }
+
+  return mappedItems.map((s) => {
+    const count = bySectionId[s.id] || (s.parentCategoryId ? byParentId[s.parentCategoryId] : 0) || 0;
+    return { ...s, productCount: count, productsCount: count };
+  });
+}
+
 function mapProductCategoryRow(c, parentById = {}) {
   const parentId = c.parentCategoryId?.toString() || null;
   const parent = parentId ? parentById[parentId] : null;
@@ -59,7 +109,10 @@ async function listByShop(shopId, opts = {}) {
     parentCategories.map((cat) => [cat._id.toString(), cat])
   );
 
-  const mappedItems = items.map((c) => mapProductCategoryRow(c, parentById));
+  const mappedItems = await attachProductCounts(
+    shopId,
+    items.map((c) => mapProductCategoryRow(c, parentById))
+  );
 
   if (!grouped) return mappedItems;
 

@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../bindings/app_binding.dart';
 import '../controller/session_controller.dart';
 import '../core/utils/image_url.dart';
+import '../model/shop_brand.dart';
+import '../model/shop_category.dart';
 import '../model/shop_product.dart';
 import '../service_layer/services/product_stock_cache.dart';
 import '../service_layer/services/shop_service.dart';
@@ -65,6 +67,41 @@ class ShopProductsController extends GetxController {
   }
 
   int get availableCount => products.where((p) => p.isAvailable).length;
+
+  bool _matchesCategory(ShopProduct product, ShopCategory category) {
+    final id = product.categoryId;
+    if (id == null || id.isEmpty) return false;
+    if (id == category.id) return true;
+    final parentId = category.parentCategoryId;
+    return parentId != null && parentId.isNotEmpty && id == parentId;
+  }
+
+  List<ShopProduct> productsInCategory(ShopCategory category) {
+    return products.where((p) => _matchesCategory(p, category)).toList();
+  }
+
+  List<ShopProduct> productsInBrand(String brandId) {
+    return products.where((p) => p.brandId == brandId).toList();
+  }
+
+  int countInCategory(ShopCategory category) =>
+      products.where((p) => _matchesCategory(p, category)).length;
+
+  int countInBrand(String brandId) =>
+      products.where((p) => p.brandId == brandId).length;
+
+  List<ShopBrand> brandsInCategory(
+    ShopCategory category,
+    List<ShopBrand> catalogBrands,
+  ) {
+    final ids = productsInCategory(category)
+        .map((p) => p.brandId)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (ids.isEmpty) return const [];
+    return catalogBrands.where((b) => ids.contains(b.id)).toList();
+  }
 
   Future<bool> addProduct({
     required String name,

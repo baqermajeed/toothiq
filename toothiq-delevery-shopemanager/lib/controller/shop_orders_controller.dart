@@ -18,6 +18,8 @@ class ShopOrdersController extends GetxController {
   final orders = <PartnerOrder>[].obs;
   final isLoading = false.obs;
   final errorMessage = ''.obs;
+  /// `null` يعني عرض كل الطلبات.
+  final selectedStatus = Rxn<PartnerOrderStatus>();
 
   @override
   void onInit() {
@@ -43,6 +45,21 @@ class ShopOrdersController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void selectStatus(PartnerOrderStatus? status) {
+    selectedStatus.value = status;
+  }
+
+  List<PartnerOrder> get filteredOrders {
+    final status = selectedStatus.value;
+    if (status == null) return orders.toList();
+    return orders.where((o) => o.status == status).toList();
+  }
+
+  int countFor(PartnerOrderStatus? status) {
+    if (status == null) return orders.length;
+    return orders.where((o) => o.status == status).length;
   }
 
   int get pendingCount =>

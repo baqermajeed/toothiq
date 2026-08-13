@@ -13,4 +13,19 @@ class PhoneValidator {
     }
     return digits;
   }
+
+  /// يحول الرقم العراقي إلى صيغة واتساب الدولية بدون + (مثل 9647XXXXXXXXX).
+  static String toWhatsAppNumber(String input) {
+    var digits = input.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('00')) {
+      digits = digits.substring(2);
+    }
+    if (digits.startsWith('964')) {
+      return digits;
+    }
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+    return '964$digits';
+  }
 }

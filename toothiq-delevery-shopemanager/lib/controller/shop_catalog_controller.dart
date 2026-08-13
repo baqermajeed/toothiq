@@ -256,14 +256,18 @@ class ShopCatalogController extends GetxController {
   }
 
   ShopCategory _withProductCount(ShopCategory category) {
-    if (category.productCount > 0) return category;
     if (!Get.isRegistered<ShopProductsController>()) return category;
-
-    final count = Get.find<ShopProductsController>()
-        .products
-        .where((product) => product.categoryId == category.id)
-        .length;
-    if (count == 0) return category;
+    final productsCtrl = Get.find<ShopProductsController>();
+    if (productsCtrl.products.isEmpty && category.productCount > 0) {
+      return category;
+    }
+    final count = productsCtrl.countInCategory(category);
+    if (count == category.productCount) return category;
     return category.copyWith(productCount: count);
+  }
+
+  int productCountForBrand(ShopBrand brand) {
+    if (!Get.isRegistered<ShopProductsController>()) return brand.productCount;
+    return Get.find<ShopProductsController>().countInBrand(brand.id);
   }
 }

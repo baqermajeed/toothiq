@@ -30,7 +30,9 @@ class ShopBrand {
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       nameAr: json['nameAr']?.toString() ?? json['name']?.toString() ?? '',
       logoPath: json['image']?.toString() ?? json['logo']?.toString(),
-      productCount: (json['productCount'] as num?)?.toInt() ?? 0,
+      productCount: (json['productCount'] as num?)?.toInt() ??
+          (json['productsCount'] as num?)?.toInt() ??
+          0,
     );
   }
 }

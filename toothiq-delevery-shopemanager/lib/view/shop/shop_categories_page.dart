@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../controller/shop_catalog_controller.dart';
+import '../../controller/shop_products_controller.dart';
 import '../../model/shop_category.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/auth_text_field.dart';
@@ -10,6 +11,7 @@ import '../../widget/my_text.dart';
 import '../../widget/shop/app_image.dart';
 import '../../widget/shop/category_icon_picker.dart';
 import '../../core/constants/category_preset_icons.dart';
+import 'shop_filtered_products_page.dart';
 
 class ShopCategoriesPage extends StatefulWidget {
   const ShopCategoriesPage({super.key});
@@ -24,6 +26,7 @@ class _ShopCategoriesPageState extends State<ShopCategoriesPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.find<ShopCatalogController>().loadShopCategories(force: true);
+      Get.find<ShopProductsController>().loadProducts();
     });
   }
 
@@ -47,6 +50,8 @@ class _ShopCategoriesPageState extends State<ShopCategoriesPage> {
         label: MyText('قسم جديد', fontSize: 13.sp, color: Colors.white),
       ),
       body: Obx(() {
+        final productsCtrl = Get.find<ShopProductsController>();
+        final _ = productsCtrl.products.length;
         if (controller.isLoadingShopCategories.value && controller.shopCategories.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -84,6 +89,11 @@ class _ShopCategoriesPageState extends State<ShopCategoriesPage> {
             final category = list[index];
             return _CategoryCard(
               category: category,
+              productCount: productsCtrl.countInCategory(category),
+              onTap: () => ShopFilteredProductsPage.open(
+                title: category.nameAr,
+                category: category,
+              ),
               onEdit: () => _openForm(context, category: category),
               onDelete: () => _confirmDelete(category),
             );
@@ -260,55 +270,66 @@ class _ShopCategoriesPageState extends State<ShopCategoriesPage> {
 class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.category,
+    required this.productCount,
+    required this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final ShopCategory category;
+  final int productCount;
+  final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16.r),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Row(
-        children: [
-          AppImage(
-            path: category.imagePath,
-            width: 52.w,
-            height: 52.w,
-            borderRadius: BorderRadius.circular(14.r),
-            icon: Icons.category_outlined,
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.cardBorder),
           ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                MyText(category.nameAr, fontSize: 14.sp),
-                SizedBox(height: 4.h),
-                MyText(
-                  category.isAdminLinked ? 'قسم إدارة' : '${category.productCount} منتج',
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
+          child: Row(
+            children: [
+              AppImage(
+                path: category.imagePath,
+                width: 52.w,
+                height: 52.w,
+                borderRadius: BorderRadius.circular(14.r),
+                icon: Icons.category_outlined,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MyText(category.nameAr, fontSize: 14.sp),
+                    SizedBox(height: 4.h),
+                    MyText(
+                      '$productCount منتج',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              if (!category.isAdminLinked)
+                IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+              IconButton(
+                onPressed: onDelete,
+                icon: Icon(Icons.delete_outline, color: AppColors.error, size: 22.sp),
+              ),
+            ],
           ),
-          if (!category.isAdminLinked)
-            IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
-          IconButton(
-            onPressed: onDelete,
-            icon: Icon(Icons.delete_outline, color: AppColors.error, size: 22.sp),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -372,62 +393,80 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
     final ctrl = Get.find<ShopCatalogController>();
     final isEdit = widget.category != null;
 
-    return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40.w,
-                  height: 4.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBorder,
-                    borderRadius: BorderRadius.circular(4.r),
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final maxHeight = MediaQuery.sizeOf(context).height - keyboard;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight * 0.92),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 20.h),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBorder,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(height: 16.h),
-              MyText(isEdit ? 'تعديل القسم' : 'إضافة قسم مخصص', fontSize: 17.sp),
-              SizedBox(height: 16.h),
-              CategoryIconPicker(
-                selectedAssetPath: _selectedIconAsset,
-                errorText: _iconError,
-                onSelected: (assetPath) => setState(() {
-                  _selectedIconAsset = assetPath;
-                  _iconError = null;
-                }),
-              ),
-              SizedBox(height: 16.h),
-              AuthTextField(
-                controller: _name,
-                label: 'اسم القسم',
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'أدخل اسم القسم' : null,
-              ),
-              SizedBox(height: 20.h),
-              Obx(
-                () => ElevatedButton(
-                  onPressed: ctrl.isSaving.value ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 50.h),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
+                  SizedBox(height: 16.h),
+                  MyText(
+                    isEdit ? 'تعديل القسم' : 'إضافة قسم مخصص',
+                    fontSize: 17.sp,
                   ),
-                  child: MyText(isEdit ? 'حفظ التعديلات' : 'إضافة القسم', fontSize: 14.sp, color: Colors.white),
-                ),
+                  SizedBox(height: 16.h),
+                  CategoryIconPicker(
+                    selectedAssetPath: _selectedIconAsset,
+                    errorText: _iconError,
+                    onSelected: (assetPath) => setState(() {
+                      _selectedIconAsset = assetPath;
+                      _iconError = null;
+                    }),
+                  ),
+                  SizedBox(height: 16.h),
+                  AuthTextField(
+                    controller: _name,
+                    label: 'اسم القسم',
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'أدخل اسم القسم' : null,
+                  ),
+                  SizedBox(height: 20.h),
+                  Obx(
+                    () => ElevatedButton(
+                      onPressed: ctrl.isSaving.value ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: Size(double.infinity, 50.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: MyText(
+                        isEdit ? 'حفظ التعديلات' : 'إضافة القسم',
+                        fontSize: 14.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

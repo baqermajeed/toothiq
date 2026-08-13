@@ -51,5 +51,11 @@
 	<string>يحتاج التطبيق لموقعك لمشاركة مسار التوصيل مع العميل.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>يحتاج التطبيق لموقعك لمشاركة مسار التوصيل مع العميل.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>whatsapp</string>
+		<string>https</string>
+		<string>tel</string>
+	</array>
 </dict>
 </plist>

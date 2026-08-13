@@ -115,7 +115,7 @@ class ShopProductsPage extends StatelessWidget {
                   crossAxisCount: 2,
                   mainAxisSpacing: 14.h,
                   crossAxisSpacing: 14.w,
-                  childAspectRatio: 0.54,
+                  childAspectRatio: 0.62,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
