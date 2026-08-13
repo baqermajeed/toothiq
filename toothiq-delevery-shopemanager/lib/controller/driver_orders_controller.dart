@@ -34,22 +34,37 @@ class DriverOrdersController extends GetxController {
   final currentLng = RxnDouble();
 
   Timer? _locationTimer;
+  Timer? _pollTimer;
+  bool _isRefreshing = false;
 
   @override
   void onInit() {
     super.onInit();
     loadOrders();
+    _startPolling();
   }
 
   @override
   void onClose() {
+    _pollTimer?.cancel();
     _stopSharing();
     super.onClose();
   }
 
-  Future<void> loadOrders() async {
-    isLoading.value = true;
-    errorMessage.value = '';
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      loadOrders(silent: true);
+    });
+  }
+
+  Future<void> loadOrders({bool silent = false}) async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
+    if (!silent) {
+      isLoading.value = true;
+      errorMessage.value = '';
+    }
     try {
       final results = await Future.wait([
         _orderService.fetchDriverOrders(tab: 'pending'),
@@ -62,10 +77,14 @@ class DriverOrdersController extends GetxController {
       pickedUpOrders.assignAll(results[2]);
       finishedOrders.assignAll(results[3]);
       _syncPickedUpFromOrders();
+      if (silent) errorMessage.value = '';
     } catch (error) {
-      errorMessage.value = apiErrorMessage(error);
+      if (!silent) {
+        errorMessage.value = apiErrorMessage(error);
+      }
     } finally {
-      isLoading.value = false;
+      _isRefreshing = false;
+      if (!silent) isLoading.value = false;
     }
   }
 

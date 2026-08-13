@@ -50,5 +50,10 @@
             <data android:scheme="whatsapp" />
         </intent>
         <package android:name="com.whatsapp" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="waze" />
+        </intent>
+        <package android:name="com.waze" />
     </queries>
 </manifest>

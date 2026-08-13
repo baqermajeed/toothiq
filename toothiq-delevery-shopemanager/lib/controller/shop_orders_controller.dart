@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../bindings/app_binding.dart';
@@ -21,15 +23,31 @@ class ShopOrdersController extends GetxController {
   /// `null` يعني عرض كل الطلبات.
   final selectedStatus = Rxn<PartnerOrderStatus>();
 
+  Timer? _pollTimer;
+  bool _isRefreshing = false;
+
   @override
   void onInit() {
     super.onInit();
     loadOrders();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      loadOrders(silent: true);
+    });
   }
 
-  Future<void> loadOrders() async {
-    isLoading.value = true;
-    errorMessage.value = '';
+  @override
+  void onClose() {
+    _pollTimer?.cancel();
+    super.onClose();
+  }
+
+  Future<void> loadOrders({bool silent = false}) async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
+    if (!silent) {
+      isLoading.value = true;
+      errorMessage.value = '';
+    }
     try {
       final list = await _orderService.fetchOrders();
       final shopId = _session.shopId.value;
@@ -41,9 +59,12 @@ class ShopOrdersController extends GetxController {
         orders.assignAll(list);
       }
     } catch (error) {
-      errorMessage.value = apiErrorMessage(error);
+      if (!silent) {
+        errorMessage.value = apiErrorMessage(error);
+      }
     } finally {
-      isLoading.value = false;
+      _isRefreshing = false;
+      if (!silent) isLoading.value = false;
     }
   }
 

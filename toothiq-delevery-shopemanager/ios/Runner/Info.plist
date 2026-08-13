@@ -54,6 +54,7 @@
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>whatsapp</string>
+		<string>waze</string>
 		<string>https</string>
 		<string>tel</string>
 	</array>

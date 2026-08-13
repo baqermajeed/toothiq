@@ -116,7 +116,7 @@ class DriverOrdersPage extends StatelessWidget {
                       onPickup: () async {
                         await controller.markPickedUp(order.id);
                         Get.snackbar(
-                          'الاستلام',
+                          'تم الاستلام',
                           'تم تأكيد استلام الطلب من المتجر',
                         );
                       },

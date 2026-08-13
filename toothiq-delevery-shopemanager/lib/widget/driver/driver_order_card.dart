@@ -183,13 +183,13 @@ class DriverOrderCard extends StatelessWidget {
         );
       case DriverOrderTab.inProgress:
         return _PrimaryActionButton(
-          label: 'الاستلام',
+          label: 'تم الاستلام',
           icon: Icons.inventory_2_outlined,
           onPressed: onPickup,
         );
       case DriverOrderTab.pickedUp:
         return _PrimaryActionButton(
-          label: 'التوصيل',
+          label: 'تم التوصيل',
           icon: Icons.location_on_outlined,
           onPressed: onDeliver,
         );

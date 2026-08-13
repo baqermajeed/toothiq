@@ -203,10 +203,23 @@ class _DriverOrderMapPageState extends State<DriverOrderMapPage> {
       );
 
   Future<void> _openMaps(double lat, double lng) async {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-    );
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final wazeApp = Uri.parse('waze://?ll=$lat,$lng&navigate=yes');
+    final wazeWeb = Uri.parse('https://waze.com/ul?ll=$lat,$lng&navigate=yes');
+    try {
+      if (await canLaunchUrl(wazeApp)) {
+        await launchUrl(wazeApp, mode: LaunchMode.externalApplication);
+        return;
+      }
+      final launched = await launchUrl(
+        wazeWeb,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        Get.snackbar('ويز', 'تعذر فتح تطبيق ويز');
+      }
+    } catch (_) {
+      Get.snackbar('ويز', 'ثبّت تطبيق ويز لفتح المسار');
+    }
   }
 
   @override
