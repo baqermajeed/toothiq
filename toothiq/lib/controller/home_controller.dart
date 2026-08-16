@@ -37,7 +37,6 @@ class HomeController extends GetxController {
   final brands = <BrandModel>[].obs;
   final products = <ProductModel>[].obs;
   final shops = <StoreModel>[].obs;
-  final offerProducts = <ProductModel>[].obs;
   final selectedFeed = HomeFeedTab.all.obs;
   final isLoading = false.obs;
   final feedLoading = false.obs;
@@ -46,7 +45,8 @@ class HomeController extends GetxController {
   final currentPage = 1.obs;
   final loadError = RxnString();
   static const int _pageSize = 12;
-  int _feedRequestId = 0;
+  final _feedCaches = <HomeFeedTab, _HomeFeedCache>{};
+  final _feedRequestIds = <HomeFeedTab, int>{};
 
   @override
   void onInit() {
@@ -62,7 +62,9 @@ class HomeController extends GetxController {
   }
 
   Future<void> loadHome() async {
-    isLoading.value = true;
+    final hasVisibleData =
+        products.isNotEmpty || shops.isNotEmpty || banners.isNotEmpty;
+    if (!hasVisibleData) isLoading.value = true;
     loadError.value = null;
 
     try {
@@ -75,28 +77,31 @@ class HomeController extends GetxController {
       banners.assignAll(results[0] as List<BannerModel>);
       _applyCategories(results[1] as List<ShopCategoryModel>);
       brands.assignAll(results[2] as List<BrandModel>);
-      await Future.wait([
-        _loadProductsFirstPage(),
-        _loadOfferProducts(),
-      ]);
+      await _refreshTab(
+        selectedFeed.value,
+        silent: _feedCaches.containsKey(selectedFeed.value),
+        replace: true,
+      );
     } on ApiException catch (error) {
       loadError.value = error.message;
-      banners.clear();
-      categories.clear();
-      brands.clear();
-      products.clear();
-      shops.clear();
-      offerProducts.clear();
-      hasNextPage.value = false;
+      if (!hasVisibleData) {
+        banners.clear();
+        categories.clear();
+        brands.clear();
+        products.clear();
+        shops.clear();
+        hasNextPage.value = false;
+      }
     } catch (_) {
       loadError.value = 'تعذر تحميل بيانات الصفحة الرئيسية';
-      banners.clear();
-      categories.clear();
-      brands.clear();
-      products.clear();
-      shops.clear();
-      offerProducts.clear();
-      hasNextPage.value = false;
+      if (!hasVisibleData) {
+        banners.clear();
+        categories.clear();
+        brands.clear();
+        products.clear();
+        shops.clear();
+        hasNextPage.value = false;
+      }
     } finally {
       isLoading.value = false;
     }
@@ -132,56 +137,136 @@ class HomeController extends GetxController {
     await loadHome();
   }
 
-  Future<void> _loadProductsFirstPage() async {
-    await _loadFeedFirstPage();
-  }
-
   Future<void> selectFeed(HomeFeedTab tab) async {
     if (selectedFeed.value == tab) return;
     selectedFeed.value = tab;
+    loadingMore.value = false;
+    final cached = _feedCaches[tab];
+    if (cached != null) {
+      _applyCacheToUi(tab);
+      feedLoading.value = false;
+      final rotateAll = tab == HomeFeedTab.all &&
+          cached.rotationKey != _baghdadDayKey();
+      await _refreshTab(tab, silent: true, replace: rotateAll);
+      return;
+    }
     products.clear();
     shops.clear();
     hasNextPage.value = false;
-    await _loadFeedFirstPage();
+    currentPage.value = 1;
+    await _refreshTab(tab, silent: false);
   }
 
-  Future<void> _loadFeedFirstPage() async {
-    final requestId = ++_feedRequestId;
-    currentPage.value = 1;
-    feedLoading.value = true;
+  void _applyCacheToUi(HomeFeedTab tab) {
+    if (selectedFeed.value != tab) return;
+    final cache = _feedCaches[tab];
+    if (cache == null) {
+      products.clear();
+      shops.clear();
+      currentPage.value = 1;
+      hasNextPage.value = false;
+      return;
+    }
+    if (tab.showsShops) {
+      shops.assignAll(cache.shops);
+      products.clear();
+    } else {
+      products.assignAll(
+        _favoritesService.applyFavoriteState(cache.products),
+      );
+      shops.clear();
+    }
+    currentPage.value = cache.page;
+    hasNextPage.value = cache.hasNextPage;
+  }
+
+  Future<void> _refreshTab(
+    HomeFeedTab tab, {
+    required bool silent,
+    bool replace = false,
+  }) async {
+    final requestId = (_feedRequestIds[tab] ?? 0) + 1;
+    _feedRequestIds[tab] = requestId;
+    if (!silent && selectedFeed.value == tab) {
+      feedLoading.value = true;
+    }
     try {
-      if (selectedFeed.value.showsShops) {
+      if (tab.showsShops) {
         final result = await _shopService.fetchTopRatedShops(
           page: 1,
           limit: _pageSize,
         );
-        if (requestId != _feedRequestId) return;
-        shops.assignAll(result.items);
-        products.clear();
-        hasNextPage.value = result.hasNextPage;
-        currentPage.value = result.page;
-        return;
+        if (_feedRequestIds[tab] != requestId) return;
+        _storeShopPage(tab, result, replace: replace);
+      } else {
+        final result = await _fetchFeedProducts(tab, page: 1);
+        if (_feedRequestIds[tab] != requestId) return;
+        _storeProductPage(tab, result, replace: replace);
       }
-      shops.clear();
-      final result = await _fetchFeedProducts(page: 1);
-      if (requestId != _feedRequestId) return;
-      products.assignAll(_favoritesService.applyFavoriteState(result.items));
-      hasNextPage.value = result.hasNextPage;
-      currentPage.value = result.page;
+      if (selectedFeed.value == tab) _applyCacheToUi(tab);
     } catch (_) {
-      if (requestId != _feedRequestId) return;
-      products.clear();
-      shops.clear();
-      hasNextPage.value = false;
+      if (!silent &&
+          selectedFeed.value == tab &&
+          !_feedCaches.containsKey(tab)) {
+        products.clear();
+        shops.clear();
+        hasNextPage.value = false;
+      }
     } finally {
-      if (requestId == _feedRequestId) {
+      if (selectedFeed.value == tab && _feedRequestIds[tab] == requestId) {
         feedLoading.value = false;
       }
     }
   }
 
-  Future<PaginatedResult<ProductModel>> _fetchFeedProducts({required int page}) {
-    switch (selectedFeed.value) {
+  void _storeProductPage(
+    HomeFeedTab tab,
+    PaginatedResult<ProductModel> result, {
+    required bool replace,
+  }) {
+    final fresh = _favoritesService.applyFavoriteState(result.items);
+    final cache = _feedCaches.putIfAbsent(tab, () => _HomeFeedCache());
+    if (replace || cache.products.length <= _pageSize) {
+      cache.products = List<ProductModel>.from(fresh);
+      cache.page = result.page;
+      cache.hasNextPage = result.hasNextPage;
+      cache.rotationKey = _baghdadDayKey();
+      return;
+    }
+    final freshIds = fresh.map((item) => item.id).toSet();
+    final extras = cache.products
+        .skip(_pageSize)
+        .where((item) => !freshIds.contains(item.id));
+    cache.products = [...fresh, ...extras];
+    cache.hasNextPage = result.hasNextPage || cache.hasNextPage;
+    cache.rotationKey = _baghdadDayKey();
+  }
+
+  void _storeShopPage(
+    HomeFeedTab tab,
+    PaginatedResult<StoreModel> result, {
+    required bool replace,
+  }) {
+    final cache = _feedCaches.putIfAbsent(tab, () => _HomeFeedCache());
+    if (replace || cache.shops.length <= _pageSize) {
+      cache.shops = List<StoreModel>.from(result.items);
+      cache.page = result.page;
+      cache.hasNextPage = result.hasNextPage;
+      return;
+    }
+    final freshIds = result.items.map((item) => item.id).toSet();
+    final extras = cache.shops
+        .skip(_pageSize)
+        .where((item) => !freshIds.contains(item.id));
+    cache.shops = [...result.items, ...extras];
+    cache.hasNextPage = result.hasNextPage || cache.hasNextPage;
+  }
+
+  Future<PaginatedResult<ProductModel>> _fetchFeedProducts(
+    HomeFeedTab tab, {
+    required int page,
+  }) {
+    switch (tab) {
       case HomeFeedTab.all:
         return _productService.fetchProductsPaginated(page: page, limit: _pageSize);
       case HomeFeedTab.offers:
@@ -197,40 +282,39 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> _loadOfferProducts() async {
-    try {
-      final result = await _productService.fetchOffers(page: 1, limit: 10);
-      offerProducts.assignAll(
-        _favoritesService.applyFavoriteState(result.items),
-      );
-    } catch (_) {
-      offerProducts.clear();
-    }
-  }
-
   Future<void> loadMoreProducts() async {
+    final tab = selectedFeed.value;
     if (loadingMore.value || !hasNextPage.value) return;
     loadingMore.value = true;
     try {
       final nextPage = currentPage.value + 1;
-      if (selectedFeed.value.showsShops) {
+      final cache = _feedCaches.putIfAbsent(tab, () => _HomeFeedCache());
+      if (tab.showsShops) {
         final result = await _shopService.fetchTopRatedShops(
           page: nextPage,
           limit: _pageSize,
         );
-        shops.addAll(result.items);
-        hasNextPage.value = result.hasNextPage;
-        currentPage.value = result.page;
+        final existingIds = cache.shops.map((item) => item.id).toSet();
+        cache.shops.addAll(
+          result.items.where((item) => existingIds.add(item.id)),
+        );
+        cache.page = result.page;
+        cache.hasNextPage = result.hasNextPage;
       } else {
-        final result = await _fetchFeedProducts(page: nextPage);
-        products.addAll(_favoritesService.applyFavoriteState(result.items));
-        hasNextPage.value = result.hasNextPage;
-        currentPage.value = result.page;
+        final result = await _fetchFeedProducts(tab, page: nextPage);
+        final fresh = _favoritesService.applyFavoriteState(result.items);
+        final existingIds = cache.products.map((item) => item.id).toSet();
+        cache.products.addAll(
+          fresh.where((item) => existingIds.add(item.id)),
+        );
+        cache.page = result.page;
+        cache.hasNextPage = result.hasNextPage;
       }
+      if (selectedFeed.value == tab) _applyCacheToUi(tab);
     } catch (_) {
       // لا نعرض خطأ لجلب المزيد.
     } finally {
-      loadingMore.value = false;
+      if (selectedFeed.value == tab) loadingMore.value = false;
     }
   }
 
@@ -238,8 +322,7 @@ class HomeController extends GetxController {
     final index = products.indexWhere((p) => p.id == productId);
     if (index == -1) return;
     final isFavorite = await _favoritesService.toggle(products[index]);
-    products[index] = products[index].copyWith(isFavorite: isFavorite);
-    products.refresh();
+    updateFavoriteState(productId, isFavorite);
   }
 
   void updateFavoriteState(String productId, bool isFavorite) {
@@ -248,11 +331,12 @@ class HomeController extends GetxController {
       products[index] = products[index].copyWith(isFavorite: isFavorite);
       products.refresh();
     }
-    final offerIndex = offerProducts.indexWhere((p) => p.id == productId);
-    if (offerIndex != -1) {
-      offerProducts[offerIndex] =
-          offerProducts[offerIndex].copyWith(isFavorite: isFavorite);
-      offerProducts.refresh();
+    for (final cache in _feedCaches.values) {
+      final cachedIndex = cache.products.indexWhere((p) => p.id == productId);
+      if (cachedIndex != -1) {
+        cache.products[cachedIndex] =
+            cache.products[cachedIndex].copyWith(isFavorite: isFavorite);
+      }
     }
   }
 
@@ -274,4 +358,20 @@ class HomeController extends GetxController {
     );
     if (result == null) return;
   }
+}
+
+String _baghdadDayKey() {
+  final day = DateTime.now().toUtc().add(const Duration(hours: 3));
+  final y = day.year.toString().padLeft(4, '0');
+  final m = day.month.toString().padLeft(2, '0');
+  final d = day.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
+
+class _HomeFeedCache {
+  List<ProductModel> products = [];
+  List<StoreModel> shops = [];
+  int page = 1;
+  bool hasNextPage = false;
+  String? rotationKey;
 }

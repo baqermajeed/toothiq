@@ -8,6 +8,15 @@ const { notFound, forbidden } = require('../utils/errors');
 /** صورة افتراضية للمنتجات التي لا تحتوي على صورة */
 const DEFAULT_PRODUCT_IMAGE = '/uploads/products/photo_2026-03-18 00.25.48.jpeg';
 
+function catalogDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baghdad',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 function getActiveOfferMongoCondition(now = new Date()) {
   return {
     offerPrice: { $exists: true, $ne: null, $gt: 0 },
@@ -465,7 +474,7 @@ const PRODUCT_POPULATE = [
 
 /**
  * جلب منتجات من كل المحلات مع pagination (دون الاعتماد على shopId).
- * الترتيب عشوائي. عند تمرير excludeIds تُستبعد المنتجات المحمّلة مسبقاً (لتحميل المزيد بدون تكرار).
+ * الترتيب ثابت طوال اليوم (توقيت بغداد) ويتغيّر كل 24 ساعة. صفحات التحميل متتابعة بدون تكرار.
  */
 async function listAll(filters = {}) {
   const {
@@ -479,8 +488,10 @@ async function listAll(filters = {}) {
     subcategoryId: rawSubcategoryId,
     brandId: rawBrandId,
   } = filters;
-  const limitNum = Number(limit);
-  const pageNum = Number(page);
+  const limitNum = Math.max(1, Number(limit) || 12);
+  const pageNum = Math.max(1, Number(page) || 1);
+  const skip = (pageNum - 1) * limitNum;
+  const dayKey = catalogDayKey();
 
   const visibleShopIds = await getVisibleShopIds();
   const query = { isAvailable: true, shopId: { $in: visibleShopIds } };
@@ -513,10 +524,20 @@ async function listAll(filters = {}) {
     query._id = { $nin: excludeIds };
   }
 
-  const sampleSize = limitNum;
   const pipeline = [
     { $match: query },
-    { $sample: { size: sampleSize } },
+    {
+      $addFields: {
+        _dailyShuffle: {
+          $toHashedIndexKey: {
+            $concat: [{ $toString: '$_id' }, '|', dayKey],
+          },
+        },
+      },
+    },
+    { $sort: { _dailyShuffle: 1, _id: 1 } },
+    { $skip: skip },
+    { $limit: limitNum },
     {
       $lookup: {
         from: 'shops',
@@ -546,6 +567,7 @@ async function listAll(filters = {}) {
       $project: {
         shopDoc: 0,
         categoryDoc: 0,
+        _dailyShuffle: 0,
       },
     },
   ];
@@ -553,7 +575,7 @@ async function listAll(filters = {}) {
   const countQuery = { ...query };
   delete countQuery._id;
   const [rawItems, total] = await Promise.all([
-    Product.aggregate(pipeline),
+    Product.aggregate(pipeline).option({ allowDiskUse: true }),
     Product.countDocuments(countQuery),
   ]);
 

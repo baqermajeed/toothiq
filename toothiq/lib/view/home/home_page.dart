@@ -17,7 +17,6 @@ import '../../widget/home/home_feed_chips.dart';
 import '../../widget/home/home_compact_header_overlay.dart';
 import '../../widget/home/home_scroll_metrics.dart';
 import '../../widget/home/products_grid_widget.dart';
-import '../../widget/home/product_cards_strip.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/search_filter_row.dart';
@@ -157,26 +156,6 @@ class _HomePageState extends State<HomePage> {
                         selected: home.selectedFeed.value,
                         onSelected: home.selectFeed,
                       ),
-                      if (home.selectedFeed.value == HomeFeedTab.all &&
-                          home.offerProducts.isNotEmpty) ...[
-                        SizedBox(height: 10.h),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: MyText(
-                              'العروض',
-                              fontSize: 17.sp,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 8.h),
-                        ProductCardsStrip(
-                          products: home.offerProducts.toList(growable: false),
-                        ),
-                      ],
                       SizedBox(height: 10.h),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -191,7 +170,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       SizedBox(height: 6.h),
-                      if (home.feedLoading.value)
+                      if (home.feedLoading.value &&
+                          home.products.isEmpty &&
+                          home.shops.isEmpty)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 24.h),
                           child: const AppLoadingState(),
