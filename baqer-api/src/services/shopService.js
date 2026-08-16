@@ -44,7 +44,8 @@ async function create(ownerId, body) {
     phone: body.phone?.trim() || null,
     phone2: body.phone2?.trim() || null,
     deliveryFee: 0,
-    openHours: body.openHours,
+    isOpen: true,
+    openHours: { from: '', to: '' },
     image: body.image,
   });
   return shop;

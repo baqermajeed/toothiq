@@ -8,7 +8,7 @@ abstract final class HomeScrollMetrics {
 
   static double searchBlockHeight() => 8.h + 53.72.h + 8.h;
 
-  static double bannerBlockHeight() => 8.h + 160.h + 6.h + 14.h + 10.h;
+  static double bannerBlockHeight() => 8.h + 142.h + 8.h + 14.h + 10.h;
 
   static double catalogStripsHeight() =>
       HomeCatalogStripsMetrics.categoryStripHeight() +

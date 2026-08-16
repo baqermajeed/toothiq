@@ -18,8 +18,6 @@ export function ShopsPage() {
   const [phone2, setPhone2] = useState('')
   const [lng, setLng] = useState(44.3661)
   const [lat, setLat] = useState(33.3152)
-  const [openFrom, setOpenFrom] = useState('09:00')
-  const [openTo, setOpenTo] = useState('22:00')
   const [ownerPhone, setOwnerPhone] = useState('')
   const [ownerPassword, setOwnerPassword] = useState('')
   const [ownerName, setOwnerName] = useState('')
@@ -81,9 +79,6 @@ export function ShopsPage() {
     const c = loc?.coordinates
     setLng(c && c[0] != null ? Number(c[0]) : 44.3661)
     setLat(c && c[1] != null ? Number(c[1]) : 33.3152)
-    const oh = row.openHours as { from?: string; to?: string } | undefined
-    setOpenFrom(String(oh?.from ?? '09:00'))
-    setOpenTo(String(oh?.to ?? '22:00'))
     setIsOpen(Boolean(row.isOpen))
     setIsHidden(Boolean(row.isHidden))
     setIsActive(row.isActive !== false)
@@ -117,8 +112,6 @@ export function ShopsPage() {
     if (phone2.trim()) fd.append('phone2', phone2.trim())
     fd.append('lng', String(lng))
     fd.append('lat', String(lat))
-    fd.append('openHoursFrom', openFrom)
-    fd.append('openHoursTo', openTo)
     fd.append('isOpen', String(isOpen))
     fd.append('isHidden', String(isHidden))
     if (modal === 'edit') {
@@ -347,16 +340,6 @@ export function ShopsPage() {
                 </>
               ) : null}
 
-              <div className="row">
-                <div className="field" style={{ flex: 1 }}>
-                  <label>فتح من</label>
-                  <input className="input" value={openFrom} onChange={(e) => setOpenFrom(e.target.value)} />
-                </div>
-                <div className="field" style={{ flex: 1 }}>
-                  <label>إلى</label>
-                  <input className="input" value={openTo} onChange={(e) => setOpenTo(e.target.value)} />
-                </div>
-              </div>
               <div className="field">
                 <label>صورة (اختياري)</label>
                 <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />

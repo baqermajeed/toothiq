@@ -395,7 +395,7 @@ async function createShop(adminId, body) {
     deliveryFee: 0,
     isOpen: rest.isOpen !== false,
     isHidden: rest.isHidden === true,
-    openHours: rest.openHours,
+    openHours: { from: '', to: '' },
     image: rest.image,
   });
   return shop;
@@ -415,7 +415,6 @@ async function updateShop(shopId, body) {
     'isOpen',
     'isActive',
     'isHidden',
-    'openHours',
     'image',
     'ownerId',
     'order',
@@ -427,12 +426,11 @@ async function updateShop(shopId, body) {
   return shop;
 }
 
-/** تطبيق وقت فتح وإغلاق واحد على جميع المحلات (توقيت العراق). */
-async function bulkUpdateShopsOpenHours(body) {
-  const { from, to } = body;
+/** المتاجر تبقى مفتوحة 24 ساعة؛ الدالة تمسح أي جدول دوام سابق. */
+async function bulkUpdateShopsOpenHours() {
   const result = await Shop.updateMany(
     {},
-    { $set: { openHours: { from: String(from).trim(), to: String(to).trim() } } }
+    { $set: { isOpen: true, openHours: { from: '', to: '' } } }
   );
   return { updated: result.modifiedCount };
 }

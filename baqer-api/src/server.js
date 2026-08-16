@@ -8,9 +8,9 @@ connectDb()
     // Initialize FCM service
     const fcmService = require('./services/fcmService');
     fcmService.init();
-    // Shop open/close by Iraq time (openHours)
-    const { startShopOpenCloseJob } = require('./jobs/shopOpenCloseJob');
-    startShopOpenCloseJob();
+    // Shops stay open 24h (no auto open/close by openHours)
+    const { disableScheduledShopHours } = require('./jobs/shopOpenCloseJob');
+    disableScheduledShopHours();
     // Daily drivers report to Telegram at 11:56 Baghdad
     const { startDailyReportJob } = require('./jobs/dailyReportJob');
     startDailyReportJob();

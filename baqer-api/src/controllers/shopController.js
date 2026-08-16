@@ -35,12 +35,7 @@ function parseShopBody(raw) {
   if (raw.isActive !== undefined) body.isActive = raw.isActive === true || raw.isActive === 'true';
   if (raw.isHidden !== undefined) body.isHidden = raw.isHidden === true || raw.isHidden === 'true';
   if (raw.image !== undefined && raw.image !== '') body.image = typeof raw.image === 'string' ? raw.image.trim() : raw.image;
-  if (raw.openHoursFrom !== undefined || raw.openHoursTo !== undefined) {
-    body.openHours = {
-      from: (raw.openHoursFrom != null && raw.openHoursFrom !== '') ? String(raw.openHoursFrom).trim() : '',
-      to: (raw.openHoursTo != null && raw.openHoursTo !== '') ? String(raw.openHoursTo).trim() : '',
-    };
-  } else if (raw.openHours !== undefined) body.openHours = typeof raw.openHours === 'object' ? raw.openHours : undefined;
+  // Shops stay open 24h — ignore scheduled openHours from clients.
   if (raw.ownerId !== undefined && raw.ownerId !== null && raw.ownerId !== '') {
     const r = extractObjectIdHex(raw.ownerId);
     if ('id' in r) {

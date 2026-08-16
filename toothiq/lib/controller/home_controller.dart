@@ -29,7 +29,6 @@ class HomeController extends GetxController {
   final FavoritesService _favoritesService = Get.find<FavoritesService>();
 
   final searchController = TextEditingController();
-  final bannerPageController = PageController();
   final bannerIndex = 0.obs;
 
   final banners = <BannerModel>[].obs;
@@ -57,7 +56,6 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     searchController.dispose();
-    bannerPageController.dispose();
     super.onClose();
   }
 
@@ -75,6 +73,7 @@ class HomeController extends GetxController {
       ]);
 
       banners.assignAll(results[0] as List<BannerModel>);
+      if (bannerIndex.value >= banners.length) bannerIndex.value = 0;
       _applyCategories(results[1] as List<ShopCategoryModel>);
       brands.assignAll(results[2] as List<BrandModel>);
       await _refreshTab(

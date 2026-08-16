@@ -1,3 +1,4 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -20,25 +21,36 @@ class HomeBannerCarousel extends StatelessWidget {
     final home = Get.find<HomeController>();
 
     return Obx(() {
-      final banners = home.banners;
+      final banners = home.banners.toList(growable: false);
       if (banners.isEmpty) return const SizedBox.shrink();
+      final peekSides = banners.length > 1;
 
       return Column(
         children: [
-          SizedBox(
-            height: 160.h,
-            child: PageView.builder(
-              controller: home.bannerPageController,
-              itemCount: banners.length,
-              onPageChanged: home.onBannerChanged,
-              itemBuilder: (context, index) {
-                final banner = banners[index];
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: GestureDetector(
-                    onTap: () => _openBanner(banner),
+          CarouselSlider.builder(
+            itemCount: banners.length,
+            itemBuilder: (context, index, realIndex) {
+              final banner = banners[index];
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: peekSides ? 7.w : 16.w,
+                  vertical: 4.h,
+                ),
+                child: GestureDetector(
+                  onTap: () => _openBanner(banner),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.10),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(20.r),
                       child: AppImage(
                         source: banner.imageUrl,
                         width: double.infinity,
@@ -48,21 +60,39 @@ class HomeBannerCarousel extends StatelessWidget {
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              );
+            },
+            options: CarouselOptions(
+              height: 142.h,
+              viewportFraction: peekSides ? 0.78 : 1,
+              padEnds: true,
+              enlargeCenterPage: peekSides,
+              enlargeFactor: 0.22,
+              enlargeStrategy: CenterPageEnlargeStrategy.zoom,
+              autoPlay: peekSides,
+              autoPlayInterval: const Duration(seconds: 4),
+              autoPlayAnimationDuration: const Duration(milliseconds: 680),
+              autoPlayCurve: Curves.easeOutCubic,
+              enableInfiniteScroll: peekSides,
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              onPageChanged: (index, reason) => home.onBannerChanged(index),
             ),
           ),
-          SizedBox(height: 6.h),
-          SmoothPageIndicator(
-            controller: home.bannerPageController,
-            count: banners.length,
-            effect: ExpandingDotsEffect(
-              dotHeight: 7.h,
-              dotWidth: 7.w,
-              spacing: 6.w,
-              expansionFactor: 2.8,
-              activeDotColor: AppColors.indicatorActive,
-              dotColor: AppColors.indicatorInactive,
+          SizedBox(height: 8.h),
+          Obx(
+            () => AnimatedSmoothIndicator(
+              activeIndex: home.bannerIndex.value,
+              count: banners.length,
+              effect: ExpandingDotsEffect(
+                dotHeight: 7.h,
+                dotWidth: 7.w,
+                spacing: 6.w,
+                expansionFactor: 2.8,
+                activeDotColor: AppColors.indicatorActive,
+                dotColor: AppColors.indicatorInactive,
+              ),
             ),
           ),
         ],
