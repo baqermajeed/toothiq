@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../utils/app_colors.dart';
 import '../my_text.dart';
-import '../primary_button.dart';
 
 class DriverRatingCard extends StatelessWidget {
   const DriverRatingCard({
@@ -29,10 +28,10 @@ class DriverRatingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.orderDetailCardBorder),
       ),
       child: Column(
@@ -40,82 +39,127 @@ class DriverRatingCard extends StatelessWidget {
         children: [
           MyText(
             hasSubmitted ? 'تقييمك للسائق' : 'قيّم السائق',
-            fontSize: 16.sp,
+            fontSize: 14.sp,
             fontWeight: FontWeight.w800,
             color: AppColors.productTitle,
             textAlign: TextAlign.right,
           ),
           if (driverName.trim().isNotEmpty) ...[
-            SizedBox(height: 4.h),
+            SizedBox(height: 2.h),
             MyText(
               driverName,
-              fontSize: 13.sp,
+              fontSize: 12.sp,
               fontWeight: FontWeight.w600,
               color: AppColors.productStore,
               textAlign: TextAlign.right,
             ),
           ],
-          SizedBox(height: 12.h),
+          SizedBox(height: 6.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var star = 1; star <= 5; star++)
-                IconButton(
-                  onPressed: isSubmitting ? null : () => onRatingChanged(star),
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  constraints: const BoxConstraints(),
-                  icon: Icon(
-                    star <= selectedRating
-                        ? Icons.star_rounded
-                        : Icons.star_border_rounded,
-                    color: AppColors.ratingStar,
-                    size: 34.sp,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 2.w),
+                  child: GestureDetector(
+                    onTap: isSubmitting || hasSubmitted
+                        ? null
+                        : () => onRatingChanged(star),
+                    behavior: HitTestBehavior.opaque,
+                    child: Icon(
+                      star <= selectedRating
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: AppColors.ratingStar,
+                      size: 22.sp,
+                    ),
                   ),
                 ),
             ],
           ),
-          SizedBox(height: 8.h),
-          TextField(
-            controller: commentController,
-            enabled: !isSubmitting,
-            maxLines: 3,
-            minLines: 2,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontFamily: 'Expo Arabic',
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-            decoration: InputDecoration(
-              hintText: 'تعليق اختياري عن التوصيل',
-              hintStyle: TextStyle(
-                fontFamily: 'Expo Arabic',
-                fontSize: 13.sp,
+          SizedBox(height: 6.h),
+          if (hasSubmitted) ...[
+            if (commentController.text.trim().isNotEmpty)
+              MyText(
+                commentController.text.trim(),
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
+                textAlign: TextAlign.right,
               ),
-              filled: true,
-              fillColor: AppColors.ordersPageBackground,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: AppColors.orderDetailCardBorder),
+          ] else ...[
+            TextField(
+              controller: commentController,
+              enabled: !isSubmitting,
+              maxLines: 2,
+              minLines: 1,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontFamily: 'Expo Arabic',
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: AppColors.orderDetailCardBorder),
-              ),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 12.w,
-                vertical: 10.h,
+              decoration: InputDecoration(
+                hintText: 'تعليق اختياري عن التوصيل',
+                hintStyle: TextStyle(
+                  fontFamily: 'Expo Arabic',
+                  fontSize: 11.sp,
+                  color: AppColors.textSecondary,
+                ),
+                filled: true,
+                fillColor: AppColors.ordersPageBackground,
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide:
+                      BorderSide(color: AppColors.orderDetailCardBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide:
+                      BorderSide(color: AppColors.orderDetailCardBorder),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 10.w,
+                  vertical: 8.h,
+                ),
               ),
             ),
-          ),
-          SizedBox(height: 12.h),
-          PrimaryButton(
-            label: hasSubmitted ? 'تحديث التقييم' : 'إرسال التقييم',
-            onPressed: selectedRating > 0 && !isSubmitting ? onSubmit : null,
-            isLoading: isSubmitting,
-          ),
+            SizedBox(height: 8.h),
+            SizedBox(
+              height: 36.h,
+              child: ElevatedButton(
+                onPressed:
+                    selectedRating > 0 && !isSubmitting ? onSubmit : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor:
+                      AppColors.primary.withValues(alpha: 0.6),
+                  elevation: 0,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                child: isSubmitting
+                    ? SizedBox(
+                        width: 16.w,
+                        height: 16.w,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : MyText(
+                        'إرسال التقييم',
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+              ),
+            ),
+          ],
         ],
       ),
     );

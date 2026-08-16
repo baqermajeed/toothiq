@@ -262,29 +262,24 @@ class _SearchResultsBody extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 24.h),
+            padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 8.h),
             sliver: SliverGrid(
               gridDelegate: ProductCardWidget.gridDelegate,
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  if (index >= search.products.length) {
-                    if (search.loadingMore.value) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    return Center(
-                      child: TextButton(
-                        onPressed: search.loadMore,
-                        child: const Text('تحميل المزيد'),
-                      ),
-                    );
-                  }
                   return ProductCardWidget(product: search.products[index]);
                 },
-                childCount:
-                    search.products.length +
-                    ((search.loadingMore.value || search.hasNextPage.value)
-                        ? 1
-                        : 0),
+                childCount: search.products.length,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 24.h),
+              child: AppLoadMoreFooter(
+                isLoading: search.loadingMore.value,
+                hasNextPage: search.hasNextPage.value,
+                onTap: search.loadMore,
               ),
             ),
           ),

@@ -43,6 +43,7 @@ class ProductsGridWidget extends StatelessWidget {
       controller: scrollController,
       shrinkWrap: shrinkWrap,
       primary: shrinkWrap ? false : null,
+      clipBehavior: Clip.none,
       physics: physics ??
           (shrinkWrap
               ? const NeverScrollableScrollPhysics()

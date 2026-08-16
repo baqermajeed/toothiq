@@ -143,14 +143,14 @@ async function listForDriver(driverId, query = {}) {
 
 async function attachToOrder(orderObj) {
   if (!orderObj) return orderObj;
-  const orderId = orderObj._id || orderObj.id;
-  if (!orderId) {
-    orderObj.driverReview = null;
-    return orderObj;
+  const rawId = orderObj._id || orderObj.id;
+  if (!rawId || !mongoose.Types.ObjectId.isValid(String(rawId))) {
+    return { ...orderObj, driverReview: null };
   }
-  const review = await DriverReview.findOne({ orderId }).lean();
-  orderObj.driverReview = toClientReview(review);
-  return orderObj;
+  const review = await DriverReview.findOne({
+    orderId: new mongoose.Types.ObjectId(String(rawId)),
+  }).lean();
+  return { ...orderObj, driverReview: toClientReview(review) };
 }
 
 module.exports = {

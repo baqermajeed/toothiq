@@ -8,7 +8,7 @@ import '../../model/store_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/categories/category_card_widget.dart';
-import '../../widget/home/product_card_widget.dart';
+import '../../widget/home/product_cards_strip.dart';
 import '../../widget/home/products_grid_widget.dart';
 import '../../widget/my_text.dart';
 import '../../widget/search_filter_row.dart';
@@ -154,36 +154,23 @@ class _ProductsTabContent extends StatelessWidget {
               onFilterTap: () {},
             ),
             SizedBox(height: 20.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: MyText(
-                  'أشهر المنتجات',
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.productTitle,
+            if (popularProducts.isNotEmpty) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: MyText(
+                    'أشهر المنتجات',
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.productTitle,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 14.h),
-            SizedBox(
-              height: 290.h,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                itemCount: popularProducts.length,
-                separatorBuilder: (_, index) => SizedBox(width: 12.w),
-                itemBuilder: (context, index) {
-                  final product = popularProducts[index];
-                  return SizedBox(
-                    width: 168.w,
-                    child: ProductCardWidget(product: product),
-                  );
-                },
-              ),
-            ),
-            SizedBox(height: 24.h),
+              SizedBox(height: 14.h),
+              ProductCardsStrip(products: popularProducts),
+              SizedBox(height: 24.h),
+            ],
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Align(

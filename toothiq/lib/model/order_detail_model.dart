@@ -244,8 +244,11 @@ class OrderDetailModel {
 
     DriverReviewModel? driverReview;
     final rawReview = json['driverReview'];
-    if (rawReview is Map<String, dynamic> && rawReview.isNotEmpty) {
-      driverReview = DriverReviewModel.fromJson(rawReview);
+    if (rawReview is Map && rawReview.isNotEmpty) {
+      final parsed = DriverReviewModel.fromJson(
+        Map<String, dynamic>.from(rawReview),
+      );
+      if (parsed.rating > 0) driverReview = parsed;
     }
 
     return OrderDetailModel(

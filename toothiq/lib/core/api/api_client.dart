@@ -720,7 +720,27 @@ class ApiClient {
     if (data is! Map<String, dynamic>) {
       throw const ApiException('رد تفاصيل الطلب غير صالح');
     }
-    return OrderDetailModel.fromApi(data);
+    var model = OrderDetailModel.fromApi(data);
+    if (model.canRateDriver && !model.hasDriverReview) {
+      final review = await _tryGetDriverReview(orderId);
+      if (review != null) {
+        model = model.copyWithDriverReview(review);
+      }
+    }
+    return model;
+  }
+
+  Future<DriverReviewModel?> _tryGetDriverReview(String orderId) async {
+    try {
+      final data = await _getSuccessData(ApiEndpoints.orderDriverReview(orderId));
+      if (data is Map && data.isNotEmpty) {
+        final review = DriverReviewModel.fromJson(
+          Map<String, dynamic>.from(data),
+        );
+        if (review.rating > 0) return review;
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<DriverReviewModel> submitDriverReview({

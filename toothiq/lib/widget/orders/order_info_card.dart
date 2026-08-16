@@ -28,7 +28,7 @@ class OrderInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(_radius.r),
@@ -37,7 +37,7 @@ class OrderInfoCard extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < fields.length; i++) ...[
-            if (i > 0) SizedBox(height: 12.h),
+            if (i > 0) SizedBox(height: 6.h),
             _OrderInfoFieldRow(field: fields[i]),
           ],
         ],
@@ -71,7 +71,7 @@ class _OrderInfoFieldRow extends StatelessWidget {
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: AppColors.orderDetailLabel,
-              height: 1.4,
+              height: 1.2,
             ),
           ),
         ),
@@ -85,7 +85,7 @@ class _OrderInfoFieldRow extends StatelessWidget {
               fontSize: field.highlightValue ? 15.sp : 14.sp,
               fontWeight: valueWeight,
               color: valueColor,
-              height: 1.4,
+              height: 1.2,
             ),
           ),
         ),

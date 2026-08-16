@@ -82,7 +82,7 @@ class ProductDetailsPage extends StatelessWidget {
                           SizedBox(height: 8.h),
                         ],
                         _ProductGallerySection(controller: ctrl),
-                        SizedBox(height: 16.h),
+                        SizedBox(height: 8.h),
                         _StoreLinkBar(
                           storeName: product.storeName,
                           onTap: ctrl.openStorePage,
@@ -92,7 +92,7 @@ class ProductDetailsPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              SizedBox(height: 16.h),
+                              SizedBox(height: 8.h),
                               MyText(
                                 product.name,
                                 fontSize: 16.sp,
@@ -101,18 +101,18 @@ class ProductDetailsPage extends StatelessWidget {
                                 textAlign: TextAlign.right,
                                 height: 1.0,
                               ),
-                              SizedBox(height: 14.h),
+                              SizedBox(height: 6.h),
                               _PriceQuantityRow(controller: ctrl),
-                              SizedBox(height: 20.h),
+                              SizedBox(height: 8.h),
                               MyText(
                                 'وصف المنتج',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.productStoreName,
                                 textAlign: TextAlign.right,
-                                height: 1.5,
+                                height: 1.2,
                               ),
-                              SizedBox(height: 8.h),
+                              SizedBox(height: 4.h),
                               Text(
                                 product.detailsDescription.isEmpty
                                     ? 'لا يوجد وصف لهذا المنتج.'
@@ -120,14 +120,14 @@ class ProductDetailsPage extends StatelessWidget {
                                 textAlign: TextAlign.justify,
                                 style: TextStyle(
                                   fontFamily: 'Expo Arabic',
-                                  fontSize: 14.sp,
+                                  fontSize: 12.sp,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.black,
+                                  color: Colors.black.withValues(alpha: 0.5),
                                   height: 1.6,
                                 ),
                               ),
                               if (product.expirationDate.isNotEmpty) ...[
-                                SizedBox(height: 16.h),
+                                SizedBox(height: 8.h),
                                 MyText(
                                   'تاريخ الأنتهاء : ${product.expirationDate}',
                                   fontSize: 14.sp,
@@ -170,8 +170,10 @@ class _ProductDetailsAppBar extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: true,
       automaticallyImplyLeading: false,
       leading: Obx(

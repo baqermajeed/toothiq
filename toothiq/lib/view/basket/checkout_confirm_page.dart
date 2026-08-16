@@ -110,7 +110,7 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 14.h),
+                  SizedBox(height: 8.h),
                   OrderInfoCard(
                     fields: [
                       OrderInfoField(label: 'تاريخ الطلب :', value: orderDate),
@@ -121,7 +121,7 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 10.h),
                   MyText(
                     'المنتجات المطلوبة ( ${lineItems.length} )',
                     fontSize: 16.sp,
@@ -129,7 +129,7 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                     color: AppColors.productTitle,
                     textAlign: TextAlign.right,
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: 6.h),
                   if (lineItems.isEmpty)
                     const AppEmptyState(
                       title: 'لا توجد منتجات في الطلب',
@@ -138,11 +138,11 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                   else
                     ...lineItems.map(
                       (item) => Padding(
-                        padding: EdgeInsets.only(bottom: 12.h),
+                        padding: EdgeInsets.only(bottom: 6.h),
                         child: OrderProductLineWidget(item: item),
                       ),
                     ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 6.h),
                   MyText(
                     'تفاصيل السعر',
                     fontSize: 16.sp,
@@ -150,7 +150,7 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                     color: AppColors.productTitle,
                     textAlign: TextAlign.right,
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: 6.h),
                   OrderInfoCard(
                     fields: [
                       OrderInfoField(

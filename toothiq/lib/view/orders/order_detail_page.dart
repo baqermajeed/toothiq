@@ -98,7 +98,7 @@ class OrderDetailPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 14.h),
+                  SizedBox(height: 8.h),
                   OrderInfoCard(
                     fields: [
                       OrderInfoField(
@@ -150,7 +150,7 @@ class OrderDetailPage extends StatelessWidget {
                       ),
                     ),
                   ],
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 10.h),
                   MyText(
                     'المنتجات المطلوبة ( ${d.itemCount} )',
                     fontSize: 16.sp,
@@ -158,7 +158,7 @@ class OrderDetailPage extends StatelessWidget {
                     color: AppColors.productTitle,
                     textAlign: TextAlign.right,
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: 6.h),
                   if (d.items.isEmpty)
                     const AppEmptyState(
                       title: 'لا توجد منتجات في هذا الطلب',
@@ -167,11 +167,11 @@ class OrderDetailPage extends StatelessWidget {
                   else
                     ...d.items.map(
                       (item) => Padding(
-                        padding: EdgeInsets.only(bottom: 12.h),
+                        padding: EdgeInsets.only(bottom: 6.h),
                         child: OrderProductLineWidget(item: item),
                       ),
                     ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 6.h),
                   MyText(
                     'تفاصيل السعر',
                     fontSize: 16.sp,
@@ -179,7 +179,7 @@ class OrderDetailPage extends StatelessWidget {
                     color: AppColors.productTitle,
                     textAlign: TextAlign.right,
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: 6.h),
                   OrderInfoCard(
                     fields: [
                       OrderInfoField(

@@ -22,16 +22,27 @@ function getProductEffectivePrice(product) {
 const DEFAULT_PRODUCT_IMAGE = '/uploads/products/photo_2026-03-18 00.25.48.jpeg';
 
 /** يستخرج رابط الصورة من حقل populated أو يُعيد الافتراضي. */
+function isPlaceholderProductImage(value) {
+  if (!value || typeof value !== 'string') return true;
+  const normalized = String(value).replace(/^\/+/, '').trim();
+  return (
+    !normalized ||
+    normalized === DEFAULT_PRODUCT_IMAGE.replace(/^\/+/, '')
+  );
+}
+
 function resolveProductImage(productRaw) {
   if (productRaw && typeof productRaw === 'object') {
     if (Array.isArray(productRaw.images) && productRaw.images.length > 0) {
-      const first = productRaw.images.find((v) => typeof v === 'string' && String(v).trim());
+      const first = productRaw.images.find(
+        (v) => typeof v === 'string' && !isPlaceholderProductImage(v),
+      );
       if (first) return String(first).trim();
     }
     const img = productRaw.image;
-    if (img && String(img).trim()) return String(img).trim();
+    if (img && !isPlaceholderProductImage(img)) return String(img).trim();
   }
-  return DEFAULT_PRODUCT_IMAGE;
+  return '';
 }
 
 /**

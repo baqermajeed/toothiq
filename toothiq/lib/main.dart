@@ -162,8 +162,16 @@ class DentalApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(
               seedColor: AppColors.primary,
               primary: AppColors.primary,
+              surface: AppColors.background,
             ),
             scaffoldBackgroundColor: AppColors.background,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: AppColors.background,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              shadowColor: Colors.transparent,
+            ),
           ),
           home: const SplashPage(),
           initialBinding: AppBinding(),

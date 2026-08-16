@@ -81,15 +81,30 @@ function deleteProductImagesIfLocal(imagePaths) {
   for (const p of imagePaths) deleteProductImageIfLocal(p);
 }
 
+function isPlaceholderProductImage(value) {
+  if (!value || typeof value !== 'string') return true;
+  const normalized = value.replace(/^\/+/, '').trim();
+  return (
+    !normalized ||
+    normalized === DEFAULT_PRODUCT_IMAGE.replace(/^\/+/, '')
+  );
+}
+
 function normalizeProductImages(images, fallbackImage) {
   const list = Array.isArray(images)
     ? images.filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim())
     : [];
-  if (list.length > 0) return list;
-  if (fallbackImage && typeof fallbackImage === 'string' && fallbackImage.trim()) {
+  const real = list.filter((v) => !isPlaceholderProductImage(v));
+  if (real.length > 0) return real;
+  if (
+    fallbackImage &&
+    typeof fallbackImage === 'string' &&
+    fallbackImage.trim() &&
+    !isPlaceholderProductImage(fallbackImage)
+  ) {
     return [fallbackImage.trim()];
   }
-  return [DEFAULT_PRODUCT_IMAGE];
+  return [];
 }
 
 /**

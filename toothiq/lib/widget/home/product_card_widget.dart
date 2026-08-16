@@ -22,15 +22,24 @@ class ProductCardWidget extends StatelessWidget {
   static const double _cardRadius = 24;
   static const double _fixedCardHeight = 252;
   static const double _imageHeight = 127.34;
+  static const double _gridHPad = 16;
+  static const double _gridGap = 12;
+  static const int _crossAxisCount = 2;
 
   /// ارتفاع الكارد بعد ScreenUtil — ليتطابق مع `mainAxisExtent` في الشبكة
   static double get cardHeight => _fixedCardHeight.h;
 
+  /// عرض كارد واحد في شبكة عمودين (هوامش 16 + تباعد 12).
+  static double cardWidthFor(BuildContext context) {
+    final screenW = MediaQuery.sizeOf(context).width;
+    return (screenW - _gridHPad.w * 2 - _gridGap.w) / _crossAxisCount;
+  }
+
   /// شبكة الصفحة الرئيسية — مصدر واحد لكل صفحات المنتجات.
   static SliverGridDelegate get gridDelegate {
     return SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12.w,
+      crossAxisCount: _crossAxisCount,
+      crossAxisSpacing: _gridGap.w,
       mainAxisSpacing: 10.h,
       mainAxisExtent: cardHeight,
     );
