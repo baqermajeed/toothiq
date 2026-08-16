@@ -1139,4 +1139,5 @@ module.exports = {
   listRandomFromMultipleShops,
   mapProductForCatalog,
   expandAdminCategoryMatch,
+  getVisibleShopIds,
 };

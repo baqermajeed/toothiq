@@ -1,4 +1,5 @@
 import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
 import '../../model/paginated_result.dart';
 import '../../model/product_model.dart';
 import '../../model/search_filter_options_model.dart';
@@ -44,6 +45,38 @@ class ProductService {
     int limit = 12,
   }) {
     return _api.searchProducts(query, page: page, limit: limit);
+  }
+
+  Future<PaginatedResult<ProductModel>> fetchOffers({
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.getProductFeed(ApiEndpoints.productOffers, page: page, limit: limit);
+  }
+
+  Future<PaginatedResult<ProductModel>> fetchBestSellers({
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.getProductFeed(
+      ApiEndpoints.productBestSellers,
+      page: page,
+      limit: limit,
+    );
+  }
+
+  Future<PaginatedResult<ProductModel>> fetchForYou({
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.getProductFeed(ApiEndpoints.productForYou, page: page, limit: limit);
+  }
+
+  Future<PaginatedResult<ProductModel>> fetchNewProducts({
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.getProductFeed(ApiEndpoints.productNew, page: page, limit: limit);
   }
 
   /// أقل وأعلى سعر بين كل المنتجات المتاحة في التطبيق.

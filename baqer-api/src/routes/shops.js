@@ -1,4 +1,5 @@
 const express = require('express');
+const homeFeedController = require('../controllers/homeFeedController');
 const shopController = require('../controllers/shopController');
 const { authenticate, optionalAuthenticate, requireRoles } = require('../middlewares/auth');
 const { validateQuery, validateParams } = require('../middlewares/validate');
@@ -7,6 +8,8 @@ const { objectIdParam } = require('../validators/common');
 const uploadShopImage = require('../middlewares/uploadShopImage');
 
 const router = express.Router();
+
+router.get('/top-rated', optionalAuthenticate, homeFeedController.topRated);
 
 router.get(
   '/',

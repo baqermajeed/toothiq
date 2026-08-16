@@ -14,6 +14,7 @@ const DriverReview = require('./DriverReview');
 const DriverWallet = require('./DriverWallet');
 const DriverWalletTransaction = require('./DriverWalletTransaction');
 const Notification = require('./Notification');
+const HomeSectionPin = require('./HomeSectionPin');
 
 module.exports = {
   User,
@@ -32,4 +33,5 @@ module.exports = {
   DriverWallet,
   DriverWalletTransaction,
   Notification,
+  HomeSectionPin,
 };

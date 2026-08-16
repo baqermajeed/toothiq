@@ -452,6 +452,29 @@ class ApiClient {
     return _parseProductsPaginatedData(data, page: page, limit: limit);
   }
 
+  Future<PaginatedResult<ProductModel>> getProductFeed(
+    String path, {
+    int page = 1,
+    int limit = 12,
+  }) async {
+    final data = await _getSuccessData(
+      path,
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return _parseProductsPaginatedData(data, page: page, limit: limit);
+  }
+
+  Future<PaginatedResult<StoreModel>> getTopRatedShops({
+    int page = 1,
+    int limit = 12,
+  }) async {
+    final data = await _getSuccessData(
+      ApiEndpoints.shopsTopRated,
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return _parseShopsPaginatedData(data, page: page, limit: limit);
+  }
+
   Future<List<StoreModel>> getShops({
     String? category,
     int page = 1,
@@ -801,6 +824,40 @@ class ApiClient {
               : 0)
         : list.length;
 
+    return PaginatedResult(
+      items: list,
+      page: pageNum,
+      limit: limitNum,
+      total: total,
+    );
+  }
+
+  PaginatedResult<StoreModel> _parseShopsPaginatedData(
+    dynamic data, {
+    required int page,
+    required int limit,
+  }) {
+    if (data is! Map<String, dynamic>) {
+      return PaginatedResult(items: const [], page: 1, limit: limit, total: 0);
+    }
+    final items = data['items'];
+    final pagination = data['pagination'];
+    final list = items is List
+        ? items
+              .whereType<Map<String, dynamic>>()
+              .map(StoreModel.fromJson)
+              .toList(growable: false)
+        : <StoreModel>[];
+    final pageNum = pagination is Map<String, dynamic> && pagination['page'] is num
+        ? (pagination['page'] as num).toInt()
+        : page;
+    final limitNum =
+        pagination is Map<String, dynamic> && pagination['limit'] is num
+        ? (pagination['limit'] as num).toInt()
+        : limit;
+    final total = pagination is Map<String, dynamic> && pagination['total'] is num
+        ? (pagination['total'] as num).toInt()
+        : list.length;
     return PaginatedResult(
       items: list,
       page: pageNum,

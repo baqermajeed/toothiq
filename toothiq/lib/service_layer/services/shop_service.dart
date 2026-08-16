@@ -19,6 +19,13 @@ class ShopService {
     return _api.getShops(category: category, page: page, limit: limit);
   }
 
+  Future<PaginatedResult<StoreModel>> fetchTopRatedShops({
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.getTopRatedShops(page: page, limit: limit);
+  }
+
   /// بحث محلي في قائمة المتاجر (السيرفر لا يدعم q على /api/shops).
   Future<List<StoreModel>> searchStoresByQuery(
     String query, {

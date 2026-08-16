@@ -261,6 +261,65 @@ const spec = {
       get: { summary: 'List shops', tags: ['Shops'], parameters: [{ name: 'category', in: 'query' }, { name: 'isOpen', in: 'query' }, { name: 'page', in: 'query' }, { name: 'limit', in: 'query' }], responses: { 200: { description: 'OK' } } },
       post: { summary: 'Create shop', tags: ['Shops'], security: [{ bearerAuth: [] }], responses: { 201: { description: 'Created' }, 401: { description: 'Unauthorized' } } },
     },
+    '/api/shops/top-rated': {
+      get: {
+        summary: 'Home feed: highest-rated shops',
+        description: 'Pinned shops first (admin), then auto-ranked by rating. No duplicates.',
+        tags: ['Shops'],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/products/offers': {
+      get: {
+        summary: 'Home feed: products on offer',
+        tags: ['Products'],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/products/best-sellers': {
+      get: {
+        summary: 'Home feed: best-selling products',
+        description: 'Pinned products first, then sold quantity from delivered orders.',
+        tags: ['Products'],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/products/for-you': {
+      get: {
+        summary: 'Home feed: personalized products',
+        description: 'Uses the caller order history when authenticated, else best-sellers/newest. Pins first.',
+        tags: ['Products'],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
+    '/api/products/new': {
+      get: {
+        summary: 'Home feed: newest products',
+        description: 'Pinned products first, then createdAt descending.',
+        tags: ['Products'],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, default: 12 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
     '/api/shops/{id}': {
       get: { summary: 'Get shop by ID', tags: ['Shops'], parameters: [{ name: 'id', in: 'path', required: true }], responses: { 200: { description: 'OK' }, 404: { description: 'Not found' } } },
       patch: { summary: 'Update shop', tags: ['Shops'], security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true }], responses: { 200: { description: 'OK' }, 403: { description: 'Forbidden' }, 404: { description: 'Not found' } } },
@@ -818,6 +877,44 @@ const spec = {
     },
     '/api/admin/users/{id}/active': {
       patch: { summary: 'Set user active/inactive (admin)', tags: ['Admin'], security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true }], requestBody: { content: { 'application/json': { schema: { type: 'object', required: ['isActive'], properties: { isActive: { type: 'boolean' } } } } } }, responses: { 200: { description: 'OK' }, 403: { description: 'Forbidden' }, 404: { description: 'Not found' } } },
+    },
+    '/api/admin/home-sections': {
+      get: {
+        summary: 'List pinned items for a home section',
+        tags: ['Admin'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'section',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', enum: ['best_sellers', 'for_you', 'new', 'top_rated'] },
+          },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+      post: {
+        summary: 'Pin a product or shop to a home section',
+        tags: ['Admin'],
+        security: [{ bearerAuth: [] }],
+        responses: { 201: { description: 'Created' }, 409: { description: 'Already pinned' } },
+      },
+    },
+    '/api/admin/home-sections/{id}': {
+      patch: {
+        summary: 'Update pin order or active state',
+        tags: ['Admin'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true }],
+        responses: { 200: { description: 'OK' } },
+      },
+      delete: {
+        summary: 'Remove a home section pin',
+        tags: ['Admin'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true }],
+        responses: { 200: { description: 'OK' } },
+      },
     },
     '/api/admin/banners': {
       get: {

@@ -183,6 +183,24 @@ export const adminApi = {
       apiFetch<Record<string, unknown>>(`/api/admin/banners/${id}`, { method: 'PATCH', body: form }),
     remove: (id: string) => apiFetch<unknown>(`/api/admin/banners/${id}`, { method: 'DELETE' }),
   },
+  homeSections: {
+    list: (section: string) =>
+      apiFetch<{ section: string; itemType: string; items: Record<string, unknown>[] }>(
+        `/api/admin/home-sections?section=${encodeURIComponent(section)}`
+      ),
+    create: (body: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>('/api/admin/home-sections', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    patch: (id: string, body: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>(`/api/admin/home-sections/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    remove: (id: string) =>
+      apiFetch<{ deleted: boolean }>(`/api/admin/home-sections/${id}`, { method: 'DELETE' }),
+  },
   notifications: {
     broadcast: (body: {
       title: string

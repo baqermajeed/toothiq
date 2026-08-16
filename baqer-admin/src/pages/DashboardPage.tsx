@@ -107,6 +107,8 @@ export function DashboardPage() {
       </div>
 
       <p style={{ marginTop: '1.5rem' }}>
+        <Link to="/home-sections">أقسام الرئيسية</Link>
+        {' — '}
         <Link to="/orders">إدارة الطلبات</Link>
         {' — '}
         <Link to="/settings">إعدادات المنصة</Link>

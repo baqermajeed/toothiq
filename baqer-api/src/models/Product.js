@@ -23,6 +23,7 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ shopId: 1 });
+productSchema.index({ isAvailable: 1, shopId: 1, createdAt: -1 });
 productSchema.index({ shopId: 1, name: 1 });
 productSchema.index({ categoryId: 1, subcategoryId: 1 });
 productSchema.index({ categoryId: 1, brandId: 1 });

@@ -71,6 +71,27 @@ class ShopProduct {
 
   int get sellingPrice => isOnOffer ? offerPrice! : price;
 
+  /// نسبة التخفيض: ((السعر الأصلي − سعر العرض) ÷ السعر الأصلي) × 100
+  static int? percentOff(int price, int offerPrice) {
+    if (price <= 0 || offerPrice <= 0 || offerPrice >= price) return null;
+    final percent = (((price - offerPrice) / price) * 100).round();
+    if (percent < 1) return 1;
+    return percent;
+  }
+
+  int? get discountPercent {
+    if (!isOnOffer) return null;
+    final offer = offerPrice;
+    if (offer == null) return null;
+    return percentOff(price, offer);
+  }
+
+  String get offerBadgeLabel {
+    final percent = discountPercent;
+    if (percent == null) return 'عرض';
+    return 'عرض $percent%';
+  }
+
   String get formattedPrice {
     final formatted = sellingPrice.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),

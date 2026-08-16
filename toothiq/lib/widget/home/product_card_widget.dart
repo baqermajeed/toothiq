@@ -166,7 +166,7 @@ class ProductCardWidget extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
-                        'عرض',
+                        product.offerBadgeLabel,
                         style: TextStyle(
                           fontFamily: 'Expo Arabic',
                           fontSize: 10.sp,

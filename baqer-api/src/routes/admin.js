@@ -21,6 +21,7 @@ const {
 const discountCodeAdminController = require('../controllers/discountCodeAdminController');
 const uploadShopImage = require('../middlewares/uploadShopImage');
 const uploadBannerImage = require('../middlewares/uploadBannerImage');
+const homeSectionAdminController = require('../controllers/homeSectionAdminController');
 const uploadCategoryIcon = require('../middlewares/uploadCategoryIcon');
 const uploadBrandImage = require('../middlewares/uploadBrandImage');
 
@@ -254,6 +255,19 @@ router.delete(
   '/banners/:id',
   validateParams(objectIdParam('id')),
   bannerAdminController.remove
+);
+
+router.get('/home-sections', homeSectionAdminController.list);
+router.post('/home-sections', homeSectionAdminController.create);
+router.patch(
+  '/home-sections/:id',
+  validateParams(objectIdParam('id')),
+  homeSectionAdminController.update
+);
+router.delete(
+  '/home-sections/:id',
+  validateParams(objectIdParam('id')),
+  homeSectionAdminController.remove
 );
 
 router.post('/notifications/broadcast', adminController.broadcastNotification);

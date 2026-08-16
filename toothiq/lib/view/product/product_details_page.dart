@@ -529,7 +529,7 @@ class _PriceQuantityRow extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: Text(
-                    'عرض',
+                    controller.product.offerBadgeLabel,
                     style: TextStyle(
                       fontFamily: 'Expo Arabic',
                       fontSize: 11.sp,

@@ -129,7 +129,7 @@ class _ShopProductDetailsPageState extends State<ShopProductDetailsPage> {
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: MyText(
-                            'عرض',
+                            product.offerBadgeLabel,
                             fontSize: 11.sp,
                             color: Colors.white,
                           ),

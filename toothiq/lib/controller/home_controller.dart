@@ -4,15 +4,19 @@ import 'package:get/get.dart';
 import '../model/banner_model.dart';
 import '../model/brand_model.dart';
 import '../model/category_model.dart';
+import '../model/home_feed_tab.dart';
+import '../model/paginated_result.dart';
 import '../model/product_model.dart';
 import '../model/search_filter_model.dart';
 import '../model/shop_category_model.dart';
+import '../model/store_model.dart';
 import '../core/api/api_exception.dart';
 import '../service_layer/services/banner_service.dart';
 import '../service_layer/services/brand_service.dart';
 import '../service_layer/services/category_service.dart';
 import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/product_service.dart';
+import '../service_layer/services/shop_service.dart';
 import '../view/search/search_filter_page.dart';
 import '../view/search/search_results_page.dart';
 
@@ -21,6 +25,7 @@ class HomeController extends GetxController {
   final CategoryService _categoryService = Get.find<CategoryService>();
   final BrandService _brandService = Get.find<BrandService>();
   final ProductService _productService = Get.find<ProductService>();
+  final ShopService _shopService = Get.find<ShopService>();
   final FavoritesService _favoritesService = Get.find<FavoritesService>();
 
   final searchController = TextEditingController();
@@ -31,13 +36,17 @@ class HomeController extends GetxController {
   final categories = <CategoryModel>[].obs;
   final brands = <BrandModel>[].obs;
   final products = <ProductModel>[].obs;
+  final shops = <StoreModel>[].obs;
   final offerProducts = <ProductModel>[].obs;
+  final selectedFeed = HomeFeedTab.all.obs;
   final isLoading = false.obs;
+  final feedLoading = false.obs;
   final loadingMore = false.obs;
   final hasNextPage = false.obs;
   final currentPage = 1.obs;
   final loadError = RxnString();
   static const int _pageSize = 12;
+  int _feedRequestId = 0;
 
   @override
   void onInit() {
@@ -76,6 +85,7 @@ class HomeController extends GetxController {
       categories.clear();
       brands.clear();
       products.clear();
+      shops.clear();
       offerProducts.clear();
       hasNextPage.value = false;
     } catch (_) {
@@ -84,6 +94,7 @@ class HomeController extends GetxController {
       categories.clear();
       brands.clear();
       products.clear();
+      shops.clear();
       offerProducts.clear();
       hasNextPage.value = false;
     } finally {
@@ -122,25 +133,73 @@ class HomeController extends GetxController {
   }
 
   Future<void> _loadProductsFirstPage() async {
+    await _loadFeedFirstPage();
+  }
+
+  Future<void> selectFeed(HomeFeedTab tab) async {
+    if (selectedFeed.value == tab) return;
+    selectedFeed.value = tab;
+    products.clear();
+    shops.clear();
+    hasNextPage.value = false;
+    await _loadFeedFirstPage();
+  }
+
+  Future<void> _loadFeedFirstPage() async {
+    final requestId = ++_feedRequestId;
     currentPage.value = 1;
-    final result = await _productService.fetchProductsPaginated(
-      page: 1,
-      limit: _pageSize,
-    );
-    products.assignAll(
-      _favoritesService.applyFavoriteState(result.items),
-    );
-    hasNextPage.value = result.hasNextPage;
-    currentPage.value = result.page;
+    feedLoading.value = true;
+    try {
+      if (selectedFeed.value.showsShops) {
+        final result = await _shopService.fetchTopRatedShops(
+          page: 1,
+          limit: _pageSize,
+        );
+        if (requestId != _feedRequestId) return;
+        shops.assignAll(result.items);
+        products.clear();
+        hasNextPage.value = result.hasNextPage;
+        currentPage.value = result.page;
+        return;
+      }
+      shops.clear();
+      final result = await _fetchFeedProducts(page: 1);
+      if (requestId != _feedRequestId) return;
+      products.assignAll(_favoritesService.applyFavoriteState(result.items));
+      hasNextPage.value = result.hasNextPage;
+      currentPage.value = result.page;
+    } catch (_) {
+      if (requestId != _feedRequestId) return;
+      products.clear();
+      shops.clear();
+      hasNextPage.value = false;
+    } finally {
+      if (requestId == _feedRequestId) {
+        feedLoading.value = false;
+      }
+    }
+  }
+
+  Future<PaginatedResult<ProductModel>> _fetchFeedProducts({required int page}) {
+    switch (selectedFeed.value) {
+      case HomeFeedTab.all:
+        return _productService.fetchProductsPaginated(page: page, limit: _pageSize);
+      case HomeFeedTab.offers:
+        return _productService.fetchOffers(page: page, limit: _pageSize);
+      case HomeFeedTab.bestSellers:
+        return _productService.fetchBestSellers(page: page, limit: _pageSize);
+      case HomeFeedTab.forYou:
+        return _productService.fetchForYou(page: page, limit: _pageSize);
+      case HomeFeedTab.newest:
+        return _productService.fetchNewProducts(page: page, limit: _pageSize);
+      case HomeFeedTab.topRated:
+        return _productService.fetchProductsPaginated(page: page, limit: _pageSize);
+    }
   }
 
   Future<void> _loadOfferProducts() async {
     try {
-      final result = await _productService.fetchProductsPaginated(
-        page: 1,
-        limit: 10,
-        hasOffer: true,
-      );
+      final result = await _productService.fetchOffers(page: 1, limit: 10);
       offerProducts.assignAll(
         _favoritesService.applyFavoriteState(result.items),
       );
@@ -154,15 +213,20 @@ class HomeController extends GetxController {
     loadingMore.value = true;
     try {
       final nextPage = currentPage.value + 1;
-      final result = await _productService.fetchProductsPaginated(
-        page: nextPage,
-        limit: _pageSize,
-      );
-      products.addAll(
-        _favoritesService.applyFavoriteState(result.items),
-      );
-      hasNextPage.value = result.hasNextPage;
-      currentPage.value = result.page;
+      if (selectedFeed.value.showsShops) {
+        final result = await _shopService.fetchTopRatedShops(
+          page: nextPage,
+          limit: _pageSize,
+        );
+        shops.addAll(result.items);
+        hasNextPage.value = result.hasNextPage;
+        currentPage.value = result.page;
+      } else {
+        final result = await _fetchFeedProducts(page: nextPage);
+        products.addAll(_favoritesService.applyFavoriteState(result.items));
+        hasNextPage.value = result.hasNextPage;
+        currentPage.value = result.page;
+      }
     } catch (_) {
       // لا نعرض خطأ لجلب المزيد.
     } finally {

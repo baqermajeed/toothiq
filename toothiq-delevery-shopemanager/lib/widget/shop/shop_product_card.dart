@@ -85,6 +85,14 @@ class ShopProductCard extends StatelessWidget {
                         fontSize: 14.sp,
                         color: AppColors.primary,
                       ),
+                      if (product.isOnOffer) ...[
+                        SizedBox(height: 4.h),
+                        MyText(
+                          product.offerBadgeLabel,
+                          fontSize: 11.sp,
+                          color: AppColors.error,
+                        ),
+                      ],
                       SizedBox(height: 6.h),
                       Wrap(
                         spacing: 6.w,
@@ -202,7 +210,7 @@ class _ImageHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: MyText(
-                    'عرض',
+                    product.offerBadgeLabel,
                     fontSize: 10.sp,
                     color: Colors.white,
                   ),

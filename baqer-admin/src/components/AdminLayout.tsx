@@ -11,6 +11,7 @@ const links = [
   { to: '/categories', label: 'تصنيفات المنتجات' },
   { to: '/discount-codes', label: 'أكواد الخصم' },
   { to: '/banners', label: 'البانرات' },
+  { to: '/home-sections', label: 'أقسام الرئيسية' },
   { to: '/notifications', label: 'الإشعارات' },
   { to: '/settings', label: 'إعدادات المنصة' },
 ]

@@ -312,6 +312,22 @@ class ProductModel {
     return price;
   }
 
+  /// نسبة التخفيض: ((السعر الأصلي − سعر العرض) ÷ السعر الأصلي) × 100
+  int? get discountPercent {
+    if (!isOnOffer) return null;
+    final offer = offerPrice;
+    if (offer == null || price <= 0 || offer >= price) return null;
+    final percent = (((price - offer) / price) * 100).round();
+    if (percent < 1) return 1;
+    return percent;
+  }
+
+  String get offerBadgeLabel {
+    final percent = discountPercent;
+    if (percent == null) return 'عرض';
+    return 'عرض $percent%';
+  }
+
   String get formattedPrice {
     final formatted = sellingPrice.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),

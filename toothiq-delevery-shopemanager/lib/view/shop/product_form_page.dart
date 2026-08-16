@@ -58,14 +58,29 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _gallery = List<String>.from(p?.galleryPaths ?? []);
     _categoryId = p?.categoryId;
     _brandId = p?.brandId;
+    _price.addListener(_onOfferInputsChanged);
+    _offerPrice.addListener(_onOfferInputsChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.find<ShopCatalogController>().loadCatalog(force: true);
     });
   }
 
+  void _onOfferInputsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  int? get _liveDiscountPercent {
+    final price = int.tryParse(_price.text.trim());
+    final offer = int.tryParse(_offerPrice.text.trim());
+    if (price == null || offer == null) return null;
+    return ShopProduct.percentOff(price, offer);
+  }
+
   @override
   void dispose() {
+    _price.removeListener(_onOfferInputsChanged);
+    _offerPrice.removeListener(_onOfferInputsChanged);
     _name.dispose();
     _description.dispose();
     _price.dispose();
@@ -267,6 +282,25 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     return null;
                   },
                 ),
+                if (_liveDiscountPercent != null) ...[
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: AppColors.error.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: MyText(
+                      'نسبة التخفيض: ${_liveDiscountPercent}%',
+                      fontSize: 13.sp,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ],
                 SizedBox(height: 14.h),
                 _OptionalDateField(
                   label: 'انتهاء العرض (اختياري)',

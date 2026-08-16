@@ -6,11 +6,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../controller/home_controller.dart';
+import '../../model/home_feed_tab.dart';
 import '../../utils/app_colors.dart';
 import '../../view/search/search_page.dart';
+import '../../view/stores/store_detail_page.dart';
 import '../../widget/app_bottom_navigation.dart';
 import '../../widget/home/home_banner_carousel.dart';
 import '../../widget/home/home_catalog_strips.dart';
+import '../../widget/home/home_feed_chips.dart';
 import '../../widget/home/home_compact_header_overlay.dart';
 import '../../widget/home/home_scroll_metrics.dart';
 import '../../widget/home/products_grid_widget.dart';
@@ -18,6 +21,7 @@ import '../../widget/home/product_cards_strip.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/search_filter_row.dart';
+import '../../widget/stores/store_card_widget.dart';
 import '../../widget/my_text.dart';
 
 class HomePage extends StatefulWidget {
@@ -148,7 +152,13 @@ class _HomePageState extends State<HomePage> {
                         categories: home.categories.toList(growable: false),
                         brands: home.brands.toList(growable: false),
                       ),
-                      if (home.offerProducts.isNotEmpty) ...[
+                      SizedBox(height: 10.h),
+                      HomeFeedChips(
+                        selected: home.selectedFeed.value,
+                        onSelected: home.selectFeed,
+                      ),
+                      if (home.selectedFeed.value == HomeFeedTab.all &&
+                          home.offerProducts.isNotEmpty) ...[
                         SizedBox(height: 10.h),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -173,7 +183,7 @@ class _HomePageState extends State<HomePage> {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: MyText(
-                            'جميع المنتجات',
+                            home.selectedFeed.value.gridTitle,
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
@@ -181,16 +191,39 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       SizedBox(height: 6.h),
-                      if (home.isLoading.value && home.products.isEmpty)
+                      if (home.feedLoading.value)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 24.h),
                           child: const AppLoadingState(),
                         )
+                      else if (home.selectedFeed.value.showsShops)
+                        home.shops.isEmpty
+                            ? Padding(
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                child: AppEmptyState(
+                                  title: home.selectedFeed.value.emptyTitle,
+                                ),
+                              )
+                            : Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                                child: Column(
+                                  children: [
+                                    for (final store in home.shops) ...[
+                                      StoreCardWidget(
+                                        store: store,
+                                        onViewStore: () =>
+                                            StoreDetailPage.open(store),
+                                      ),
+                                      SizedBox(height: 14.h),
+                                    ],
+                                  ],
+                                ),
+                              )
                       else if (home.products.isEmpty)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 14.h),
-                          child: const AppEmptyState(
-                            title: 'لا توجد منتجات حالياً',
+                          child: AppEmptyState(
+                            title: home.selectedFeed.value.emptyTitle,
                           ),
                         )
                       else
