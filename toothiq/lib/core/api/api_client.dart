@@ -7,6 +7,7 @@ import '../../model/auth_session_model.dart';
 import '../../model/banner_model.dart';
 import '../../model/brand_model.dart';
 import '../../model/category_section_model.dart';
+import '../../model/driver_review_model.dart';
 import '../../model/governorate_model.dart';
 import '../../model/notification_model.dart';
 import '../../model/order_detail_model.dart';
@@ -720,6 +721,24 @@ class ApiClient {
       throw const ApiException('رد تفاصيل الطلب غير صالح');
     }
     return OrderDetailModel.fromApi(data);
+  }
+
+  Future<DriverReviewModel> submitDriverReview({
+    required String orderId,
+    required int rating,
+    String comment = '',
+  }) async {
+    final data = await _postSuccessData(
+      ApiEndpoints.orderDriverReview(orderId),
+      body: {
+        'rating': rating,
+        'comment': comment,
+      },
+    );
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('رد تقييم السائق غير صالح');
+    }
+    return DriverReviewModel.fromJson(data);
   }
 
   PaginatedResult<ProductModel> _parseProductsPaginatedData(

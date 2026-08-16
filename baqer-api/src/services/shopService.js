@@ -24,7 +24,11 @@ async function list(filters = {}) {
   const pageNum = Number(page);
 
   const [items, total] = await Promise.all([
-    Shop.find(query).sort({ order: 1, createdAt: 1 }).skip(skip).limit(limitNum).lean(),
+    Shop.find(query)
+      .sort({ rating: -1, ratingCount: -1, name: 1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
     Shop.countDocuments(query),
   ]);
   return { items, pagination: { page: pageNum, limit: limitNum, total } };

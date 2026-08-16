@@ -9,8 +9,10 @@ import '../../controller/home_controller.dart';
 import '../../utils/app_colors.dart';
 import '../../view/search/search_page.dart';
 import '../../widget/app_bottom_navigation.dart';
-import '../../widget/home/category_chip_widget.dart';
 import '../../widget/home/home_banner_carousel.dart';
+import '../../widget/home/home_catalog_strips.dart';
+import '../../widget/home/home_compact_header_overlay.dart';
+import '../../widget/home/home_scroll_metrics.dart';
 import '../../widget/home/products_grid_widget.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/common/async_state_widgets.dart';
@@ -26,7 +28,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late final ScrollController _scrollController;
-  double _scrollOffset = 0;
+  final _scrollOffset = ValueNotifier<double>(0);
+  bool _logoFullyHidden = false;
 
   @override
   void initState() {
@@ -39,14 +42,27 @@ class _HomePageState extends State<HomePage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _scrollOffset.dispose();
     super.dispose();
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final offset = _scrollController.offset;
-    if ((offset - _scrollOffset).abs() >= 1) {
-      setState(() => _scrollOffset = offset);
+
+    final hideEnd = HomeScrollMetrics.logoHideStartOffset() +
+        HomeScrollMetrics.logoHideAnimationRange();
+
+    if (offset >= hideEnd) {
+      if (!_logoFullyHidden) {
+        _logoFullyHidden = true;
+        _scrollOffset.value = hideEnd;
+      }
+    } else {
+      _logoFullyHidden = false;
+      if ((offset - _scrollOffset.value).abs() >= 1) {
+        _scrollOffset.value = offset;
+      }
     }
 
     if (!Get.isRegistered<HomeController>()) return;
@@ -79,7 +95,12 @@ class _HomePageState extends State<HomePage> {
               }
 
               return CustomMaterialIndicator(
-                onRefresh: home.refresh,
+                onRefresh: () async {
+                  if (_scrollController.hasClients) {
+                    _scrollController.jumpTo(0);
+                  }
+                  await home.refresh();
+                },
                 backgroundColor: AppColors.primaryLight,
                 indicatorBuilder: (context, controller) {
                   return Opacity(
@@ -120,42 +141,12 @@ class _HomePageState extends State<HomePage> {
                           compact: true,
                         ),
                       ],
-                      if (home.categories.length > 1) ...[
-                        SizedBox(height: 8.h),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: MyText(
-                              'الأقسام الأكثر شهرة',
-                              fontSize: 17.sp,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 5.h),
-                        SizedBox(
-                          height: 44.h,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.symmetric(horizontal: 16.w),
-                            itemCount: home.categories.length,
-                            separatorBuilder: (context, index) =>
-                                SizedBox(width: 10.w),
-                            itemBuilder: (context, index) {
-                              return CategoryChipWidget(
-                                label: home.categories[index].name,
-                                isSelected:
-                                    home.selectedCategoryIndex.value == index,
-                                onTap: () => home.selectCategory(index),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
                       SizedBox(height: 8.h),
                       const HomeBannerCarousel(),
+                      HomeCatalogStrips(
+                        categories: home.categories.toList(growable: false),
+                        brands: home.brands.toList(growable: false),
+                      ),
                       SizedBox(height: 10.h),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -170,9 +161,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       SizedBox(height: 6.h),
-                      if ((home.isLoading.value ||
-                              home.isCategoryLoading.value) &&
-                          home.products.isEmpty)
+                      if (home.isLoading.value && home.products.isEmpty)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 24.h),
                           child: const AppLoadingState(),
@@ -206,7 +195,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               );
             }),
-            MainGlassHeaderOverlay(scrollOffset: _scrollOffset),
+            MainGlassHeaderOverlay(
+              scrollOffsetListenable: _scrollOffset,
+            ),
+            HomeCompactHeaderOverlay(
+              scrollOffsetListenable: _scrollOffset,
+              searchController: home.searchController,
+            ),
           ],
         ),
       ),

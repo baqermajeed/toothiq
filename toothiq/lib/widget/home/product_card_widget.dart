@@ -20,7 +20,7 @@ class ProductCardWidget extends StatelessWidget {
   });
 
   static const double _cardRadius = 24;
-  static const double _fixedCardHeight = 277.56;
+  static const double _fixedCardHeight = 252;
   static const double _imageHeight = 127.34;
 
   /// ارتفاع الكارد بعد ScreenUtil — ليتطابق مع `mainAxisExtent` في الشبكة
@@ -74,7 +74,7 @@ class ProductCardWidget extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 3.h),
                     Padding(
                       padding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 0),
                       child: Column(
@@ -94,7 +94,7 @@ class ProductCardWidget extends StatelessWidget {
                               height: 1.2,
                             ),
                           ),
-                          SizedBox(height: 4.h),
+                          SizedBox(height: 3.h),
                           Text(
                             product.storeName,
                             textAlign: TextAlign.right,
@@ -108,11 +108,11 @@ class ProductCardWidget extends StatelessWidget {
                               height: 1.2,
                             ),
                           ),
-                          SizedBox(height: 8.h),
+                          SizedBox(height: 3.h),
                           Text(
                             product.description,
                             textAlign: TextAlign.right,
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Expo Arabic',
@@ -125,9 +125,10 @@ class ProductCardWidget extends StatelessWidget {
                         ],
                       ),
                     ),
+                    SizedBox(height: 3.h),
                     const Spacer(),
                     Padding(
-                      padding: EdgeInsets.fromLTRB(10.w, 0, 10.w, 8.h),
+                      padding: EdgeInsets.fromLTRB(10.w, 0, 10.w, 6.w),
                       child: _ProductPriceBar(
                         price: product.formattedPrice,
                         onAddToCart: () {

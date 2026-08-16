@@ -22,6 +22,9 @@ export function UserDetailPage() {
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(!isNew)
+  const [reviews, setReviews] = useState<Record<string, unknown>[]>([])
+  const [reviewsErr, setReviewsErr] = useState('')
+  const [reviewsLoading, setReviewsLoading] = useState(false)
 
   useEffect(() => {
     void fetchGovernorates().then(setGovs).catch(() => {})
@@ -46,6 +49,22 @@ export function UserDetailPage() {
         setRoles(Array.isArray(u.roles) ? (u.roles as string[]) : [])
         setGovernorateId(String(u.governorateId ?? ''))
         setClinicName(String(u.clinicName ?? ''))
+        if (Array.isArray(u.roles) && (u.roles as string[]).includes('driver')) {
+          setReviewsErr('')
+          setReviewsLoading(true)
+          try {
+            const result = await adminApi.drivers.reviews(id, { page: 1, limit: 50 })
+            if (!cancelled) setReviews(result.items)
+          } catch (reviewError) {
+            if (!cancelled) {
+              setReviewsErr(reviewError instanceof ApiError ? reviewError.message : 'تعذر تحميل التقييمات')
+            }
+          } finally {
+            if (!cancelled) setReviewsLoading(false)
+          }
+        } else {
+          setReviews([])
+        }
       } catch (e) {
         if (!cancelled) setErr(e instanceof ApiError ? e.message : 'فشل التحميل')
       } finally {
@@ -205,6 +224,67 @@ export function UserDetailPage() {
           <button type="button" className="btn btn-danger" onClick={() => void removeUser()}>
             حذف المستخدم
           </button>
+        </div>
+      ) : null}
+
+      {!isNew && roles.includes('driver') ? (
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <h2>تقييمات السائق</h2>
+          <p>
+            المتوسط:{' '}
+            <strong>{Number(user?.rating ?? 0).toFixed(1)}</strong> من 5 — عدد التقييمات:{' '}
+            <strong>{Number(user?.ratingCount ?? 0)}</strong>
+          </p>
+          {reviewsErr ? <div className="alert alert-error">{reviewsErr}</div> : null}
+          {reviewsLoading ? <p className="muted">جاري تحميل التقييمات…</p> : null}
+          {!reviewsLoading && reviews.length === 0 ? (
+            <p className="muted">لا توجد تقييمات بعد.</p>
+          ) : null}
+          {reviews.length > 0 ? (
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>الطلب</th>
+                    <th>العميل</th>
+                    <th>الهاتف</th>
+                    <th>التقييم</th>
+                    <th>التعليق</th>
+                    <th>التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviews.map((review) => {
+                    const orderId = String(review.orderId ?? '')
+                    const rating = Number(review.rating ?? 0)
+                    const createdAt = review.createdAt
+                      ? new Date(String(review.createdAt)).toLocaleString('ar-IQ')
+                      : ''
+                    return (
+                      <tr key={String(review.id ?? review._id)}>
+                        <td>
+                          {orderId ? (
+                            <Link to={`/orders/${orderId}`}>
+                              {review.orderNumber != null ? `#${String(review.orderNumber)}` : 'فتح الطلب'}
+                            </Link>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td>{String(review.customerName || '—')}</td>
+                        <td dir="ltr" style={{ textAlign: 'start' }}>
+                          {String(review.customerPhone || '—')}
+                        </td>
+                        <td>{'★'.repeat(Math.max(0, Math.min(5, rating)))}{'☆'.repeat(Math.max(0, 5 - rating))} ({rating})</td>
+                        <td>{String(review.comment || '—')}</td>
+                        <td>{createdAt}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

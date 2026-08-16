@@ -8,17 +8,21 @@ import 'category_icon_widget.dart';
 class CategoryCardWidget extends StatelessWidget {
   final CategoryModel category;
   final VoidCallback onTap;
+  final bool compact;
 
   const CategoryCardWidget({
     super.key,
     required this.category,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     const designShadow = Color(0x61659AB9);
-    final radius = BorderRadius.circular(20.65.r);
+    final radius = BorderRadius.circular(compact ? 14.r : 20.65.r);
+    final iconSize = compact ? 48.w : 56.w;
+    final nameSize = compact ? 11.sp : 13.93.sp;
 
     return GestureDetector(
       onTap: onTap,
@@ -39,20 +43,28 @@ class CategoryCardWidget extends StatelessWidget {
           borderRadius: radius,
           clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.45.h, horizontal: 7.51.w),
+            padding: compact
+                ? EdgeInsets.symmetric(vertical: 6.h, horizontal: 5.w)
+                : EdgeInsets.symmetric(vertical: 8.45.h, horizontal: 7.51.w),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CategoryIconWidget(category: category),
+                Padding(
+                  padding: EdgeInsets.only(top: compact ? 6.h : 0),
+                  child: CategoryIconWidget(
+                    category: category,
+                    size: iconSize,
+                  ),
+                ),
                 MyText(
                   category.name,
-                  fontSize: 13.93.sp,
+                  fontSize: nameSize,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF022B2F),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  height: 1.5,
+                  height: 1.3,
                 ),
               ],
             ),

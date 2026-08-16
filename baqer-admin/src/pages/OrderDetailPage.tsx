@@ -95,6 +95,25 @@ export function OrderDetailPage() {
           <strong>العميل:</strong> {String(order.customerName ?? '')} — {String(order.customerPhone ?? '')}
         </p>
         <p>
+          <strong>السائق:</strong> {String(order.driverName || '—')}
+          {order.driverPhone ? ` — ${String(order.driverPhone)}` : ''}
+          {order.driverId ? (
+            <>
+              {' '}
+              <Link to={`/users/${String(order.driverId)}`}>ملف السائق</Link>
+            </>
+          ) : null}
+        </p>
+        {order.driverReview && typeof order.driverReview === 'object' ? (
+          <p>
+            <strong>تقييم العميل للسائق:</strong>{' '}
+            {Number((order.driverReview as Record<string, unknown>).rating ?? 0)} / 5
+            {(order.driverReview as Record<string, unknown>).comment
+              ? ` — ${String((order.driverReview as Record<string, unknown>).comment)}`
+              : ''}
+          </p>
+        ) : null}
+        <p>
           <strong>الإجمالي:</strong> {String(order.totalPrice ?? '')} + توصيل {String(order.deliveryFee ?? '')}
         </p>
         <pre

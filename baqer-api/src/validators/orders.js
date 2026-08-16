@@ -86,11 +86,21 @@ function validateListOrdersQuery(query) {
   return listOrdersQuerySchema.validate(query, { abortEarly: false });
 }
 
+const createDriverReviewSchema = Joi.object({
+  rating: Joi.number().integer().min(1).max(5).required(),
+  comment: Joi.string().trim().allow('').max(500),
+});
+
+function validateCreateDriverReview(body) {
+  return createDriverReviewSchema.validate(body, { abortEarly: false });
+}
+
 module.exports = {
   validateCreateOrder,
   validateCreateVoiceOrder,
   validateUpdateStatus,
   validateListOrdersQuery,
+  validateCreateDriverReview,
   orderItemSchema,
   shopPortionSchema,
 };

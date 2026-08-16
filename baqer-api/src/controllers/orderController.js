@@ -131,6 +131,30 @@ async function cancelByCustomer(req, res, next) {
   }
 }
 
+async function getDriverReview(req, res, next) {
+  try {
+    const driverReviewService = require('../services/driverReviewService');
+    const review = await driverReviewService.getForOrder(req.params.id, req.userId);
+    res.json({ success: true, data: review });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createDriverReview(req, res, next) {
+  try {
+    const driverReviewService = require('../services/driverReviewService');
+    const review = await driverReviewService.upsertForOrder(
+      req.params.id,
+      req.userId,
+      req.body
+    );
+    res.status(201).json({ success: true, data: review });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   list,
   uploadNoteAudio,
@@ -140,4 +164,6 @@ module.exports = {
   getCallTargets,
   updateStatus,
   cancelByCustomer,
+  getDriverReview,
+  createDriverReview,
 };

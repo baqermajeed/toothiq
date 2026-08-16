@@ -8,6 +8,7 @@ import '../../controller/orders_controller.dart';
 import '../../model/order_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/orders/driver_rating_card.dart';
 import '../../widget/orders/order_detail_app_bar.dart';
 import '../../widget/orders/order_detail_bottom_bar.dart';
 import '../../widget/orders/order_info_card.dart';
@@ -111,6 +112,20 @@ class OrderDetailPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (d.canRateDriver) ...[
+                    SizedBox(height: 16.h),
+                    DriverRatingCard(
+                      driverName: d.driverName ?? '',
+                      selectedRating: ctrl.selectedDriverRating.value,
+                      commentController:
+                          ctrl.driverReviewCommentController,
+                      isSubmitting: ctrl.isSubmittingDriverReview.value,
+                      hasSubmitted: d.hasDriverReview,
+                      onRatingChanged: (rating) =>
+                          ctrl.selectedDriverRating.value = rating,
+                      onSubmit: ctrl.submitDriverReview,
+                    ),
+                  ],
                   if (d.status == OrderStatus.onTheWay && d.canTrackOnMap) ...[
                     SizedBox(height: 16.h),
                     SizedBox(

@@ -1,6 +1,7 @@
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../model/cart_item_model.dart';
+import '../../model/driver_review_model.dart';
 import '../../model/order_detail_model.dart';
 import '../../model/order_model.dart';
 
@@ -90,5 +91,17 @@ class OrderService {
 
   Future<OrderDetailModel> getOrderById(String id) {
     return _api.getOrderById(id);
+  }
+
+  Future<DriverReviewModel> submitDriverReview({
+    required String orderId,
+    required int rating,
+    String comment = '',
+  }) {
+    return _api.submitDriverReview(
+      orderId: orderId,
+      rating: rating,
+      comment: comment,
+    );
   }
 }

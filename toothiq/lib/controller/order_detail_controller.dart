@@ -28,6 +28,9 @@ class OrderDetailController extends GetxController with WidgetsBindingObserver {
 
   final driverLat = Rxn<double>();
   final driverLng = Rxn<double>();
+  final selectedDriverRating = 0.obs;
+  final isSubmittingDriverReview = false.obs;
+  late final TextEditingController driverReviewCommentController;
 
   late final DriverTrackingSocketService _trackingService;
   StreamSubscription<DriverLocationUpdate>? _driverLocationSub;
@@ -43,6 +46,7 @@ class OrderDetailController extends GetxController with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _trackingService = Get.find<DriverTrackingSocketService>();
+    driverReviewCommentController = TextEditingController();
     loadDetail();
   }
 
@@ -61,6 +65,7 @@ class OrderDetailController extends GetxController with WidgetsBindingObserver {
     _trackingService.unsubscribeFromOrderTracking(orderId);
     _driverLocationSub?.cancel();
     _trackingEndedSub?.cancel();
+    driverReviewCommentController.dispose();
     super.onClose();
   }
 
@@ -81,6 +86,7 @@ class OrderDetailController extends GetxController with WidgetsBindingObserver {
         driverLat.value = loaded.driverLat;
         driverLng.value = loaded.driverLng;
       }
+      _syncDriverReviewFromDetail(loaded);
     } on ApiException catch (error) {
       loadError.value = error.message;
     } catch (_) {
@@ -131,6 +137,52 @@ class OrderDetailController extends GetxController with WidgetsBindingObserver {
     _trackingService.unsubscribeFromOrderTracking(orderId);
     _isTrackingSubscribed = false;
     loadDetail();
+  }
+
+  void _syncDriverReviewFromDetail(OrderDetailModel loaded) {
+    selectedDriverRating.value = loaded.driverReview?.rating ?? 0;
+    if (loaded.driverReview != null) {
+      driverReviewCommentController.text = loaded.driverReview!.comment;
+    }
+  }
+
+  Future<void> submitDriverReview() async {
+    final current = detail.value;
+    if (current == null || !current.canRateDriver) return;
+    if (selectedDriverRating.value < 1) {
+      AppToast.show(
+        'التقييم',
+        'اختر عدد النجوم قبل الإرسال',
+        type: ToastType.warning,
+      );
+      return;
+    }
+    if (isSubmittingDriverReview.value) return;
+
+    isSubmittingDriverReview.value = true;
+    try {
+      final review = await _orderService.submitDriverReview(
+        orderId: orderId,
+        rating: selectedDriverRating.value,
+        comment: driverReviewCommentController.text.trim(),
+      );
+      detail.value = current.copyWithDriverReview(review);
+      AppToast.show(
+        'شكراً لك',
+        'تم حفظ تقييم السائق',
+        type: ToastType.success,
+      );
+    } on ApiException catch (error) {
+      AppToast.show('تعذر حفظ التقييم', error.message, type: ToastType.error);
+    } catch (_) {
+      AppToast.show(
+        'تعذر حفظ التقييم',
+        'حاول مرة أخرى',
+        type: ToastType.error,
+      );
+    } finally {
+      isSubmittingDriverReview.value = false;
+    }
   }
 
   void openLiveTracking() {

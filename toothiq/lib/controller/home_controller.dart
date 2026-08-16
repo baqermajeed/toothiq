@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../model/banner_model.dart';
-import '../model/home_category_model.dart';
+import '../model/brand_model.dart';
+import '../model/category_model.dart';
 import '../model/product_model.dart';
 import '../model/search_filter_model.dart';
 import '../model/shop_category_model.dart';
 import '../core/api/api_exception.dart';
 import '../service_layer/services/banner_service.dart';
+import '../service_layer/services/brand_service.dart';
 import '../service_layer/services/category_service.dart';
 import '../service_layer/services/favorites_service.dart';
 import '../service_layer/services/product_service.dart';
@@ -17,19 +19,19 @@ import '../view/search/search_results_page.dart';
 class HomeController extends GetxController {
   final BannerService _bannerService = Get.find<BannerService>();
   final CategoryService _categoryService = Get.find<CategoryService>();
+  final BrandService _brandService = Get.find<BrandService>();
   final ProductService _productService = Get.find<ProductService>();
   final FavoritesService _favoritesService = Get.find<FavoritesService>();
 
   final searchController = TextEditingController();
   final bannerPageController = PageController();
   final bannerIndex = 0.obs;
-  final selectedCategoryIndex = 0.obs;
 
   final banners = <BannerModel>[].obs;
-  final categories = <HomeCategoryModel>[const HomeCategoryModel.all()].obs;
+  final categories = <CategoryModel>[].obs;
+  final brands = <BrandModel>[].obs;
   final products = <ProductModel>[].obs;
   final isLoading = false.obs;
-  final isCategoryLoading = false.obs;
   final loadingMore = false.obs;
   final hasNextPage = false.obs;
   final currentPage = 1.obs;
@@ -57,21 +59,25 @@ class HomeController extends GetxController {
       final results = await Future.wait([
         _bannerService.fetchActiveBanners(),
         _categoryService.fetchCategories(),
+        _fetchBrandsSafely(),
       ]);
 
       banners.assignAll(results[0] as List<BannerModel>);
       _applyCategories(results[1] as List<ShopCategoryModel>);
+      brands.assignAll(results[2] as List<BrandModel>);
       await _loadProductsFirstPage();
     } on ApiException catch (error) {
       loadError.value = error.message;
       banners.clear();
-      categories.assignAll([const HomeCategoryModel.all()]);
+      categories.clear();
+      brands.clear();
       products.clear();
       hasNextPage.value = false;
     } catch (_) {
       loadError.value = 'تعذر تحميل بيانات الصفحة الرئيسية';
       banners.clear();
-      categories.assignAll([const HomeCategoryModel.all()]);
+      categories.clear();
+      brands.clear();
       products.clear();
       hasNextPage.value = false;
     } finally {
@@ -79,45 +85,29 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<List<BrandModel>> _fetchBrandsSafely() async {
+    try {
+      final data = await _brandService.fetchAllBrands();
+      return data.where((brand) => brand.name.trim().isNotEmpty).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   void _applyCategories(List<ShopCategoryModel> apiCategories) {
     final mapped = apiCategories
-        .where((category) => category.nameAr.isNotEmpty)
+        .asMap()
+        .entries
+        .where((entry) => entry.value.nameAr.isNotEmpty)
         .map(
-          (category) => HomeCategoryModel(
-            id: category.id,
-            name: category.nameAr,
-            isShopCategory: category.isShopCategory,
+          (entry) => CategoryModel.fromShopCategory(
+            entry.value,
+            index: entry.key,
           ),
         )
         .toList();
 
-    categories.assignAll([const HomeCategoryModel.all(), ...mapped]);
-
-    if (selectedCategoryIndex.value >= categories.length) {
-      selectedCategoryIndex.value = 0;
-    }
-  }
-
-  Future<void> selectCategory(int index) async {
-    selectedCategoryIndex.value = index;
-    if (index >= categories.length) return;
-
-    isCategoryLoading.value = true;
-    loadError.value = null;
-
-    try {
-      await _loadProductsFirstPage();
-    } on ApiException catch (error) {
-      loadError.value = error.message;
-      products.clear();
-      hasNextPage.value = false;
-    } catch (_) {
-      loadError.value = 'تعذر تحميل منتجات هذا القسم';
-      products.clear();
-      hasNextPage.value = false;
-    } finally {
-      isCategoryLoading.value = false;
-    }
+    categories.assignAll(mapped);
   }
 
   @override
@@ -127,13 +117,9 @@ class HomeController extends GetxController {
 
   Future<void> _loadProductsFirstPage() async {
     currentPage.value = 1;
-    final category = categories[selectedCategoryIndex.value];
-    final categoryId = category.isAll ? null : category.id;
     final result = await _productService.fetchProductsPaginated(
       page: 1,
       limit: _pageSize,
-      productCategoryId: category.isShopCategory ? categoryId : null,
-      categoryId: category.isShopCategory ? null : categoryId,
     );
     products.assignAll(
       _favoritesService.applyFavoriteState(result.items),
@@ -147,13 +133,9 @@ class HomeController extends GetxController {
     loadingMore.value = true;
     try {
       final nextPage = currentPage.value + 1;
-      final category = categories[selectedCategoryIndex.value];
-      final categoryId = category.isAll ? null : category.id;
       final result = await _productService.fetchProductsPaginated(
         page: nextPage,
         limit: _pageSize,
-        productCategoryId: category.isShopCategory ? categoryId : null,
-        categoryId: category.isShopCategory ? null : categoryId,
       );
       products.addAll(
         _favoritesService.applyFavoriteState(result.items),

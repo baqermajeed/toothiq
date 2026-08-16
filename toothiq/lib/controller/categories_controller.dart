@@ -16,23 +16,6 @@ class CategoriesController extends GetxController {
   final isLoading = false.obs;
   final loadError = RxnString();
 
-  static const _icons = <IconData>[
-    Icons.brush_outlined,
-    Icons.grid_view_rounded,
-    Icons.healing_outlined,
-    Icons.medical_services_outlined,
-    Icons.construction_outlined,
-    Icons.water_drop_outlined,
-  ];
-  static const _iconColors = <Color>[
-    Color(0xFF26A69A),
-    Color(0xFF00897B),
-    Color(0xFF00796B),
-    Color(0xFF00695C),
-    Color(0xFF26A69A),
-    Color(0xFF00897B),
-  ];
-
   @override
   void onInit() {
     super.onInit();
@@ -89,24 +72,12 @@ class CategoriesController extends GetxController {
     return data
         .asMap()
         .entries
-        .map((entry) {
-          final index = entry.key;
-          final category = entry.value;
-          return CategoryModel(
-            id: category.id,
-            name: category.nameAr,
-            iconUrl: category.iconUrl,
-            icon: _icons[index % _icons.length],
-            iconColor: _iconColors[index % _iconColors.length],
-            source: category.isShopCategory
-                ? CategorySource.shop
-                : CategorySource.admin,
-            shopId: category.shopId,
-            productCategoryId:
-                category.isShopCategory ? category.id : null,
-            parentCategoryId: category.parentCategoryId,
-          );
-        })
+        .map(
+          (entry) => CategoryModel.fromShopCategory(
+            entry.value,
+            index: entry.key,
+          ),
+        )
         .toList(growable: false);
   }
 

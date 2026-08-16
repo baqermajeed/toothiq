@@ -70,6 +70,7 @@ export function UsersPage() {
                   <th>الاسم</th>
                   <th>الهاتف</th>
                   <th>الأدوار</th>
+                  <th>تقييم السائق</th>
                   <th>نشط</th>
                   <th></th>
                 </tr>
@@ -82,6 +83,11 @@ export function UsersPage() {
                       {String(u.phone ?? '')}
                     </td>
                     <td>{Array.isArray(u.roles) ? u.roles.join(', ') : ''}</td>
+                    <td>
+                      {Array.isArray(u.roles) && (u.roles as string[]).includes('driver')
+                        ? `${Number(u.rating ?? 0).toFixed(1)} (${Number(u.ratingCount ?? 0)})`
+                        : '—'}
+                    </td>
                     <td>{u.isActive ? 'نعم' : 'لا'}</td>
                     <td>
                       <Link to={`/users/${String(u._id)}`}>تفاصيل</Link>

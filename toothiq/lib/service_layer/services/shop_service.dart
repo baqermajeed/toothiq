@@ -28,14 +28,20 @@ class ShopService {
     if (normalized.isEmpty) return const [];
 
     final shops = await fetchShops(limit: limit);
-    return shops
+    final matched = shops
         .where(
           (store) =>
               store.name.toLowerCase().contains(normalized) ||
               store.description.toLowerCase().contains(normalized) ||
               store.address.toLowerCase().contains(normalized),
         )
-        .toList(growable: false);
+        .toList();
+    matched.sort((a, b) {
+      final byRating = b.rating.compareTo(a.rating);
+      if (byRating != 0) return byRating;
+      return a.name.compareTo(b.name);
+    });
+    return matched;
   }
 
   Future<StoreModel> getShopById(String shopId) {

@@ -221,6 +221,11 @@ router.delete(
 );
 
 router.get(
+  '/drivers/:driverId/reviews',
+  validateParams(objectIdParam('driverId')),
+  adminController.listDriverReviews
+);
+router.get(
   '/drivers/:driverId/wallet',
   validateParams(objectIdParam('driverId')),
   adminController.getDriverWallet

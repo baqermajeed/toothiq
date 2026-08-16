@@ -27,8 +27,11 @@ async function listUsers(filters = {}) {
     ];
   }
   const skip = (Number(page) - 1) * Number(limit);
+  const sort = role === ROLES.DRIVER
+    ? { rating: -1, ratingCount: -1, name: 1 }
+    : { createdAt: -1 };
   const [items, total] = await Promise.all([
-    User.find(query).select('-passwordHash -refreshTokenHash').skip(skip).limit(Number(limit)).lean(),
+    User.find(query).select('-passwordHash -refreshTokenHash').sort(sort).skip(skip).limit(Number(limit)).lean(),
     User.countDocuments(query),
   ]);
   return { items, pagination: { page: Number(page), limit: Number(limit), total } };
@@ -188,7 +191,9 @@ async function getOrderById(orderId) {
     .populate('shopId shopPortions.shopId customerId driverId')
     .lean();
   if (!order) throw notFound('الطلب غير موجود');
-  return normalizeOrderForAdmin(order);
+  const normalized = normalizeOrderForAdmin(order);
+  const driverReviewService = require('./driverReviewService');
+  return driverReviewService.attachToOrder(normalized);
 }
 
 async function updateOrderStatus(orderId, adminUserId, body) {
@@ -612,6 +617,11 @@ async function getOrdersStats(filters = {}) {
   };
 }
 
+async function listDriverReviews(driverId, query = {}) {
+  const driverReviewService = require('./driverReviewService');
+  return driverReviewService.listForDriver(driverId, query);
+}
+
 async function deleteOrder(orderId) {
   const order = await Order.findByIdAndDelete(orderId);
   if (!order) throw notFound('Order not found');
@@ -633,6 +643,7 @@ module.exports = {
   getOrdersStats,
   deleteShop,
   deleteOrder,
+  listDriverReviews,
   createShop,
   updateShop,
   reorderShops,

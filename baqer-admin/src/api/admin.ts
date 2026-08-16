@@ -48,6 +48,18 @@ export const adminApi = {
       }),
     remove: (id: string) => apiFetch<{ message: string }>(`/api/admin/users/${id}`, { method: 'DELETE' }),
   },
+  drivers: {
+    reviews: (driverId: string, q: Record<string, string | number | undefined> = {}) => {
+      const sp = new URLSearchParams()
+      Object.entries(q).forEach(([k, v]) => {
+        if (v !== undefined && v !== '') sp.set(k, String(v))
+      })
+      const query = sp.toString()
+      return apiFetch<Paginated<Record<string, unknown>>>(
+        `/api/admin/drivers/${driverId}/reviews${query ? `?${query}` : ''}`
+      )
+    },
+  },
   shops: {
     list: (q: Record<string, string | number | boolean | undefined>) => {
       const sp = new URLSearchParams()

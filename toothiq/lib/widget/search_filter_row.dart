@@ -17,6 +17,9 @@ class SearchFilterRow extends StatelessWidget {
   final bool filterCircular;
   final bool readOnly;
   final bool showFilter;
+  final double? height;
+  final EdgeInsetsGeometry? padding;
+  final bool centerTextVertically;
 
   const SearchFilterRow({
     super.key,
@@ -28,14 +31,18 @@ class SearchFilterRow extends StatelessWidget {
     this.filterCircular = false,
     this.readOnly = false,
     this.showFilter = true,
+    this.height,
+    this.padding,
+    this.centerTextVertically = false,
   });
 
   @override
   Widget build(BuildContext context) {
     const designShadow = Color(0x61659AB9); // 38%
     const filterColor = Color(0xFF16929E);
+    final barHeight = height ?? 53.72.h;
     final searchField = Container(
-      height: 53.72.h,
+      height: barHeight,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(21.89.r),
@@ -69,7 +76,7 @@ class SearchFilterRow extends StatelessWidget {
                       ),
                 child: SizedBox(
                   width: 48.75.w,
-                  height: 53.72.h,
+                  height: barHeight,
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
                       10.94.w,
@@ -97,6 +104,9 @@ class SearchFilterRow extends StatelessWidget {
                     }
                   : null,
               textAlign: TextAlign.right,
+              textAlignVertical: centerTextVertically
+                  ? TextAlignVertical.center
+                  : null,
               textInputAction: TextInputAction.search,
               onSubmitted: onSubmitted,
               style: TextStyle(
@@ -104,20 +114,29 @@ class SearchFilterRow extends StatelessWidget {
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
+                height: centerTextVertically ? 1 : null,
               ),
               decoration: InputDecoration(
+                isDense: centerTextVertically,
                 hintText: hintText,
                 hintStyle: TextStyle(
                   fontFamily: 'Expo Arabic',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
+                  height: centerTextVertically ? 1 : null,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 15.92.w,
-                  vertical: 14.h,
+                  vertical: centerTextVertically ? 0 : 14.h,
                 ),
+                prefixIconConstraints: centerTextVertically
+                    ? BoxConstraints(
+                        minWidth: 43.w,
+                        minHeight: 22.w,
+                      )
+                    : null,
                 prefixIcon: Padding(
                   padding: EdgeInsetsDirectional.only(start: 15.w, end: 6.w),
                   child: SizedBox(
@@ -137,7 +156,7 @@ class SearchFilterRow extends StatelessWidget {
     );
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      padding: padding ?? EdgeInsets.symmetric(horizontal: 20.w),
       child: readOnly
           ? GestureDetector(
               onTap: onTap,

@@ -34,6 +34,8 @@ const userSchema = new mongoose.Schema(
     location: { type: pointSchema, default: null },
     avatar: { type: String, default: null, trim: true },
     isActive: { type: Boolean, default: true },
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    ratingCount: { type: Number, default: 0, min: 0 },
     refreshTokenHash: { type: String, select: false },
     lastLoginAt: { type: Date },
     fcmTokens: { type: [String], default: [], select: false },

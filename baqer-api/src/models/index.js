@@ -10,6 +10,7 @@ const Banner = require('./Banner');
 const { PlatformSettings } = require('./PlatformSettings');
 const DiscountCode = require('./DiscountCode');
 const ShopReview = require('./ShopReview');
+const DriverReview = require('./DriverReview');
 const DriverWallet = require('./DriverWallet');
 const DriverWalletTransaction = require('./DriverWalletTransaction');
 const Notification = require('./Notification');
@@ -27,6 +28,7 @@ module.exports = {
   PlatformSettings,
   DiscountCode,
   ShopReview,
+  DriverReview,
   DriverWallet,
   DriverWalletTransaction,
   Notification,

@@ -17,21 +17,37 @@ abstract final class PinnedBlurHeaderStyle {
 
   static const List<double> fadeStops = [0.0, 0.55, 0.85, 1.0];
 
+  /// تلاشي أخف من الأسفل — للهيدر المثبت بعد السكرول
+  static const List<double> compactFadeStops = [0.0, 0.50, 0.82, 1.0];
+
+  static const List<Color> defaultFadeMaskColors = [
+    Color(0xFFFFFFFF),
+    Color(0xFFFFFFFF),
+    Color(0xAAFFFFFF),
+    Color(0x00FFFFFF),
+  ];
+
+  static const List<Color> compactFadeMaskColors = [
+    Color(0xFFFFFFFF),
+    Color(0xFFFFFFFF),
+    Color(0xE6FFFFFF),
+    Color(0x88FFFFFF),
+  ];
+
   static const double strongBlurSigma = 44;
   static const double mediumBlurSigma = 24;
   static const double lightBlurSigma = 8;
   static const double strongBlurMaskEnd = 0.48;
 
-  static Shader fadeMaskShader(Rect bounds, List<double> stops) {
+  static Shader fadeMaskShader(
+    Rect bounds,
+    List<double> stops, {
+    List<Color>? colors,
+  }) {
     return LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFFFFFF),
-        Color(0xFFFFFFFF),
-        Color(0xAAFFFFFF),
-        Color(0x00FFFFFF),
-      ],
+      colors: colors ?? defaultFadeMaskColors,
       stops: stops,
     ).createShader(bounds);
   }
@@ -42,6 +58,7 @@ class PinnedBlurGradientBackground extends StatelessWidget {
   const PinnedBlurGradientBackground({
     super.key,
     this.fadeStops = PinnedBlurHeaderStyle.fadeStops,
+    this.fadeMaskColors,
     this.strongBlurSigma = PinnedBlurHeaderStyle.strongBlurSigma,
     this.mediumBlurSigma = PinnedBlurHeaderStyle.mediumBlurSigma,
     this.lightBlurSigma = PinnedBlurHeaderStyle.lightBlurSigma,
@@ -49,6 +66,7 @@ class PinnedBlurGradientBackground extends StatelessWidget {
   });
 
   final List<double> fadeStops;
+  final List<Color>? fadeMaskColors;
   final double strongBlurSigma;
   final double mediumBlurSigma;
   final double lightBlurSigma;
@@ -58,8 +76,11 @@ class PinnedBlurGradientBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderMask(
       blendMode: BlendMode.dstIn,
-      shaderCallback: (bounds) =>
-          PinnedBlurHeaderStyle.fadeMaskShader(bounds, fadeStops),
+      shaderCallback: (bounds) => PinnedBlurHeaderStyle.fadeMaskShader(
+        bounds,
+        fadeStops,
+        colors: fadeMaskColors,
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [

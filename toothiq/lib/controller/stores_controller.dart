@@ -111,18 +111,24 @@ class StoresController extends GetxController {
 
   void _applyFilters() {
     final query = searchController.text.trim().toLowerCase();
-    filteredStores.assignAll(
-      stores.where((store) {
-        final matchesQuery =
-            query.isEmpty ||
-            store.name.toLowerCase().contains(query) ||
-            store.description.toLowerCase().contains(query) ||
-            store.address.toLowerCase().contains(query);
-        final matchesRating =
-            minRating.value == null || store.rating >= minRating.value!;
-        return matchesQuery && matchesRating;
-      }).toList(),
-    );
+    final matched = stores.where((store) {
+      final matchesQuery =
+          query.isEmpty ||
+          store.name.toLowerCase().contains(query) ||
+          store.description.toLowerCase().contains(query) ||
+          store.address.toLowerCase().contains(query);
+      final matchesRating =
+          minRating.value == null || store.rating >= minRating.value!;
+      return matchesQuery && matchesRating;
+    }).toList();
+    matched.sort(_compareByHighestRating);
+    filteredStores.assignAll(matched);
+  }
+
+  static int _compareByHighestRating(StoreModel a, StoreModel b) {
+    final byRating = b.rating.compareTo(a.rating);
+    if (byRating != 0) return byRating;
+    return a.name.compareTo(b.name);
   }
 
   void submitSearch() {

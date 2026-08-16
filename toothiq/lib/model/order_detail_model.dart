@@ -1,3 +1,4 @@
+import 'driver_review_model.dart';
 import 'order_line_item_model.dart';
 import 'order_model.dart';
 import '../core/utils/image_url.dart';
@@ -26,6 +27,7 @@ class OrderDetailModel {
   final String? driverPhone;
   final double? driverLat;
   final double? driverLng;
+  final DriverReviewModel? driverReview;
 
   const OrderDetailModel({
     required this.id,
@@ -51,6 +53,7 @@ class OrderDetailModel {
     this.driverPhone,
     this.driverLat,
     this.driverLng,
+    this.driverReview,
   });
 
   bool get canTrackOnMap =>
@@ -59,6 +62,14 @@ class OrderDetailModel {
           (driverLat != null && driverLng != null));
 
   int get itemCount => items.length;
+
+  bool get canRateDriver =>
+      status == OrderStatus.delivered &&
+      driverId != null &&
+      driverId!.trim().isNotEmpty;
+
+  bool get hasDriverReview =>
+      driverReview != null && driverReview!.rating > 0;
 
   String formatPrice(int amount) {
     final formatted = amount.toString().replaceAllMapped(
@@ -99,6 +110,36 @@ class OrderDetailModel {
       driverPhone: driverPhone,
       driverLat: driverLat ?? this.driverLat,
       driverLng: driverLng ?? this.driverLng,
+      driverReview: driverReview,
+    );
+  }
+
+  OrderDetailModel copyWithDriverReview(DriverReviewModel? review) {
+    return OrderDetailModel(
+      id: id,
+      shopId: shopId,
+      customerName: customerName,
+      phone: phone,
+      altPhone: altPhone,
+      deliveryTime: deliveryTime,
+      deliveryAddress: deliveryAddress,
+      orderDate: orderDate,
+      storeName: storeName,
+      storeAddress: storeAddress,
+      items: items,
+      paymentMethod: paymentMethod,
+      orderPrice: orderPrice,
+      deliveryPriceLabel: deliveryPriceLabel,
+      totalPrice: totalPrice,
+      status: status,
+      deliveryLat: deliveryLat,
+      deliveryLng: deliveryLng,
+      driverId: driverId,
+      driverName: driverName,
+      driverPhone: driverPhone,
+      driverLat: driverLat,
+      driverLng: driverLng,
+      driverReview: review,
     );
   }
 
@@ -196,6 +237,15 @@ class OrderDetailModel {
           }
         }
       }
+    } else if (driver != null) {
+      driverId = driver.toString();
+    }
+    driverId ??= json['driverUserId']?.toString();
+
+    DriverReviewModel? driverReview;
+    final rawReview = json['driverReview'];
+    if (rawReview is Map<String, dynamic> && rawReview.isNotEmpty) {
+      driverReview = DriverReviewModel.fromJson(rawReview);
     }
 
     return OrderDetailModel(
@@ -224,6 +274,7 @@ class OrderDetailModel {
       driverPhone: driverPhone,
       driverLat: driverLat,
       driverLng: driverLng,
+      driverReview: driverReview,
     );
   }
 

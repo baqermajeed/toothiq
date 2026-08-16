@@ -36,6 +36,8 @@ class CategoriesPage extends StatelessWidget {
               controller: categories.searchController,
               hintText: 'أبحث عن قسم ..',
               showFilter: false,
+              height: 48.h,
+              centerTextVertically: true,
             ),
             SizedBox(height: 16.h),
             Expanded(
@@ -70,16 +72,17 @@ class CategoriesPage extends StatelessWidget {
                       AppBottomNavMetrics.floatingBarReservedHeight.h,
                     ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 12.w,
-                      mainAxisSpacing: 12.h,
-                      childAspectRatio: 1.11,
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 8.w,
+                      mainAxisSpacing: 8.h,
+                      childAspectRatio: 0.86,
                     ),
                     itemCount: categories.filteredCategories.length,
                     itemBuilder: (context, index) {
                       final category = categories.filteredCategories[index];
                       return CategoryCardWidget(
                         category: category,
+                        compact: true,
                         onTap: () => categories.onCategoryTap(category),
                       );
                     },

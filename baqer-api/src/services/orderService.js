@@ -5,6 +5,7 @@ const { notFound, forbidden, badRequest } = require('../utils/errors');
 const discountCodeService = require('./discountCodeService');
 const { notifyOrderStatusChange } = require('../utils/telegram');
 const { notifyCustomerOrderStatusChange } = require('../utils/fcmNotifications');
+const driverReviewService = require('./driverReviewService');
 
 /** يُرجع السعر الفعلي للمنتج: سعر العرض إن كان نشطاً، وإلا السعر العادي. */
 function getProductEffectivePrice(product) {
@@ -610,7 +611,7 @@ async function getById(orderId, userId, roles) {
     const portion = _getShopPortionForShop(order, viewerShopId);
     if (portion) return attachVoiceCallIds(_toShopViewOrder(order, portion));
   }
-  return attachVoiceCallIds(order);
+  return driverReviewService.attachToOrder(attachVoiceCallIds(order));
 }
 
 async function getCallTargets(orderId, userId, roles) {

@@ -348,6 +348,15 @@ async function collectDriverWallet(req, res, next) {
   }
 }
 
+async function listDriverReviews(req, res, next) {
+  try {
+    const result = await adminService.listDriverReviews(req.params.driverId, req.query);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function broadcastNotification(req, res, next) {
   try {
     const notificationService = require('../services/notificationService');
@@ -383,5 +392,6 @@ module.exports = {
   updateSettings,
   getDriverWallet,
   collectDriverWallet,
+  listDriverReviews,
   broadcastNotification,
 };

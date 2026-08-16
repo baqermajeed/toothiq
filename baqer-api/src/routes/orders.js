@@ -8,6 +8,7 @@ const {
   validateCreateVoiceOrder,
   validateUpdateStatus,
   validateListOrdersQuery,
+  validateCreateDriverReview,
 } = require('../validators/orders');
 const { objectIdParam } = require('../validators/common');
 
@@ -53,6 +54,21 @@ router.get(
   authenticate,
   validateParams(objectIdParam('id')),
   orderController.getCallTargets
+);
+
+router.get(
+  '/:id/driver-review',
+  authenticate,
+  validateParams(objectIdParam('id')),
+  orderController.getDriverReview
+);
+
+router.post(
+  '/:id/driver-review',
+  authenticate,
+  validateParams(objectIdParam('id')),
+  validateBody(validateCreateDriverReview),
+  orderController.createDriverReview
 );
 
 router.get(
