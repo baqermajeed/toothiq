@@ -112,6 +112,11 @@ export const adminApi = {
         method: 'POST',
         body: form,
       }),
+    patch: (shopId: string, productId: string, body: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>(`/api/shops/${shopId}/products/${productId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
   },
   categories: {
     list: () => apiFetch<Record<string, unknown>[]>('/api/admin/categories'),

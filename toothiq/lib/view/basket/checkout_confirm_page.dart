@@ -65,7 +65,7 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                   id: item.product.id,
                   name: item.product.name,
                   quantity: item.quantity,
-                  unitPrice: item.product.price,
+                  unitPrice: item.product.sellingPrice,
                   imageAsset: item.product.imageAsset,
                 ),
               )

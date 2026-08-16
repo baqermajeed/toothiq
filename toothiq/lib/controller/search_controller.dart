@@ -272,8 +272,8 @@ class SearchProductsController extends GetxController {
       return false;
     }
     if (activeFilter.hasPriceFilter &&
-        (product.price < activeFilter.minPrice ||
-            product.price > activeFilter.maxPrice)) {
+        (product.sellingPrice < activeFilter.minPrice ||
+            product.sellingPrice > activeFilter.maxPrice)) {
       return false;
     }
     if (!_matchesExpiry(product, activeFilter.expiryDate)) return false;

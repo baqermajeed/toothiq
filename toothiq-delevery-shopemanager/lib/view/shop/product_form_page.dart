@@ -29,9 +29,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late final TextEditingController _name;
   late final TextEditingController _description;
   late final TextEditingController _price;
+  late final TextEditingController _offerPrice;
   late final TextEditingController _stock;
   late final TextEditingController _origin;
   DateTime? _expiryDate;
+  DateTime? _offerEndsAt;
   String? _imagePath;
   List<String> _gallery = [];
   String? _categoryId;
@@ -44,9 +46,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _name = TextEditingController(text: p?.name ?? '');
     _description = TextEditingController(text: p?.description ?? '');
     _price = TextEditingController(text: p != null ? '${p.price}' : '');
+    final existingOffer = p?.offerPrice;
+    _offerPrice = TextEditingController(
+      text: existingOffer != null ? '$existingOffer' : '',
+    );
     _stock = TextEditingController(text: p != null ? '${p.stock}' : '1');
     _origin = TextEditingController(text: p?.origin ?? '');
     _expiryDate = ExpiryDateUtils.parseToDateTime(p?.expiryDate);
+    _offerEndsAt = DateTime.tryParse(p?.offerEndsAt ?? '');
     _imagePath = p?.imagePath ?? p?.primaryImage;
     _gallery = List<String>.from(p?.galleryPaths ?? []);
     _categoryId = p?.categoryId;
@@ -62,9 +69,25 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _name.dispose();
     _description.dispose();
     _price.dispose();
+    _offerPrice.dispose();
     _stock.dispose();
     _origin.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickOfferEndDate() async {
+    final now = DateTime.now();
+    final picked = await ScrollDatePickerSheet.show(
+      context: context,
+      title: 'انتهاء العرض',
+      initialDate: _offerEndsAt ?? now,
+      minimumDate: now,
+      maximumDate: DateTime(now.year + 5),
+      mode: CupertinoDatePickerMode.date,
+    );
+    if (picked != null) {
+      setState(() => _offerEndsAt = picked);
+    }
   }
 
   Future<void> _pickExpiryDate() async {
@@ -100,6 +123,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
     final originRaw = _origin.text.trim();
     final origin = originRaw.isEmpty ? null : originRaw;
 
+    final offerRaw = _offerPrice.text.trim();
+    final offerPrice = offerRaw.isEmpty ? null : int.tryParse(offerRaw);
+    final offerEndsAt = _offerEndsAt?.toIso8601String();
+
     bool saved;
     if (widget.isEdit) {
       saved = await products.updateProduct(
@@ -107,6 +134,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
           name: _name.text.trim(),
           description: _description.text.trim(),
           price: int.parse(_price.text.trim()),
+          offerPrice: offerPrice,
+          offerEndsAt: offerEndsAt,
+          clearOffer: offerPrice == null,
+          clearOfferEnds: _offerEndsAt == null,
           stock: int.parse(_stock.text.trim()),
           imagePath: _imagePath,
           galleryPaths: _gallery,
@@ -125,6 +156,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
         name: _name.text.trim(),
         description: _description.text.trim(),
         price: int.parse(_price.text.trim()),
+        offerPrice: offerPrice,
+        offerEndsAt: offerEndsAt,
         stock: int.parse(_stock.text.trim()),
         imagePath: _imagePath,
         galleryPaths: _gallery,
@@ -208,13 +241,40 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 SizedBox(height: 14.h),
                 AuthTextField(
                   controller: _price,
-                  label: 'السعر (د.ع)',
+                  label: 'السعر الأصلي (د.ع)',
                   keyboardType: TextInputType.number,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'أدخل السعر';
                     if (int.tryParse(v.trim()) == null) return 'سعر غير صالح';
                     return null;
                   },
+                ),
+                SizedBox(height: 14.h),
+                AuthTextField(
+                  controller: _offerPrice,
+                  label: 'سعر العرض (اختياري)',
+                  keyboardType: TextInputType.number,
+                  validator: (v) {
+                    final raw = v?.trim() ?? '';
+                    if (raw.isEmpty) return null;
+                    final offer = int.tryParse(raw);
+                    if (offer == null) return 'سعر عرض غير صالح';
+                    if (offer <= 0) return 'سعر العرض أكبر من صفر';
+                    final original = int.tryParse(_price.text.trim());
+                    if (original != null && offer >= original) {
+                      return 'يجب أن يكون أقل من السعر الأصلي';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 14.h),
+                _OptionalDateField(
+                  label: 'انتهاء العرض (اختياري)',
+                  value: _offerEndsAt,
+                  onTap: _pickOfferEndDate,
+                  onClear: _offerEndsAt == null
+                      ? null
+                      : () => setState(() => _offerEndsAt = null),
                 ),
                 SizedBox(height: 14.h),
                 Row(

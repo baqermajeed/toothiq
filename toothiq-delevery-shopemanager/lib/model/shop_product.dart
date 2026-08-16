@@ -5,6 +5,8 @@ class ShopProduct {
   final String name;
   final String description;
   final int price;
+  final int? offerPrice;
+  final String? offerEndsAt;
   final int stock;
   final String? imagePath;
   final List<String> galleryPaths;
@@ -21,6 +23,8 @@ class ShopProduct {
     required this.name,
     required this.description,
     required this.price,
+    this.offerPrice,
+    this.offerEndsAt,
     required this.stock,
     this.imagePath,
     this.galleryPaths = const [],
@@ -55,8 +59,37 @@ class ShopProduct {
     return images;
   }
 
+  bool get isOnOffer {
+    final offer = offerPrice;
+    if (offer == null || offer <= 0 || offer >= price) return false;
+    final rawEnd = offerEndsAt?.trim();
+    if (rawEnd == null || rawEnd.isEmpty) return true;
+    final parsed = DateTime.tryParse(rawEnd);
+    if (parsed == null) return true;
+    return parsed.isAfter(DateTime.now());
+  }
+
+  int get sellingPrice => isOnOffer ? offerPrice! : price;
+
   String get formattedPrice {
+    final formatted = sellingPrice.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    return '$formatted د.ع';
+  }
+
+  String get formattedOriginalPrice {
     final formatted = price.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    return '$formatted د.ع';
+  }
+
+  String get formattedOfferPrice {
+    final offer = offerPrice ?? sellingPrice;
+    final formatted = offer.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]},',
     );
@@ -67,6 +100,8 @@ class ShopProduct {
     String? name,
     String? description,
     int? price,
+    int? offerPrice,
+    String? offerEndsAt,
     int? stock,
     String? imagePath,
     List<String>? galleryPaths,
@@ -82,12 +117,18 @@ class ShopProduct {
     bool clearBrand = false,
     bool clearExpiry = false,
     bool clearOrigin = false,
+    bool clearOffer = false,
+    bool clearOfferEnds = false,
   }) {
     return ShopProduct(
       id: id,
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
+      offerPrice: clearOffer ? null : (offerPrice ?? this.offerPrice),
+      offerEndsAt: (clearOffer || clearOfferEnds)
+          ? null
+          : (offerEndsAt ?? this.offerEndsAt),
       stock: stock ?? this.stock,
       imagePath: clearImage ? null : (imagePath ?? this.imagePath),
       galleryPaths: galleryPaths ?? this.galleryPaths,
@@ -121,7 +162,8 @@ class ShopProduct {
   }
 
   factory ShopProduct.fromApi(Map<String, dynamic> json) {
-    final priceValue = json['offerPrice'] ?? json['price'];
+    final price = _readInt(json['price']) ?? 0;
+    final offer = _readInt(json['offerPrice']);
     final gallery = _readGallery(json);
     final image = json['image']?.toString() ??
         json['imageUrl']?.toString() ??
@@ -133,7 +175,9 @@ class ShopProduct {
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
-      price: (priceValue as num?)?.toInt() ?? _readInt(priceValue) ?? 0,
+      price: price,
+      offerPrice: offer,
+      offerEndsAt: json['offerEndsAt']?.toString(),
       stock: _readStock(json),
       imagePath: image,
       galleryPaths: gallery,
@@ -201,6 +245,8 @@ class ShopProduct {
       'name': name,
       'description': description,
       'price': price,
+      'offerPrice': offerPrice ?? '',
+      'offerEndsAt': offerEndsAt ?? '',
       'stock': stock,
       'quantity': stock,
       if (categoryId != null) 'productCategoryId': categoryId,

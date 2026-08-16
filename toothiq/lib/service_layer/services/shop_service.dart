@@ -74,6 +74,7 @@ class ShopService {
     int limit = 20,
     String? productCategoryId,
     String? categoryId,
+    bool hasOffer = false,
   }) {
     return _api.getShopProductsPaginated(
       shopId: shopId,
@@ -82,6 +83,7 @@ class ShopService {
       limit: limit,
       productCategoryId: productCategoryId,
       categoryId: categoryId,
+      hasOffer: hasOffer,
     );
   }
 

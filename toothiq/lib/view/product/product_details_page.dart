@@ -515,14 +515,50 @@ class _PriceQuantityRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        MyText(
-          controller.product.formattedPrice,
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w800,
-          color: AppColors.productAccent,
-          height: 1.0,
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8.w,
+            runSpacing: 4.h,
+            children: [
+              if (controller.product.isOnOffer) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.favoriteRed,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    'عرض',
+                    style: TextStyle(
+                      fontFamily: 'Expo Arabic',
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Text(
+                  controller.product.formattedOriginalPrice,
+                  style: TextStyle(
+                    fontFamily: 'Expo Arabic',
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.productDescription,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              ],
+              MyText(
+                controller.product.formattedPrice,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.productAccent,
+                height: 1.0,
+              ),
+            ],
+          ),
         ),
-        const Spacer(),
         Obx(
           () => _QuantitySelector(
             quantity: controller.quantity.value,

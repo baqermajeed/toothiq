@@ -14,6 +14,7 @@ import '../../widget/home/home_catalog_strips.dart';
 import '../../widget/home/home_compact_header_overlay.dart';
 import '../../widget/home/home_scroll_metrics.dart';
 import '../../widget/home/products_grid_widget.dart';
+import '../../widget/home/product_cards_strip.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/common/async_state_widgets.dart';
 import '../../widget/search_filter_row.dart';
@@ -147,6 +148,25 @@ class _HomePageState extends State<HomePage> {
                         categories: home.categories.toList(growable: false),
                         brands: home.brands.toList(growable: false),
                       ),
+                      if (home.offerProducts.isNotEmpty) ...[
+                        SizedBox(height: 10.h),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: MyText(
+                              'العروض',
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        ProductCardsStrip(
+                          products: home.offerProducts.toList(growable: false),
+                        ),
+                      ],
                       SizedBox(height: 10.h),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.w),

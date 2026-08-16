@@ -26,6 +26,7 @@ class ShopProductsController extends GetxController {
   final isSaving = false.obs;
   final isLoading = false.obs;
   final searchQuery = ''.obs;
+  final showOffersOnly = false.obs;
   final errorMessage = ''.obs;
 
   @override
@@ -55,8 +56,9 @@ class ShopProductsController extends GetxController {
 
   List<ShopProduct> get filteredProducts {
     final q = searchQuery.value.trim().toLowerCase();
-    if (q.isEmpty) return products;
-    return products
+    var list = showOffersOnly.value ? offerProducts : products.toList();
+    if (q.isEmpty) return list;
+    return list
         .where(
           (p) =>
               p.name.toLowerCase().contains(q) ||
@@ -67,6 +69,11 @@ class ShopProductsController extends GetxController {
   }
 
   int get availableCount => products.where((p) => p.isAvailable).length;
+
+  int get offerCount => products.where((p) => p.isOnOffer).length;
+
+  List<ShopProduct> get offerProducts =>
+      products.where((p) => p.isOnOffer).toList();
 
   bool _matchesCategory(ShopProduct product, ShopCategory category) {
     final id = product.categoryId;
@@ -107,6 +114,8 @@ class ShopProductsController extends GetxController {
     required String name,
     required String description,
     required int price,
+    int? offerPrice,
+    String? offerEndsAt,
     required int stock,
     String? imagePath,
     List<String> galleryPaths = const [],
@@ -127,6 +136,8 @@ class ShopProductsController extends GetxController {
         name: name,
         description: description,
         price: price,
+        offerPrice: offerPrice,
+        offerEndsAt: offerEndsAt,
         stock: stock,
         categoryId: categoryId,
         categoryName: categoryName,

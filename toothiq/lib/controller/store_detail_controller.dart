@@ -29,6 +29,7 @@ class StoreDetailController extends GetxController {
   final selectedTabIndex = 0.obs;
   final searchQuery = ''.obs;
   final products = <ProductModel>[].obs;
+  final offerProducts = <ProductModel>[].obs;
   final categories = <CategoryModel>[].obs;
   final filteredCategories = <CategoryModel>[].obs;
   final filteredBrands = <BrandModel>[].obs;
@@ -153,6 +154,7 @@ class StoreDetailController extends GetxController {
       final updatedStore = results[0] as StoreModel;
       currentStore.value = updatedStore;
       await _loadProductsFirstPage();
+      await _loadOfferProducts();
 
       final shopCategories = results[1] as List<ShopCategoryModel>;
       final categoryCards = _mapCategories(shopCategories);
@@ -177,6 +179,7 @@ class StoreDetailController extends GetxController {
     } on ApiException catch (error) {
       loadError.value = error.message;
       products.clear();
+      offerProducts.clear();
       categories.clear();
       filteredCategories.clear();
       brands.clear();
@@ -186,6 +189,7 @@ class StoreDetailController extends GetxController {
     } catch (_) {
       loadError.value = 'تعذر تحميل بيانات المتجر';
       products.clear();
+      offerProducts.clear();
       categories.clear();
       filteredCategories.clear();
       brands.clear();
@@ -208,6 +212,23 @@ class StoreDetailController extends GetxController {
     products.assignAll(_favoritesService.applyFavoriteState(result.items));
     hasNextProductsPage.value = result.hasNextPage;
     currentProductsPage.value = result.page;
+  }
+
+  Future<void> _loadOfferProducts() async {
+    try {
+      final result = await _shopService.fetchShopProductsPaginated(
+        shopId: store.id,
+        shopName: store.name,
+        page: 1,
+        limit: 10,
+        hasOffer: true,
+      );
+      offerProducts.assignAll(
+        _favoritesService.applyFavoriteState(result.items),
+      );
+    } catch (_) {
+      offerProducts.clear();
+    }
   }
 
   Future<void> loadMoreProducts() async {
@@ -322,8 +343,15 @@ class StoreDetailController extends GetxController {
 
   void updateFavoriteState(String productId, bool isFavorite) {
     final idx = products.indexWhere((p) => p.id == productId);
-    if (idx == -1) return;
-    products[idx] = products[idx].copyWith(isFavorite: isFavorite);
-    products.refresh();
+    if (idx != -1) {
+      products[idx] = products[idx].copyWith(isFavorite: isFavorite);
+      products.refresh();
+    }
+    final offerIdx = offerProducts.indexWhere((p) => p.id == productId);
+    if (offerIdx != -1) {
+      offerProducts[offerIdx] =
+          offerProducts[offerIdx].copyWith(isFavorite: isFavorite);
+      offerProducts.refresh();
+    }
   }
 }

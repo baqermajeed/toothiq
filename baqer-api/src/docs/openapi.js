@@ -680,6 +680,7 @@ const spec = {
                               productCategoryId: { type: 'string', nullable: true },
                               categoryName: { type: 'string', nullable: true },
                               offerPrice: { type: 'number', nullable: true },
+                              isOnOffer: { type: 'boolean' },
                               offerEndsAt: { type: 'string', format: 'date-time', nullable: true },
                               productionDate: { type: 'string', format: 'date-time', nullable: true },
                               expiryDate: { type: 'string', format: 'date-time', nullable: true },

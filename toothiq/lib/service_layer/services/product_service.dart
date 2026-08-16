@@ -26,6 +26,7 @@ class ProductService {
     String? productCategoryId,
     String? categoryId,
     String? brandId,
+    bool hasOffer = false,
   }) {
     return _api.getProducts(
       page: page,
@@ -33,6 +34,7 @@ class ProductService {
       productCategoryId: productCategoryId,
       categoryId: categoryId,
       brandId: brandId,
+      hasOffer: hasOffer,
     );
   }
 
@@ -55,7 +57,7 @@ class ProductService {
     while (true) {
       final result = await fetchProductsPaginated(page: page, limit: pageSize);
       for (final product in result.items) {
-        final price = product.price.toDouble();
+        final price = product.sellingPrice.toDouble();
         min = min == null ? price : (price < min ? price : min);
         max = max == null ? price : (price > max ? price : max);
       }

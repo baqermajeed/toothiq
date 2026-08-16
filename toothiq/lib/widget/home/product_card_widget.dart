@@ -140,6 +140,9 @@ class ProductCardWidget extends StatelessWidget {
                       padding: EdgeInsets.fromLTRB(10.w, 0, 10.w, 6.w),
                       child: _ProductPriceBar(
                         price: product.formattedPrice,
+                        originalPrice: product.isOnOffer
+                            ? product.formattedOriginalPrice
+                            : null,
                         onAddToCart: () {
                           final cart = Get.isRegistered<CartController>()
                               ? Get.find<CartController>()
@@ -151,6 +154,28 @@ class ProductCardWidget extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            Positioned(
+              right: 12.w,
+              top: 10.w,
+              child: product.isOnOffer
+                  ? Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.favoriteRed,
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Text(
+                        'عرض',
+                        style: TextStyle(
+                          fontFamily: 'Expo Arabic',
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
             Positioned(
               left: 16.w,
@@ -194,11 +219,13 @@ class ProductCardWidget extends StatelessWidget {
 
 class _ProductPriceBar extends StatelessWidget {
   final String price;
+  final String? originalPrice;
   final VoidCallback onAddToCart;
 
   const _ProductPriceBar({
     required this.price,
     required this.onAddToCart,
+    this.originalPrice,
   });
 
   @override
@@ -216,14 +243,31 @@ class _ProductPriceBar extends StatelessWidget {
           Expanded(
             child: Align(
               alignment: Alignment.center,
-              child: Text(
-                price,
-                style: TextStyle(
-                  fontFamily: 'Expo Arabic',
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.productStore,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (originalPrice != null)
+                    Text(
+                      originalPrice!,
+                      style: TextStyle(
+                        fontFamily: 'Expo Arabic',
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.productDescription,
+                        decoration: TextDecoration.lineThrough,
+                        height: 1,
+                      ),
+                    ),
+                  Text(
+                    price,
+                    style: TextStyle(
+                      fontFamily: 'Expo Arabic',
+                      fontSize: originalPrice != null ? 12.sp : 13.sp,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.productStore,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

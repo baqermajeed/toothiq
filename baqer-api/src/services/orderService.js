@@ -14,6 +14,7 @@ function getProductEffectivePrice(product) {
   const hasActiveOffer =
     product.offerPrice != null &&
     product.offerPrice > 0 &&
+    (product.price == null || Number(product.offerPrice) < Number(product.price)) &&
     (product.offerEndsAt == null || new Date(product.offerEndsAt) > now);
   return hasActiveOffer ? Number(product.offerPrice) : Number(product.price ?? 0);
 }

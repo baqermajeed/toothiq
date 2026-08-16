@@ -31,6 +31,7 @@ class HomeController extends GetxController {
   final categories = <CategoryModel>[].obs;
   final brands = <BrandModel>[].obs;
   final products = <ProductModel>[].obs;
+  final offerProducts = <ProductModel>[].obs;
   final isLoading = false.obs;
   final loadingMore = false.obs;
   final hasNextPage = false.obs;
@@ -65,13 +66,17 @@ class HomeController extends GetxController {
       banners.assignAll(results[0] as List<BannerModel>);
       _applyCategories(results[1] as List<ShopCategoryModel>);
       brands.assignAll(results[2] as List<BrandModel>);
-      await _loadProductsFirstPage();
+      await Future.wait([
+        _loadProductsFirstPage(),
+        _loadOfferProducts(),
+      ]);
     } on ApiException catch (error) {
       loadError.value = error.message;
       banners.clear();
       categories.clear();
       brands.clear();
       products.clear();
+      offerProducts.clear();
       hasNextPage.value = false;
     } catch (_) {
       loadError.value = 'تعذر تحميل بيانات الصفحة الرئيسية';
@@ -79,6 +84,7 @@ class HomeController extends GetxController {
       categories.clear();
       brands.clear();
       products.clear();
+      offerProducts.clear();
       hasNextPage.value = false;
     } finally {
       isLoading.value = false;
@@ -128,6 +134,21 @@ class HomeController extends GetxController {
     currentPage.value = result.page;
   }
 
+  Future<void> _loadOfferProducts() async {
+    try {
+      final result = await _productService.fetchProductsPaginated(
+        page: 1,
+        limit: 10,
+        hasOffer: true,
+      );
+      offerProducts.assignAll(
+        _favoritesService.applyFavoriteState(result.items),
+      );
+    } catch (_) {
+      offerProducts.clear();
+    }
+  }
+
   Future<void> loadMoreProducts() async {
     if (loadingMore.value || !hasNextPage.value) return;
     loadingMore.value = true;
@@ -159,9 +180,16 @@ class HomeController extends GetxController {
 
   void updateFavoriteState(String productId, bool isFavorite) {
     final index = products.indexWhere((p) => p.id == productId);
-    if (index == -1) return;
-    products[index] = products[index].copyWith(isFavorite: isFavorite);
-    products.refresh();
+    if (index != -1) {
+      products[index] = products[index].copyWith(isFavorite: isFavorite);
+      products.refresh();
+    }
+    final offerIndex = offerProducts.indexWhere((p) => p.id == productId);
+    if (offerIndex != -1) {
+      offerProducts[offerIndex] =
+          offerProducts[offerIndex].copyWith(isFavorite: isFavorite);
+      offerProducts.refresh();
+    }
   }
 
   void onBannerChanged(int index) {

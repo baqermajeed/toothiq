@@ -7,6 +7,8 @@ class ProductModel {
   final String description;
   final String fullDescription;
   final int price;
+  final int? offerPrice;
+  final bool isOnOffer;
   final String imageAsset;
   final List<String> galleryAssets;
   final String expirationDate;
@@ -24,6 +26,8 @@ class ProductModel {
     required this.storeName,
     required this.description,
     required this.price,
+    this.offerPrice,
+    this.isOnOffer = false,
     required this.imageAsset,
     this.fullDescription = '',
     this.galleryAssets = const [],
@@ -88,8 +92,33 @@ class ProductModel {
     return null;
   }
 
+  static int? _readInt(dynamic value) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  static ({int price, int? offerPrice, bool isOnOffer}) _readPrices(
+    Map<String, dynamic> json,
+  ) {
+    final price = _readInt(json['price']) ?? 0;
+    final offer = _readInt(json['offerPrice']);
+    var onOffer = json['isOnOffer'] == true;
+    if (json['isOnOffer'] == null) {
+      onOffer = offer != null && offer > 0 && offer < price;
+      final ends = json['offerEndsAt']?.toString();
+      if (onOffer && ends != null && ends.isNotEmpty) {
+        final parsed = DateTime.tryParse(ends);
+        if (parsed != null && !parsed.isAfter(DateTime.now())) {
+          onOffer = false;
+        }
+      }
+    }
+    return (price: price, offerPrice: offer, isOnOffer: onOffer);
+  }
+
   factory ProductModel.fromJson(Map<String, dynamic> json) {
-    final priceValue = json['offerPrice'] ?? json['price'];
+    final prices = _readPrices(json);
     final gallery = _readGallery(json);
     final image = gallery.isNotEmpty
         ? gallery.first
@@ -104,7 +133,9 @@ class ProductModel {
       storeName: json['shopName']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       fullDescription: json['description']?.toString() ?? '',
-      price: (priceValue as num?)?.toInt() ?? 0,
+      price: prices.price,
+      offerPrice: prices.offerPrice,
+      isOnOffer: prices.isOnOffer,
       imageAsset: image,
       galleryAssets: gallery,
       expirationDate: _formatDate(json['expiryDate']),
@@ -123,7 +154,7 @@ class ProductModel {
     required String shopId,
     required String shopName,
   }) {
-    final priceValue = json['offerPrice'] ?? json['price'];
+    final prices = _readPrices(json);
     final gallery = _readGallery(json);
     final image = gallery.isNotEmpty
         ? gallery.first
@@ -138,7 +169,9 @@ class ProductModel {
       storeName: shopName,
       description: json['description']?.toString() ?? '',
       fullDescription: json['description']?.toString() ?? '',
-      price: (priceValue as num?)?.toInt() ?? 0,
+      price: prices.price,
+      offerPrice: prices.offerPrice,
+      isOnOffer: prices.isOnOffer,
       imageAsset: image,
       galleryAssets: gallery,
       expirationDate: _formatDate(json['expiryDate']),
@@ -209,6 +242,8 @@ class ProductModel {
       description: description,
       fullDescription: fullDescription,
       price: price,
+      offerPrice: offerPrice,
+      isOnOffer: isOnOffer,
       imageAsset: imageAsset,
       galleryAssets: galleryAssets,
       expirationDate: expirationDate,
@@ -230,6 +265,8 @@ class ProductModel {
       'description': description,
       'fullDescription': fullDescription,
       'price': price,
+      'offerPrice': offerPrice,
+      'isOnOffer': isOnOffer,
       'imageAsset': imageAsset,
       'galleryAssets': galleryAssets,
       'expirationDate': expirationDate,
@@ -252,6 +289,8 @@ class ProductModel {
       description: json['description']?.toString() ?? '',
       fullDescription: json['fullDescription']?.toString() ?? '',
       price: (json['price'] as num?)?.toInt() ?? 0,
+      offerPrice: (json['offerPrice'] as num?)?.toInt(),
+      isOnOffer: json['isOnOffer'] == true,
       imageAsset: json['imageAsset']?.toString() ?? ImageUrl.productPlaceholder,
       galleryAssets: gallery is List
           ? gallery.map((item) => item.toString()).toList(growable: false)
@@ -267,7 +306,21 @@ class ProductModel {
     );
   }
 
+  int get sellingPrice {
+    final offer = offerPrice;
+    if (isOnOffer && offer != null && offer > 0) return offer;
+    return price;
+  }
+
   String get formattedPrice {
+    final formatted = sellingPrice.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    return '$formatted د.ع';
+  }
+
+  String get formattedOriginalPrice {
     final formatted = price.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]},',

@@ -1,5 +1,22 @@
 const Joi = require('joi');
 
+function offerPriceRule() {
+  return Joi.number()
+    .min(0)
+    .allow(null)
+    .custom((value, helpers) => {
+      if (value == null || value === 0) return value;
+      if (!(value > 0)) {
+        return helpers.message('سعر العرض يجب أن يكون أكبر من صفر');
+      }
+      const price = helpers.state.ancestors[0]?.price;
+      if (price != null && value >= price) {
+        return helpers.message('سعر العرض يجب أن يكون أقل من السعر الأصلي');
+      }
+      return value;
+    });
+}
+
 const createProductSchema = Joi.object({
   name: Joi.string().trim().min(1).max(200).required(),
   description: Joi.string().trim().allow(''),
@@ -11,7 +28,7 @@ const createProductSchema = Joi.object({
   subcategoryId: Joi.string().trim().allow('', null).optional(),
   brandId: Joi.string().trim().allow('', null).optional(),
   productCategoryId: Joi.string().trim().allow('').optional(),
-  offerPrice: Joi.number().min(0).allow(null),
+  offerPrice: offerPriceRule(),
   offerEndsAt: Joi.date().iso().allow(null),
   stock: Joi.number().integer().min(0),
   quantity: Joi.number().integer().min(0),
@@ -30,7 +47,7 @@ const updateProductSchema = Joi.object({
   subcategoryId: Joi.string().trim().allow('', null),
   brandId: Joi.string().trim().allow('', null),
   productCategoryId: Joi.string().trim().allow('', null),
-  offerPrice: Joi.number().min(0).allow(null),
+  offerPrice: offerPriceRule(),
   offerEndsAt: Joi.date().iso().allow(null),
   stock: Joi.number().integer().min(0),
   quantity: Joi.number().integer().min(0),

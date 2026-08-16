@@ -22,6 +22,7 @@ export function ProductsPage() {
   const [expiryDateFrom, setExpiryDateFrom] = useState('')
   const [expiryDateTo, setExpiryDateTo] = useState('')
   const [missingImageOnly, setMissingImageOnly] = useState(false)
+  const [hasOffer, setHasOffer] = useState(false)
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(true)
@@ -30,12 +31,19 @@ export function ProductsPage() {
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [newPrice, setNewPrice] = useState('')
+  const [newOfferPrice, setNewOfferPrice] = useState('')
+  const [newOfferEndsAt, setNewOfferEndsAt] = useState('')
   const [newCategoryId, setNewCategoryId] = useState('')
   const [newSubcategoryId, setNewSubcategoryId] = useState('')
   const [newBrandId, setNewBrandId] = useState('')
   const [newProductionDate, setNewProductionDate] = useState('')
   const [newExpiryDate, setNewExpiryDate] = useState('')
   const [newImageFiles, setNewImageFiles] = useState<File[]>([])
+  const [editing, setEditing] = useState<Record<string, unknown> | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editPrice, setEditPrice] = useState('')
+  const [editOfferPrice, setEditOfferPrice] = useState('')
+  const [editOfferEndsAt, setEditOfferEndsAt] = useState('')
 
   const load = useCallback(async () => {
     setErr('')
@@ -57,6 +65,7 @@ export function ProductsPage() {
         expiryDateFrom: expiryDateFrom || undefined,
         expiryDateTo: expiryDateTo || undefined,
         missingImageOnly: missingImageOnly || undefined,
+        hasOffer: hasOffer || undefined,
       })
       setData(res)
     } catch (e) {
@@ -64,7 +73,7 @@ export function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, limit, shopId, q, categoryId, subcategoryId, brandId, price, minPrice, maxPrice, expiryDate, expiryDateFrom, expiryDateTo, missingImageOnly])
+  }, [page, limit, shopId, q, categoryId, subcategoryId, brandId, price, minPrice, maxPrice, expiryDate, expiryDateFrom, expiryDateTo, missingImageOnly, hasOffer])
 
   useEffect(() => {
     void load()
@@ -107,6 +116,20 @@ export function ProductsPage() {
     fd.append('name', newName)
     fd.append('description', newDescription)
     fd.append('price', newPrice)
+    if (newOfferPrice.trim()) {
+      const offerNum = Number(newOfferPrice.trim())
+      const priceNum = Number(newPrice)
+      if (!Number.isFinite(offerNum) || offerNum <= 0) {
+        setErr('سعر العرض يجب أن يكون أكبر من صفر')
+        return
+      }
+      if (Number.isFinite(priceNum) && offerNum >= priceNum) {
+        setErr('سعر العرض يجب أن يكون أقل من السعر الأصلي')
+        return
+      }
+      fd.append('offerPrice', newOfferPrice.trim())
+    }
+    if (newOfferEndsAt) fd.append('offerEndsAt', new Date(newOfferEndsAt).toISOString())
     if (newCategoryId) fd.append('categoryId', newCategoryId)
     if (newSubcategoryId) fd.append('subcategoryId', newSubcategoryId)
     if (newBrandId) fd.append('brandId', newBrandId)
@@ -122,6 +145,8 @@ export function ProductsPage() {
       setNewName('')
       setNewDescription('')
       setNewPrice('')
+      setNewOfferPrice('')
+      setNewOfferEndsAt('')
       setNewCategoryId('')
       setNewSubcategoryId('')
       setNewBrandId('')
@@ -133,6 +158,68 @@ export function ProductsPage() {
       void load()
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'فشل إضافة المنتج')
+    }
+  }
+
+  function toDateInput(value: unknown) {
+    if (!value) return ''
+    const d = new Date(String(value))
+    if (Number.isNaN(d.getTime())) return ''
+    return d.toISOString().slice(0, 10)
+  }
+
+  function openEdit(p: Record<string, unknown>) {
+    setErr('')
+    setMsg('')
+    setEditing(p)
+    setEditName(String(p.name ?? ''))
+    setEditPrice(p.price != null ? String(p.price) : '')
+    setEditOfferPrice(p.offerPrice != null && p.offerPrice !== '' ? String(p.offerPrice) : '')
+    setEditOfferEndsAt(toDateInput(p.offerEndsAt))
+  }
+
+  async function saveEdit(e: FormEvent) {
+    e.preventDefault()
+    if (!editing) return
+    setErr('')
+    setMsg('')
+    const sid = String(editing.shopId ?? '').trim()
+    const pid = String(editing._id ?? editing.id ?? '').trim()
+    if (!sid || !pid) {
+      setErr('تعذر تحديد المنتج')
+      return
+    }
+    const priceNum = Number(editPrice)
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      setErr('السعر غير صالح')
+      return
+    }
+    const offerRaw = editOfferPrice.trim()
+    let offerPrice: number | null = null
+    if (offerRaw) {
+      const offerNum = Number(offerRaw)
+      if (!Number.isFinite(offerNum) || offerNum <= 0) {
+        setErr('سعر العرض يجب أن يكون أكبر من صفر')
+        return
+      }
+      if (offerNum >= priceNum) {
+        setErr('سعر العرض يجب أن يكون أقل من السعر الأصلي')
+        return
+      }
+      offerPrice = offerNum
+    }
+    try {
+      await adminApi.products.patch(sid, pid, {
+        name: editName.trim(),
+        price: priceNum,
+        offerPrice,
+        offerEndsAt: editOfferEndsAt ? new Date(editOfferEndsAt).toISOString() : null,
+      })
+      setMsg('تم تحديث المنتج')
+      setEditing(null)
+      void load()
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'فشل تحديث المنتج')
     }
   }
 
@@ -237,6 +324,10 @@ export function ProductsPage() {
             <input type="checkbox" checked={missingImageOnly} onChange={(e) => setMissingImageOnly(e.target.checked)} />
             بدون صورة فقط
           </label>
+          <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <input type="checkbox" checked={hasOffer} onChange={(e) => setHasOffer(e.target.checked)} />
+            عروض فقط
+          </label>
           <button type="button" className="btn btn-primary" onClick={() => setPage(1)}>
             تطبيق
           </button>
@@ -256,6 +347,7 @@ export function ProductsPage() {
               setExpiryDateFrom('')
               setExpiryDateTo('')
               setMissingImageOnly(false)
+              setHasOffer(false)
               setPage(1)
             }}
           >
@@ -275,8 +367,10 @@ export function ProductsPage() {
                   <th>صورة</th>
                   <th>الاسم</th>
                   <th>السعر</th>
+                  <th>العرض</th>
                   <th>المحل</th>
                   <th>متاح</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -294,10 +388,20 @@ export function ProductsPage() {
                       <td>{img ? <img className="thumb" src={assetUrl(img)} alt="" /> : '—'}</td>
                       <td>{String(p.name ?? '')}</td>
                       <td>{String(p.price ?? '')}</td>
-                      <td dir="ltr" style={{ fontSize: '0.8rem' }}>
-                        {shopLabel}
+                      <td>
+                        {p.isOnOffer
+                          ? String(p.offerPrice ?? '')
+                          : p.offerPrice
+                            ? `${String(p.offerPrice)} (منتهي)`
+                            : '—'}
                       </td>
+                      <td>{String(p.shopName ?? shopLabel)}</td>
                       <td>{p.isAvailable !== false ? 'نعم' : 'لا'}</td>
+                      <td>
+                        <button type="button" className="btn" onClick={() => openEdit(p)}>
+                          تعديل
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}
@@ -342,8 +446,16 @@ export function ProductsPage() {
                 <textarea className="textarea" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
               </div>
               <div className="field">
-                <label>السعر</label>
+                <label>السعر الأصلي</label>
                 <input className="input" type="number" min="0" step="any" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} required />
+              </div>
+              <div className="field">
+                <label>سعر العرض (اختياري)</label>
+                <input className="input" type="number" min="0" step="any" value={newOfferPrice} onChange={(e) => setNewOfferPrice(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>انتهاء العرض (اختياري)</label>
+                <input className="input" type="date" value={newOfferEndsAt} onChange={(e) => setNewOfferEndsAt(e.target.value)} />
               </div>
               <div className="field">
                 <label>تصنيف رئيسي</label>
@@ -422,6 +534,59 @@ export function ProductsPage() {
                   حفظ
                 </button>
                 <button type="button" className="btn" onClick={() => setShowCreate(false)}>
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+      {editing ? (
+        <div className="modal-backdrop" onClick={() => setEditing(null)} role="presentation">
+          <div className="modal" role="dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <h3>تعديل المنتج</h3>
+            <form onSubmit={saveEdit}>
+              <div className="field">
+                <label>اسم المنتج</label>
+                <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+              </div>
+              <div className="field">
+                <label>السعر الأصلي</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="field">
+                <label>سعر العرض (اختياري — اتركه فارغاً لإزالة العرض)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={editOfferPrice}
+                  onChange={(e) => setEditOfferPrice(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>انتهاء العرض (اختياري)</label>
+                <input
+                  className="input"
+                  type="date"
+                  value={editOfferEndsAt}
+                  onChange={(e) => setEditOfferEndsAt(e.target.value)}
+                />
+              </div>
+              <div style={{ marginTop: '1rem', display: 'flex', gap: 8 }}>
+                <button type="submit" className="btn btn-primary">
+                  حفظ
+                </button>
+                <button type="button" className="btn" onClick={() => setEditing(null)}>
                   إلغاء
                 </button>
               </div>

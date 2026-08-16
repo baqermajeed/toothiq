@@ -9,7 +9,7 @@ class CartItemModel {
     this.quantity = 1,
   });
 
-  int get lineTotal => product.price * quantity;
+  int get lineTotal => product.sellingPrice * quantity;
 
   String get formattedLineTotal {
     final formatted = lineTotal.toString().replaceAllMapped(

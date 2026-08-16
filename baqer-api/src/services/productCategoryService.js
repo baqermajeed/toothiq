@@ -5,6 +5,7 @@ const Shop = require('../models/Shop');
 const Category = require('../models/Category');
 const ProductSubcategory = require('../models/ProductSubcategory');
 const { notFound, forbidden } = require('../utils/errors');
+const { describeOffer } = require('./productService');
 
 async function attachProductCounts(shopId, mappedItems) {
   if (!mappedItems.length || !mongoose.Types.ObjectId.isValid(String(shopId))) {
@@ -144,12 +145,10 @@ async function listByShop(shopId, opts = {}) {
       id: p._id.toString(),
       name: p.name,
       description: p.description || '',
-      price: p.price,
       image: p.image || null,
       images: Array.isArray(p.images) ? p.images : [],
       isAvailable: p.isAvailable !== false,
-      offerPrice: p.offerPrice ?? null,
-      offerEndsAt: p.offerEndsAt || null,
+      ...describeOffer(p),
     });
   }
 

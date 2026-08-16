@@ -103,11 +103,38 @@ class _ShopProductDetailsPageState extends State<ShopProductDetailsPage> {
                   SizedBox(height: 8.h),
                   Row(
                     children: [
+                      if (product.isOnOffer) ...[
+                        Text(
+                          product.formattedOriginalPrice,
+                          style: TextStyle(
+                            fontFamily: 'Expo Arabic',
+                            fontSize: 13.sp,
+                            color: AppColors.textSecondary,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                      ],
                       MyText(
                         product.formattedPrice,
                         fontSize: 22.sp,
                         color: AppColors.primary,
                       ),
+                      if (product.isOnOffer) ...[
+                        SizedBox(width: 8.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: MyText(
+                            'عرض',
+                            fontSize: 11.sp,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       _InfoChip(
                         icon: Icons.inventory_2_outlined,

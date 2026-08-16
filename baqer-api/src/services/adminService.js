@@ -4,7 +4,7 @@ const { User, Shop, Order, Product } = require('../models');
 const authService = require('./authService');
 const env = require('../config/env');
 const { ROLES } = require('../config/constants');
-const { deleteProductImageIfLocal, getMissingImageMongoCondition } = require('./productService');
+const { deleteProductImageIfLocal, getMissingImageMongoCondition, describeOffer, applyActiveOfferFilter } = require('./productService');
 const { notFound, badRequest } = require('../utils/errors');
 
 /** إجمالي الطلب في تجميعات الإحصائيات: منتجات + توصيل */
@@ -219,6 +219,7 @@ async function listProducts(filters = {}) {
     expiryDate,
     expiryDateFrom,
     expiryDateTo,
+    hasOffer,
   } = filters;
   const missingOnly =
     missingImageOnly === true ||
@@ -286,7 +287,10 @@ async function listProducts(filters = {}) {
     if (Object.keys(range).length > 0) parts.push({ expiryDate: range });
   }
   if (missingOnly) parts.push(getMissingImageMongoCondition());
+  const hasOffersOnly =
+    hasOffer === true || hasOffer === 'true' || hasOffer === '1';
   const query = parts.length === 0 ? {} : parts.length === 1 ? parts[0] : { $and: parts };
+  applyActiveOfferFilter(query, hasOffersOnly);
   const skip = (Number(page) - 1) * Number(limit);
   const limitNum = Number(limit);
   const pageNum = Number(page);
@@ -308,8 +312,7 @@ async function listProducts(filters = {}) {
       shopName: shop?.name ?? null,
       productCategoryId: catDoc?._id?.toString(),
       categoryName: catDoc?.nameAr ?? null,
-      offerPrice: p.offerPrice != null ? p.offerPrice : undefined,
-      offerEndsAt: p.offerEndsAt ? p.offerEndsAt.toISOString() : undefined,
+      ...describeOffer(p),
     };
   });
   return { items, pagination: { page: pageNum, limit: limitNum, total } };

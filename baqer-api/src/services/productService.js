@@ -8,6 +8,99 @@ const { notFound, forbidden } = require('../utils/errors');
 /** صورة افتراضية للمنتجات التي لا تحتوي على صورة */
 const DEFAULT_PRODUCT_IMAGE = '/uploads/products/photo_2026-03-18 00.25.48.jpeg';
 
+function getActiveOfferMongoCondition(now = new Date()) {
+  return {
+    offerPrice: { $exists: true, $ne: null, $gt: 0 },
+    $expr: { $lt: ['$offerPrice', '$price'] },
+    $or: [
+      { offerEndsAt: { $exists: false } },
+      { offerEndsAt: null },
+      { offerEndsAt: { $gt: now } },
+    ],
+  };
+}
+
+function applyActiveOfferFilter(query, hasOffer) {
+  if (hasOffer !== true) return query;
+  const offer = getActiveOfferMongoCondition();
+  if (query.$or) {
+    const existingOr = query.$or;
+    delete query.$or;
+    query.$and = [...(query.$and || []), { $or: existingOr }, offer];
+    return query;
+  }
+  Object.assign(query, offer);
+  return query;
+}
+
+function describeOffer(p) {
+  const price = Number(p?.price ?? 0);
+  const rawOffer = p?.offerPrice != null && p.offerPrice !== '' ? Number(p.offerPrice) : null;
+  const offerEndsAt = p?.offerEndsAt ? new Date(p.offerEndsAt) : null;
+  const validOfferNum = rawOffer != null && Number.isFinite(rawOffer) && rawOffer > 0 ? rawOffer : null;
+  const notExpired =
+    !offerEndsAt || Number.isNaN(offerEndsAt.getTime()) || offerEndsAt > new Date();
+  const isOnOffer =
+    validOfferNum != null && Number.isFinite(price) && validOfferNum < price && notExpired;
+  return {
+    price: Number.isFinite(price) ? price : 0,
+    offerPrice: validOfferNum,
+    offerEndsAt:
+      offerEndsAt && !Number.isNaN(offerEndsAt.getTime())
+        ? offerEndsAt.toISOString()
+        : null,
+    isOnOffer,
+  };
+}
+
+function normalizeOfferWrite(body, currentPrice) {
+  const price = body.price != null && body.price !== '' ? Number(body.price) : Number(currentPrice);
+  const hasOfferField = Object.prototype.hasOwnProperty.call(body, 'offerPrice');
+  const hasEndField = Object.prototype.hasOwnProperty.call(body, 'offerEndsAt');
+
+  if (hasOfferField && (body.offerPrice === null || body.offerPrice === '' || Number(body.offerPrice) === 0)) {
+    return {
+      offerPrice: null,
+      offerEndsAt: hasEndField && body.offerEndsAt ? new Date(body.offerEndsAt) : null,
+    };
+  }
+
+  const offerRaw = hasOfferField ? body.offerPrice : undefined;
+  if (offerRaw !== undefined && offerRaw !== null && offerRaw !== '') {
+    const offerPrice = Number(offerRaw);
+    if (!Number.isFinite(offerPrice) || offerPrice <= 0) {
+      throw badRequest('سعر العرض يجب أن يكون أكبر من صفر');
+    }
+    if (!Number.isFinite(price) || offerPrice >= price) {
+      throw badRequest('سعر العرض يجب أن يكون أقل من السعر الأصلي');
+    }
+    let offerEndsAt = undefined;
+    if (hasEndField) {
+      if (body.offerEndsAt === null || body.offerEndsAt === '') offerEndsAt = null;
+      else offerEndsAt = new Date(body.offerEndsAt);
+    }
+    return { offerPrice, ...(hasEndField ? { offerEndsAt } : {}) };
+  }
+
+  if (hasEndField) {
+    if (body.offerEndsAt === null || body.offerEndsAt === '') {
+      return { offerEndsAt: null };
+    }
+    return { offerEndsAt: new Date(body.offerEndsAt) };
+  }
+
+  return {};
+}
+
+function assertOfferStillValid(nextPrice, existingOfferPrice) {
+  if (existingOfferPrice == null || existingOfferPrice === '') return;
+  const offer = Number(existingOfferPrice);
+  if (!Number.isFinite(offer) || offer <= 0) return;
+  if (Number.isFinite(nextPrice) && offer >= nextPrice) {
+    throw badRequest('سعر العرض يجب أن يكون أقل من السعر الأصلي');
+  }
+}
+
 /**
  * شرط MongoDB: المنتج لا يملك صورة حقيقية (فارغ، أو نفس الصورة الافتراضية في العرض).
  * يُستخدم لقائمة «إكمال الصور» وللفلترة في لوحة الأدمن.
@@ -39,8 +132,7 @@ function mapProductMissingImageRow(p) {
     image: null,
     productCategoryId: productCategoryId || undefined,
     categoryName: categoryName || undefined,
-    offerPrice: p.offerPrice != null ? p.offerPrice : undefined,
-    offerEndsAt: p.offerEndsAt ? p.offerEndsAt.toISOString() : undefined,
+    ...describeOffer(p),
   };
 }
 
@@ -121,14 +213,7 @@ async function listByShop(shopId, opts = {}) {
     const safe = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     query.name = new RegExp(safe, 'i');
   }
-  if (hasOffer === true) {
-    query.offerPrice = { $exists: true, $ne: null, $gt: 0 };
-    query.$or = [
-      { offerEndsAt: { $exists: false } },
-      { offerEndsAt: null },
-      { offerEndsAt: { $gt: new Date() } },
-    ];
-  }
+  applyActiveOfferFilter(query, hasOffer === true);
   await applyTaxonomyFilters(query, { productCategoryId, categoryId, subcategoryId, brandId }, shopId);
 
   const sort = { createdAt: -1 };
@@ -362,8 +447,7 @@ function mapProductWithCategory(p) {
     shopId: shopIdStr,
     shopName: shopName ?? p.shopName ?? undefined,
     shopIsOpen,
-    offerPrice: p.offerPrice != null ? p.offerPrice : undefined,
-    offerEndsAt: p.offerEndsAt ? new Date(p.offerEndsAt).toISOString() : undefined,
+    ...describeOffer(p),
   };
 }
 
@@ -400,14 +484,7 @@ async function listAll(filters = {}) {
 
   const visibleShopIds = await getVisibleShopIds();
   const query = { isAvailable: true, shopId: { $in: visibleShopIds } };
-  if (hasOffer === true) {
-    query.offerPrice = { $gt: 0 };
-    query.$or = [
-      { offerEndsAt: { $exists: false } },
-      { offerEndsAt: null },
-      { offerEndsAt: { $gt: new Date() } },
-    ];
-  }
+  applyActiveOfferFilter(query, hasOffer === true);
   const allowedShopIds = visibleShopIds;
 
   if (rawShopId && mongoose.Types.ObjectId.isValid(String(rawShopId))) {
@@ -553,6 +630,7 @@ async function create(shopId, userId, body, userRoles = []) {
   }
   const resolvedSectionId = await resolveProductCategoryForTaxonomy(shopId, body);
   const productCategoryId = body.productCategoryId || resolvedSectionId || undefined;
+  const offerWrite = normalizeOfferWrite(body, body.price);
   const product = await Product.create({
     shopId,
     name: body.name,
@@ -565,8 +643,7 @@ async function create(shopId, userId, body, userRoles = []) {
     subcategoryId: body.subcategoryId || undefined,
     brandId: body.brandId || undefined,
     productCategoryId,
-    offerPrice: body.offerPrice != null ? Number(body.offerPrice) : undefined,
-    offerEndsAt: body.offerEndsAt ? new Date(body.offerEndsAt) : undefined,
+    ...offerWrite,
     stock: body.stock != null ? Number(body.stock) : 0,
     productionDate: body.productionDate ? new Date(body.productionDate) : undefined,
     expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined,
@@ -674,6 +751,10 @@ async function updateById(productId, shopId, userId, body, userRoles = []) {
     updateBody.stock = updateBody.quantity;
   }
   delete updateBody.quantity;
+  Object.assign(updateBody, normalizeOfferWrite(updateBody, existing.price));
+  if (updateBody.price != null && updateBody.offerPrice === undefined) {
+    assertOfferStillValid(Number(updateBody.price), existing.offerPrice);
+  }
   if (updateBody.images !== undefined || updateBody.image !== undefined) {
     const normalizedImages = normalizeProductImages(updateBody.images, updateBody.image);
     updateBody.images = normalizedImages;
@@ -806,14 +887,7 @@ async function listRandomFromMultipleShops(filters = {}) {
   for (const shopId of shuffledShopIds) {
     if (usedShopIds.length >= shopCountNum) break;
     const query = { isAvailable: true, shopId };
-    if (hasOffer === true) {
-      query.offerPrice = { $gt: 0 };
-      query.$or = [
-        { offerEndsAt: { $exists: false } },
-        { offerEndsAt: null },
-        { offerEndsAt: { $gt: new Date() } },
-      ];
-    }
+    applyActiveOfferFilter(query, hasOffer === true);
     await applyTaxonomyFilters(query, {
       productCategoryId: rawProductCategoryId,
       categoryId: rawCategoryId,
@@ -1058,6 +1132,9 @@ module.exports = {
   copyProductsFromShop,
   deleteProductImageIfLocal,
   getMissingImageMongoCondition,
+  getActiveOfferMongoCondition,
+  describeOffer,
+  applyActiveOfferFilter,
   listMissingImagesByShop,
   listRandomFromMultipleShops,
   mapProductForCatalog,

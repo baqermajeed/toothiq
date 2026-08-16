@@ -129,6 +129,7 @@ class _ProductsTabContent extends StatelessWidget {
     return Obx(() {
       final products = controller.filteredProducts;
       final popularProducts = controller.popularProducts;
+      final offerProducts = controller.offerProducts.toList(growable: false);
       if (products.isEmpty) {
         return Center(
           child: MyText(
@@ -154,6 +155,23 @@ class _ProductsTabContent extends StatelessWidget {
               onFilterTap: () {},
             ),
             SizedBox(height: 20.h),
+            if (offerProducts.isNotEmpty) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: MyText(
+                    'العروض',
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.productTitle,
+                  ),
+                ),
+              ),
+              SizedBox(height: 14.h),
+              ProductCardsStrip(products: offerProducts),
+              SizedBox(height: 24.h),
+            ],
             if (popularProducts.isNotEmpty) ...[
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),

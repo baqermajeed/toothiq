@@ -68,6 +68,18 @@ class ShopProductCard extends StatelessWidget {
                         height: 1.25,
                       ),
                       const Spacer(),
+                      if (product.isOnOffer) ...[
+                        Text(
+                          product.formattedOriginalPrice,
+                          style: TextStyle(
+                            fontFamily: 'Expo Arabic',
+                            fontSize: 11.sp,
+                            color: AppColors.textSecondary,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                      ],
                       MyText(
                         product.formattedPrice,
                         fontSize: 14.sp,
@@ -179,6 +191,23 @@ class _ImageHeader extends StatelessWidget {
                 ),
               ),
             ),
+            if (product.isOnOffer)
+              Positioned(
+                top: 8.h,
+                left: 8.w,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: MyText(
+                    'عرض',
+                    fontSize: 10.sp,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             if (product.brandName != null)
               Positioned(
                 bottom: 8.h,

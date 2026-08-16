@@ -72,7 +72,7 @@ class OrderService {
                   (item) => {
                     'productId': item.product.id,
                     'name': item.product.name,
-                    'price': item.product.price,
+                    'price': item.product.sellingPrice,
                     'quantity': item.quantity,
                   },
                 )

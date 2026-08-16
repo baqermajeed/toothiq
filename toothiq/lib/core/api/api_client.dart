@@ -422,6 +422,7 @@ class ApiClient {
     String? productCategoryId,
     String? categoryId,
     String? brandId,
+    bool hasOffer = false,
   }) async {
     final data = await _getSuccessData(
       ApiEndpoints.products,
@@ -432,6 +433,7 @@ class ApiClient {
           'productCategoryId': productCategoryId,
         if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
         if (brandId != null && brandId.isNotEmpty) 'brandId': brandId,
+        if (hasOffer) 'hasOffer': true,
       },
     );
     return _parseProductsPaginatedData(data, page: page, limit: limit);
@@ -522,6 +524,7 @@ class ApiClient {
     int limit = 20,
     String? productCategoryId,
     String? categoryId,
+    bool hasOffer = false,
   }) async {
     final data = await _getSuccessData(
       ApiEndpoints.shopProducts(shopId),
@@ -531,6 +534,7 @@ class ApiClient {
         if (productCategoryId != null && productCategoryId.isNotEmpty)
           'productCategoryId': productCategoryId,
         if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+        if (hasOffer) 'hasOffer': true,
       },
     );
     if (data is! Map<String, dynamic>) {

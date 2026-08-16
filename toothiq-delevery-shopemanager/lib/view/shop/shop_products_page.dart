@@ -65,14 +65,26 @@ class ShopProductsPage extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: Row(
                   children: [
-                    _MiniStat(label: 'الكل', value: '$total', color: AppColors.primary),
-                    SizedBox(width: 10.w),
-                    _MiniStat(label: 'متاح', value: '$available', color: AppColors.success),
+                    _MiniStat(
+                      label: 'الكل',
+                      value: '$total',
+                      color: AppColors.primary,
+                      selected: !controller.showOffersOnly.value,
+                      onTap: () => controller.showOffersOnly.value = false,
+                    ),
                     SizedBox(width: 10.w),
                     _MiniStat(
-                      label: 'مخفي',
-                      value: '${total - available}',
-                      color: AppColors.warning,
+                      label: 'متاح',
+                      value: '$available',
+                      color: AppColors.success,
+                    ),
+                    SizedBox(width: 10.w),
+                    _MiniStat(
+                      label: 'عروض',
+                      value: '${controller.offerCount}',
+                      color: AppColors.error,
+                      selected: controller.showOffersOnly.value,
+                      onTap: () => controller.showOffersOnly.toggle(),
                     ),
                   ],
                 ),
@@ -97,7 +109,9 @@ class ShopProductsPage extends StatelessWidget {
                         ),
                         SizedBox(height: 12.h),
                         MyText(
-                          controller.searchQuery.value.isEmpty
+                          controller.showOffersOnly.value
+                              ? 'لا توجد منتجات عليها عرض'
+                              : controller.searchQuery.value.isEmpty
                               ? 'لا توجد منتجات — أضف أول منتج'
                               : 'لا توجد نتائج للبحث',
                           fontSize: 14.sp,
@@ -158,33 +172,40 @@ class _MiniStat extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.selected = false,
+    this.onTap,
   });
 
   final String label;
   final String value;
   final Color color;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            MyText(value, fontSize: 18.sp, color: color),
-            SizedBox(height: 2.h),
-            MyText(
-              label,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-              color: color.withValues(alpha: 0.8),
-            ),
-          ],
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10.h),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: selected ? 0.2 : 0.1),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: color.withValues(alpha: selected ? 0.5 : 0.2)),
+          ),
+          child: Column(
+            children: [
+              MyText(value, fontSize: 18.sp, color: color),
+              SizedBox(height: 2.h),
+              MyText(
+                label,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w600,
+                color: color.withValues(alpha: 0.8),
+              ),
+            ],
+          ),
         ),
       ),
     );
