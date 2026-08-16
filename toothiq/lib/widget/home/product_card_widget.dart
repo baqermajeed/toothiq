@@ -8,6 +8,7 @@ import '../../service_layer/services/favorites_service.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/app_image.dart';
 import '../../widget/cart/cart_icon.dart';
+import '../../widget/home/offer_glass_badge.dart';
 import '../../view/product/product_details_page.dart';
 
 /// كارد المنتج — مطابق لتصميم Frame_427321508
@@ -159,22 +160,7 @@ class ProductCardWidget extends StatelessWidget {
               right: 12.w,
               top: 10.w,
               child: product.isOnOffer
-                  ? Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.favoriteRed,
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Text(
-                        product.offerBadgeLabel,
-                        style: TextStyle(
-                          fontFamily: 'Expo Arabic',
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
+                  ? OfferGlassBadge(label: product.offerBadgeLabel)
                   : const SizedBox.shrink(),
             ),
             Positioned(

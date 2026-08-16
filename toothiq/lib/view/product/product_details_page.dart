@@ -9,6 +9,7 @@ import '../../utils/app_colors.dart';
 import '../../widget/app_back_button.dart';
 import '../../widget/app_image.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/home/offer_glass_badge.dart';
 import '../../widget/my_text.dart';
 
 class ProductDetailsPage extends StatelessWidget {
@@ -522,22 +523,7 @@ class _PriceQuantityRow extends StatelessWidget {
             runSpacing: 4.h,
             children: [
               if (controller.product.isOnOffer) ...[
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.favoriteRed,
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    controller.product.offerBadgeLabel,
-                    style: TextStyle(
-                      fontFamily: 'Expo Arabic',
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                OfferGlassBadge(label: controller.product.offerBadgeLabel),
                 Text(
                   controller.product.formattedOriginalPrice,
                   style: TextStyle(
