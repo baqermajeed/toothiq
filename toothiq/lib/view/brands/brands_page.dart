@@ -44,7 +44,7 @@ class BrandsPage extends StatelessWidget {
               16.w,
               topInset + 12.h,
               16.w,
-              AppBottomNavMetrics.floatingBarReservedHeight.h,
+              16.h + AppBottomNavMetrics.systemBottomInset(context),
             ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,

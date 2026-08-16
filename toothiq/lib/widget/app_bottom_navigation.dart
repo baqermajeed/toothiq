@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -16,8 +17,20 @@ abstract final class AppBottomNavMetrics {
   static double horizontalMargin() => 16.5.w;
   static double bottomMargin() => 16.h;
 
-  /// ارتفاع محجوز فوق الشريط العائم (هامش + شريط + فراغ)
-  static const double floatingBarReservedHeight = 92;
+  /// أزرار النظام / الـ gesture — يختلف بين الأجهزة لذا نأخذ الأكبر.
+  static double systemBottomInset(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    return math.max(mq.padding.bottom, mq.viewPadding.bottom);
+  }
+
+  static double barBottomOffset(BuildContext context) {
+    return bottomMargin() + systemBottomInset(context);
+  }
+
+  /// ارتفاع محجوز فوق الشريط العائم + ناف بار النظام حتى لا تُغطى آخر عناصر القائمة.
+  static double contentBottomPadding(BuildContext context) {
+    return height() + bottomMargin() + 12.h + systemBottomInset(context);
+  }
 }
 
 /// شريط التنقل السفلي العائم بزجاج ضبابي

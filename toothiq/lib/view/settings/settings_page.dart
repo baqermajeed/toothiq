@@ -36,7 +36,7 @@ class SettingsPage extends StatelessWidget {
             16.w,
             topInset + 8.h,
             16.w,
-            AppBottomNavMetrics.floatingBarReservedHeight.h,
+            AppBottomNavMetrics.contentBottomPadding(context),
           ),
           children: [
             SettingsProfileCard(controller: settings),

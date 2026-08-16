@@ -55,7 +55,7 @@ class OrdersPage extends StatelessWidget {
                             16.w,
                             0,
                             16.w,
-                            AppBottomNavMetrics.floatingBarReservedHeight.h,
+                            AppBottomNavMetrics.contentBottomPadding(context),
                           ),
                           children: [
                             SizedBox(
@@ -82,7 +82,7 @@ class OrdersPage extends StatelessWidget {
                       16.w,
                       0,
                       16.w,
-                      AppBottomNavMetrics.floatingBarReservedHeight.h,
+                      AppBottomNavMetrics.contentBottomPadding(context),
                     ),
                     itemCount: count + (orders.loadingMore.value ? 1 : 0),
                     separatorBuilder: (context, index) =>

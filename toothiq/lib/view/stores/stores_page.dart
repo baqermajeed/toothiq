@@ -69,7 +69,7 @@ class StoresPage extends StatelessWidget {
                       16.w,
                       0,
                       16.w,
-                      AppBottomNavMetrics.floatingBarReservedHeight.h,
+                      AppBottomNavMetrics.contentBottomPadding(context),
                     ),
                     itemCount:
                         stores.filteredStores.length +

@@ -13,6 +13,7 @@ import '../../widget/my_text.dart';
 import '../../widget/orders/order_detail_app_bar.dart';
 import '../../widget/orders/order_info_card.dart';
 import '../../widget/orders/order_product_line_widget.dart';
+import '../../utils/delivery_eta.dart';
 
 /// مرحلة ٢ — تأكيد الطلب (مطابق لتصميم تفاصيل الطلب)
 class CheckoutConfirmPage extends GetView<CheckoutController> {
@@ -108,6 +109,11 @@ class CheckoutConfirmPage extends GetView<CheckoutController> {
                         label: 'عنوان التوصيل :',
                         value: controller.selectedAddress.value ?? '',
                       ),
+                      if (controller.estimatedDeliveryEta != null)
+                        OrderInfoField(
+                          label: DeliveryEta.fieldLabel,
+                          value: controller.estimatedDeliveryEta!,
+                        ),
                     ],
                   ),
                   SizedBox(height: 8.h),

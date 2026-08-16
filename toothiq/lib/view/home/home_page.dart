@@ -221,8 +221,7 @@ class _HomePageState extends State<HomePage> {
                         onTap: home.loadMoreProducts,
                       ),
                       SizedBox(
-                        height:
-                            AppBottomNavMetrics.floatingBarReservedHeight.h,
+                        height: AppBottomNavMetrics.contentBottomPadding(context),
                       ),
                     ],
                   ),

@@ -96,7 +96,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final main = Get.find<MainController>();
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final barBottom = AppBottomNavMetrics.barBottomOffset(context);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -120,7 +120,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
             Positioned(
               left: 0,
               right: 0,
-              bottom: AppBottomNavMetrics.bottomMargin() + bottomInset,
+              bottom: barBottom,
               child: const Center(child: AppBottomNavigation()),
             ),
           ],

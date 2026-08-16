@@ -12,6 +12,7 @@ import '../widget/dialogs/delivery_location_required_dialog.dart';
 import '../widget/dialogs/order_success_dialog.dart';
 import '../service_layer/services/platform_settings_service.dart';
 import '../widget/settings/address_form_bottom_sheet.dart';
+import '../utils/delivery_eta.dart';
 import 'cart_controller.dart';
 import 'saved_addresses_controller.dart';
 import 'session_controller.dart';
@@ -233,6 +234,21 @@ class CheckoutController extends GetxController {
   }
 
   String get paymentMethodLabel => 'عند الأستلام';
+
+  String? get estimatedDeliveryEta {
+    final addressLine = (selectedAddress.value ?? '').trim();
+    final match = _savedAddressesController.addresses.firstWhereOrNull(
+      (item) => item.formattedLine == addressLine,
+    );
+    final sessionUser = Get.isRegistered<SessionController>()
+        ? Get.find<SessionController>().user.value
+        : null;
+    return DeliveryEta.textFor(
+      governorate: match?.governorate,
+      governorateId: sessionUser?.governorateId,
+      addressLine: addressLine,
+    );
+  }
 
   Future<void> submitOrder() async {
     if (isSubmitting.value) return;

@@ -14,6 +14,7 @@ import '../../widget/orders/order_detail_bottom_bar.dart';
 import '../../widget/orders/order_info_card.dart';
 import '../../widget/my_text.dart';
 import '../../widget/orders/order_product_line_widget.dart';
+import '../../utils/delivery_eta.dart';
 
 class OrderDetailPage extends StatelessWidget {
   const OrderDetailPage({super.key});
@@ -88,10 +89,12 @@ class OrderDetailPage extends StatelessWidget {
                         label: 'رقم هاتف آخر :',
                         value: d.altPhone,
                       ),
-                      OrderInfoField(
-                        label: 'وقت التوصيل :',
-                        value: d.deliveryTime,
-                      ),
+                      if (d.hasEstimatedDelivery &&
+                          d.status != OrderStatus.delivered)
+                        OrderInfoField(
+                          label: DeliveryEta.fieldLabel,
+                          value: d.deliveryTime,
+                        ),
                       OrderInfoField(
                         label: 'عنوان التوصيل :',
                         value: d.deliveryAddress,

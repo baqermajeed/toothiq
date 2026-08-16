@@ -69,7 +69,7 @@ class CategoriesPage extends StatelessWidget {
                       16.w,
                       6.h,
                       16.w,
-                      AppBottomNavMetrics.floatingBarReservedHeight.h,
+                      AppBottomNavMetrics.contentBottomPadding(context),
                     ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,

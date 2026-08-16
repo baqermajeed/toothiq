@@ -2,6 +2,7 @@ import 'driver_review_model.dart';
 import 'order_line_item_model.dart';
 import 'order_model.dart';
 import '../core/utils/image_url.dart';
+import '../utils/delivery_eta.dart';
 
 class OrderDetailModel {
   final String id;
@@ -20,6 +21,7 @@ class OrderDetailModel {
   final String deliveryPriceLabel;
   final int totalPrice;
   final OrderStatus status;
+  final bool hasEstimatedDelivery;
   final double? deliveryLat;
   final double? deliveryLng;
   final String? driverId;
@@ -46,6 +48,7 @@ class OrderDetailModel {
     required this.deliveryPriceLabel,
     required this.totalPrice,
     this.status = OrderStatus.pending,
+    this.hasEstimatedDelivery = false,
     this.deliveryLat,
     this.deliveryLng,
     this.driverId,
@@ -103,6 +106,7 @@ class OrderDetailModel {
       deliveryPriceLabel: deliveryPriceLabel,
       totalPrice: totalPrice,
       status: status,
+      hasEstimatedDelivery: hasEstimatedDelivery,
       deliveryLat: deliveryLat,
       deliveryLng: deliveryLng,
       driverId: driverId,
@@ -132,6 +136,7 @@ class OrderDetailModel {
       deliveryPriceLabel: deliveryPriceLabel,
       totalPrice: totalPrice,
       status: status,
+      hasEstimatedDelivery: hasEstimatedDelivery,
       deliveryLat: deliveryLat,
       deliveryLng: deliveryLng,
       driverId: driverId,
@@ -210,6 +215,14 @@ class OrderDetailModel {
 
     final customer = json['customerId'];
     final customerMap = customer is Map<String, dynamic> ? customer : null;
+    final locationGovernorate = deliveryLocation is Map<String, dynamic>
+        ? deliveryLocation['governorate']?.toString()
+        : null;
+    final estimatedDelivery = DeliveryEta.textFor(
+      governorate: locationGovernorate,
+      governorateId: customerMap?['governorateId']?.toString(),
+      addressLine: deliveryAddress,
+    );
     final shopMap = OrderJsonParser.shopMap(json);
     final createdAt = DateTime.tryParse(json['createdAt']?.toString() ?? '');
 
@@ -257,7 +270,7 @@ class OrderDetailModel {
       customerName: customerMap?['name']?.toString() ?? 'غير متوفر',
       phone: customerMap?['phone']?.toString() ?? 'غير متوفر',
       altPhone: 'لا يوجد',
-      deliveryTime: 'حسب توفر المندوب',
+      deliveryTime: estimatedDelivery ?? 'حسب توفر المندوب',
       deliveryAddress: deliveryAddress.isNotEmpty ? deliveryAddress : 'غير متوفر',
       orderDate: createdAt != null
           ? '${createdAt.year} - ${createdAt.month} - ${createdAt.day}'
@@ -270,6 +283,7 @@ class OrderDetailModel {
       deliveryPriceLabel: deliveryFee == 0 ? 'مجاني' : formatAmount(deliveryFee),
       totalPrice: subtotal + deliveryFee,
       status: _mapStatus(json['status']?.toString()),
+      hasEstimatedDelivery: estimatedDelivery != null,
       deliveryLat: deliveryLat,
       deliveryLng: deliveryLng,
       driverId: driverId,
