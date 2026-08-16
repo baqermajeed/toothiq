@@ -32,29 +32,47 @@ async function list() {
 }
 
 function toAppBanner(b) {
+  const shopRef = b.shopId;
+  const shopId =
+    shopRef && typeof shopRef === 'object' && shopRef._id
+      ? String(shopRef._id)
+      : shopRef
+        ? String(shopRef)
+        : null;
+  const productRef = b.productId;
+  const productId =
+    productRef && typeof productRef === 'object' && productRef._id
+      ? String(productRef._id)
+      : productRef
+        ? String(productRef)
+        : null;
+
   const obj = {
     _id: b._id?.toString(),
     image: b.image,
     title: b.title || null,
-    actionType: b.actionType,
+    actionType: b.actionType || 'none',
+    shopId: b.actionType === 'shop' ? shopId : null,
+    productId: b.actionType === 'product' ? productId : null,
   };
-  if (b.actionType === 'shop' && b.shopId) {
-    obj.shop = b.shopId;
+  if (b.actionType === 'shop' && shopRef) {
+    obj.shop = typeof shopRef === 'object' ? shopRef : { _id: shopId };
   }
-  if (b.actionType === 'product' && b.productId) {
-    const p = b.productId;
-    const shop = p.shopId;
-    obj.product = {
-      _id: p._id?.toString(),
-      id: p._id?.toString(),
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      image: p.image,
-      isAvailable: p.isAvailable,
-      shopId: shop?._id?.toString(),
-      shopName: shop?.name ?? null,
-    };
+  if (b.actionType === 'product' && productRef) {
+    if (typeof productRef === 'object') {
+      const shop = productRef.shopId;
+      obj.product = {
+        _id: productId,
+        id: productId,
+        name: productRef.name,
+        description: productRef.description,
+        price: productRef.price,
+        image: productRef.image,
+        isAvailable: productRef.isAvailable,
+        shopId: shop?._id?.toString() || shop?.toString?.() || null,
+        shopName: shop?.name ?? null,
+      };
+    }
   }
   if (b.actionType === 'external_url' && b.externalUrl) {
     obj.externalUrl = b.externalUrl;
@@ -77,10 +95,10 @@ async function create(body) {
   const banner = await Banner.create({
     image: body.image,
     title: body.title,
-    actionType: body.actionType,
-    shopId: body.shopId,
-    productId: body.productId,
-    externalUrl: body.externalUrl,
+    actionType: body.actionType || 'none',
+    shopId: body.actionType === 'shop' ? body.shopId : null,
+    productId: body.actionType === 'product' ? body.productId : null,
+    externalUrl: body.actionType === 'external_url' ? body.externalUrl : null,
     order: body.order ?? 0,
     isActive: body.isActive !== false,
     polygon: body.polygon,
@@ -98,9 +116,30 @@ async function updateById(id, body) {
   if (body.image !== undefined) existing.image = body.image;
   if (body.title !== undefined) existing.title = body.title;
   if (body.actionType !== undefined) existing.actionType = body.actionType;
-  if (body.shopId !== undefined) existing.shopId = body.shopId;
-  if (body.productId !== undefined) existing.productId = body.productId;
-  if (body.externalUrl !== undefined) existing.externalUrl = body.externalUrl;
+  const nextType = existing.actionType;
+  if (nextType === 'shop') {
+    if (body.shopId !== undefined) existing.shopId = body.shopId || undefined;
+    if (body.actionType !== undefined) {
+      existing.productId = undefined;
+      existing.externalUrl = undefined;
+    }
+  } else if (nextType === 'product') {
+    if (body.productId !== undefined) existing.productId = body.productId || undefined;
+    if (body.actionType !== undefined) {
+      existing.shopId = undefined;
+      existing.externalUrl = undefined;
+    }
+  } else if (nextType === 'external_url') {
+    if (body.externalUrl !== undefined) existing.externalUrl = body.externalUrl;
+    if (body.actionType !== undefined) {
+      existing.shopId = undefined;
+      existing.productId = undefined;
+    }
+  } else if (body.actionType !== undefined) {
+    existing.shopId = undefined;
+    existing.productId = undefined;
+    existing.externalUrl = undefined;
+  }
   if (body.order !== undefined) existing.order = body.order;
   if (body.isActive !== undefined) existing.isActive = body.isActive;
   if (body.polygon !== undefined) existing.polygon = body.polygon;
@@ -120,15 +159,16 @@ async function deleteById(id) {
 
 function validateActionPayload(body) {
   const { actionType, shopId, productId, externalUrl } = body;
+  if (!actionType || actionType === 'none') return;
   if (actionType === 'shop') {
-    if (!shopId) throw badRequest('يجب اختيار محل عند actionType=shop');
+    if (!shopId) throw badRequest('يجب اختيار محل عند الربط بمتجر');
   }
   if (actionType === 'product') {
-    if (!productId) throw badRequest('يجب اختيار منتج عند actionType=product');
+    if (!productId) throw badRequest('يجب اختيار منتج عند الربط بمنتج');
   }
   if (actionType === 'external_url') {
     if (!externalUrl || typeof externalUrl !== 'string' || externalUrl.trim() === '') {
-      throw badRequest('يجب إدخال رابط خارجي عند actionType=external_url');
+      throw badRequest('يجب إدخال رابط خارجي');
     }
   }
 }

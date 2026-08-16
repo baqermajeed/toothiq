@@ -17,8 +17,9 @@ const bannerSchema = new mongoose.Schema(
     title: { type: String, trim: true },
     actionType: {
       type: String,
-      enum: ['shop', 'product', 'external_url'],
+      enum: ['none', 'shop', 'product', 'external_url'],
       required: true,
+      default: 'none',
     },
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },

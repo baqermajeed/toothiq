@@ -4,7 +4,12 @@ import 'package:get/get.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../controller/home_controller.dart';
+import '../../model/banner_model.dart';
+import '../../model/product_model.dart';
+import '../../model/store_model.dart';
 import '../../utils/app_colors.dart';
+import '../../view/product/product_details_page.dart';
+import '../../view/stores/store_detail_page.dart';
 import '../../widget/app_image.dart';
 
 class HomeBannerCarousel extends StatelessWidget {
@@ -27,16 +32,20 @@ class HomeBannerCarousel extends StatelessWidget {
               itemCount: banners.length,
               onPageChanged: home.onBannerChanged,
               itemBuilder: (context, index) {
+                final banner = banners[index];
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16.r),
-                    child: AppImage(
-                      source: banners[index].imageUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorIcon: Icons.image_outlined,
+                  child: GestureDetector(
+                    onTap: () => _openBanner(banner),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16.r),
+                      child: AppImage(
+                        source: banner.imageUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorIcon: Icons.image_outlined,
+                      ),
                     ),
                   ),
                 );
@@ -59,5 +68,37 @@ class HomeBannerCarousel extends StatelessWidget {
         ],
       );
     });
+  }
+
+  void _openBanner(BannerModel banner) {
+    switch (banner.actionType) {
+      case BannerActionType.shop:
+        final shop = banner.shop ??
+            StoreModel(
+              id: banner.shopId ?? '',
+              name: '',
+              description: '',
+            );
+        if (shop.id.isEmpty) return;
+        StoreDetailPage.open(shop);
+        return;
+      case BannerActionType.product:
+        final product = banner.product ??
+            ProductModel(
+              id: banner.productId ?? '',
+              name: '',
+              storeName: '',
+              description: '',
+              price: 0,
+              imageAsset: 'assets/images/products/product_1.png',
+              shopId: banner.shopId,
+            );
+        if (product.id.isEmpty) return;
+        ProductDetailsPage.open(product);
+        return;
+      case BannerActionType.externalUrl:
+      case BannerActionType.none:
+        return;
+    }
   }
 }

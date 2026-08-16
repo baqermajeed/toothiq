@@ -15,7 +15,7 @@ const polygonSchema = Joi.object({
 const createBannerSchema = Joi.object({
   image: Joi.string().trim().required(),
   title: Joi.string().trim().allow('').optional(),
-  actionType: Joi.string().valid('shop', 'product', 'external_url').required(),
+  actionType: Joi.string().valid('none', 'shop', 'product', 'external_url').default('none'),
   shopId: Joi.string().allow(null, '').optional(),
   productId: Joi.string().allow(null, '').optional(),
   externalUrl: Joi.string().trim().allow(null, '').optional(),
@@ -27,7 +27,7 @@ const createBannerSchema = Joi.object({
 const updateBannerSchema = Joi.object({
   image: Joi.string().trim().optional(),
   title: Joi.string().trim().allow('').optional(),
-  actionType: Joi.string().valid('shop', 'product', 'external_url').optional(),
+  actionType: Joi.string().valid('none', 'shop', 'product', 'external_url').optional(),
   shopId: Joi.string().allow(null, '').optional(),
   productId: Joi.string().allow(null, '').optional(),
   externalUrl: Joi.string().trim().allow(null, '').optional(),
