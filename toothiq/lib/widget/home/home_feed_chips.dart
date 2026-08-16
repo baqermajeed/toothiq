@@ -21,6 +21,7 @@ class HomeFeedChips extends StatelessWidget {
       height: 42.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         itemCount: HomeFeedTab.values.length,
         separatorBuilder: (_, _) => SizedBox(width: 8.w),
@@ -29,12 +30,16 @@ class HomeFeedChips extends StatelessWidget {
           final isSelected = tab == selected;
           return GestureDetector(
             onTap: () => onSelected(tab),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+            child: Container(
+              padding: EdgeInsetsDirectional.only(
+                start: 16.w,
+                end: 14.w,
+                top: 5.h,
+                bottom: 5.h,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(22.r),
+                borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(
                   color: isSelected ? AppColors.primary : AppColors.cardBorder,
                   width: isSelected ? 1.6 : 1,
@@ -42,20 +47,30 @@ class HomeFeedChips extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl,
                 children: [
-                  if (tab == HomeFeedTab.offers) ...[
-                    Icon(
-                      Icons.percent_rounded,
-                      size: 14.sp,
-                      color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                    ),
-                    SizedBox(width: 4.w),
-                  ],
                   MyText(
                     tab.label,
                     fontSize: 13.sp,
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
+                  ),
+                  SizedBox(width: 6.w),
+                  Image.asset(
+                    tab.iconAsset,
+                    width: tab == HomeFeedTab.all ? 20.w : 24.w,
+                    height: tab == HomeFeedTab.all ? 20.w : 24.w,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.image_outlined,
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
+                      );
+                    },
                   ),
                 ],
               ),

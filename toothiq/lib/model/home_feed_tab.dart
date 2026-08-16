@@ -53,4 +53,21 @@ extension HomeFeedTabX on HomeFeedTab {
   }
 
   bool get showsShops => this == HomeFeedTab.topRated;
+
+  String get iconAsset {
+    switch (this) {
+      case HomeFeedTab.all:
+        return 'assets/images/iconbaner/all.png';
+      case HomeFeedTab.offers:
+        return 'assets/images/iconbaner/discount.png';
+      case HomeFeedTab.bestSellers:
+        return 'assets/images/iconbaner/mostpayed.png';
+      case HomeFeedTab.forYou:
+        return 'assets/images/iconbaner/foryou.png';
+      case HomeFeedTab.newest:
+        return 'assets/images/iconbaner/new.png';
+      case HomeFeedTab.topRated:
+        return 'assets/images/iconbaner/bigestreco.png';
+    }
+  }
 }

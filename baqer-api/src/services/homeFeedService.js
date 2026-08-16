@@ -119,9 +119,53 @@ async function countNewestAuto(excludeIds) {
 async function rankedSoldIds(visibleShopIds, excludeSet) {
   const rows = await Order.aggregate([
     { $match: { status: ORDER_STATUS.DELIVERED } },
-    { $unwind: '$items' },
-    { $match: { 'items.productId': { $type: 'objectId' } } },
-    { $group: { _id: '$items.productId', sold: { $sum: '$items.quantity' } } },
+    {
+      $addFields: {
+        lineItems: {
+          $concatArrays: [
+            { $ifNull: ['$items', []] },
+            {
+              $reduce: {
+                input: { $ifNull: ['$shopPortions', []] },
+                initialValue: [],
+                in: { $concatArrays: ['$$value', { $ifNull: ['$$this.items', []] }] },
+              },
+            },
+          ],
+        },
+      },
+    },
+    { $unwind: '$lineItems' },
+    {
+      $addFields: {
+        productId: {
+          $switch: {
+            branches: [
+              {
+                case: { $eq: [{ $type: '$lineItems.productId' }, 'objectId'] },
+                then: '$lineItems.productId',
+              },
+              {
+                case: { $eq: [{ $type: '$lineItems.productId' }, 'string'] },
+                then: {
+                  $convert: {
+                    input: '$lineItems.productId',
+                    to: 'objectId',
+                    onError: null,
+                    onNull: null,
+                  },
+                },
+              },
+            ],
+            default: null,
+          },
+        },
+        quantity: { $ifNull: ['$lineItems.quantity', 1] },
+      },
+    },
+    { $match: { productId: { $ne: null } } },
+    { $group: { _id: '$productId', sold: { $sum: '$quantity' } } },
+    { $match: { sold: { $gt: 0 } } },
     { $sort: { sold: -1 } },
     { $limit: 500 },
   ]);
@@ -193,16 +237,7 @@ async function listBestSellers(opts = {}) {
   const pins = await loadActivePins('best_sellers');
   const pinItems = await mapPinnedProducts(pins, visibleShopIds);
   const exclude = idSet(pinItems.map((item) => toId(item._id || item.id)));
-  let ranked = await rankedSoldIds(visibleShopIds, exclude);
-  if (!ranked.length) {
-    return mergePaged({
-      pinItems,
-      page,
-      limit,
-      countAuto: () => countNewestAuto([...exclude]),
-      fetchAuto: (skip, take) => listNewestAuto([...exclude], skip, take),
-    });
-  }
+  const ranked = await rankedSoldIds(visibleShopIds, exclude);
   return mergePaged({
     pinItems,
     page,
@@ -210,6 +245,19 @@ async function listBestSellers(opts = {}) {
     countAuto: async () => ranked.length,
     fetchAuto: (skip, take) => productsByOrderedIds(ranked, skip, take),
   });
+}
+
+function collectIdsFromOrder(order, orderedProductIds, shopIds) {
+  if (order.shopId) shopIds.add(String(order.shopId));
+  for (const item of order.items || []) {
+    if (item.productId) orderedProductIds.push(String(item.productId));
+  }
+  for (const portion of order.shopPortions || []) {
+    if (portion.shopId) shopIds.add(String(portion.shopId));
+    for (const item of portion.items || []) {
+      if (item.productId) orderedProductIds.push(String(item.productId));
+    }
+  }
 }
 
 async function personalizedProductIds(userId, visibleShopIds, excludeSet) {
@@ -220,16 +268,13 @@ async function personalizedProductIds(userId, visibleShopIds, excludeSet) {
   })
     .sort({ createdAt: -1 })
     .limit(40)
-    .select('items.productId shopId')
+    .select('items.productId shopId shopPortions.shopId shopPortions.items.productId')
     .lean();
 
   const orderedProductIds = [];
   const shopIds = new Set();
   for (const order of orders) {
-    if (order.shopId) shopIds.add(String(order.shopId));
-    for (const item of order.items || []) {
-      if (item.productId) orderedProductIds.push(String(item.productId));
-    }
+    collectIdsFromOrder(order, orderedProductIds, shopIds);
   }
   if (!orderedProductIds.length && !shopIds.size) return [];
 
@@ -292,9 +337,6 @@ async function listForYou(opts = {}) {
   const pinItems = await mapPinnedProducts(pins, visibleShopIds);
   const exclude = idSet(pinItems.map((item) => toId(item._id || item.id)));
   let ranked = await personalizedProductIds(opts.userId, visibleShopIds, exclude);
-  if (!ranked.length) {
-    ranked = await rankedSoldIds(visibleShopIds, exclude);
-  }
   if (!ranked.length) {
     return mergePaged({
       pinItems,

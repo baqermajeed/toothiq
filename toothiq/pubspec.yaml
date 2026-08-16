@@ -59,6 +59,13 @@ flutter:
     - assets/images/stores/
     - assets/images/cart/
     - assets/images/icon/
+    - assets/images/iconbaner/
+    - assets/images/iconbaner/all.png
+    - assets/images/iconbaner/discount.png
+    - assets/images/iconbaner/foryou.png
+    - assets/images/iconbaner/new.png
+    - assets/images/iconbaner/bigestreco.png
+    - assets/images/iconbaner/mostpayed.png
 
   fonts:
     - family: Expo Arabic
