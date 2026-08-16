@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const SECTIONS = ['best_sellers', 'for_you', 'new', 'top_rated'];
+const SECTIONS = ['all', 'offers', 'best_sellers', 'for_you', 'new', 'top_rated'];
 const ITEM_TYPES = ['product', 'shop'];
 
 const homeSectionPinSchema = new mongoose.Schema(

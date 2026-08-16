@@ -273,6 +273,18 @@ const spec = {
         responses: { 200: { description: 'OK' } },
       },
     },
+    '/api/products/all': {
+      get: {
+        summary: 'Home feed: all products',
+        description: 'Pinned products first, then the daily stable shuffle.',
+        tags: ['Products'],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
     '/api/products/offers': {
       get: {
         summary: 'Home feed: products on offer',
@@ -888,7 +900,7 @@ const spec = {
             name: 'section',
             in: 'query',
             required: true,
-            schema: { type: 'string', enum: ['best_sellers', 'for_you', 'new', 'top_rated'] },
+            schema: { type: 'string', enum: ['all', 'offers', 'best_sellers', 'for_you', 'new', 'top_rated'] },
           },
         ],
         responses: { 200: { description: 'OK' } },

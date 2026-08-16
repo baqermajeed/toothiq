@@ -4,6 +4,15 @@ function parsePaging(query = {}) {
   return { page: query.page, limit: query.limit };
 }
 
+async function all(req, res, next) {
+  try {
+    const data = await homeFeedService.listHomeAll(parsePaging(req.query));
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function offers(req, res, next) {
   try {
     const data = await homeFeedService.listOffers(parsePaging(req.query));
@@ -53,6 +62,7 @@ async function topRated(req, res, next) {
 }
 
 module.exports = {
+  all,
   offers,
   bestSellers,
   forYou,

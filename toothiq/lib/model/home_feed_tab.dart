@@ -44,7 +44,7 @@ extension HomeFeedTabX on HomeFeedTab {
       case HomeFeedTab.bestSellers:
         return 'لا توجد منتجات الأكثر مبيعاً بعد';
       case HomeFeedTab.forYou:
-        return 'لا توجد توصيات حالياً';
+        return 'لا توجد مشتريات حالياً';
       case HomeFeedTab.newest:
         return 'لا توجد منتجات جديدة';
       case HomeFeedTab.topRated:

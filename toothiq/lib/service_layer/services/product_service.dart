@@ -47,6 +47,13 @@ class ProductService {
     return _api.searchProducts(query, page: page, limit: limit);
   }
 
+  Future<PaginatedResult<ProductModel>> fetchHomeAll({
+    int page = 1,
+    int limit = 12,
+  }) {
+    return _api.getProductFeed(ApiEndpoints.productAll, page: page, limit: limit);
+  }
+
   Future<PaginatedResult<ProductModel>> fetchOffers({
     int page = 1,
     int limit = 12,

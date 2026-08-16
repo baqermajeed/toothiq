@@ -19,6 +19,7 @@ class ApiEndpoints {
   static const String brands = '/api/brands';
   static const String productSearch = '/api/products/search';
   static const String randomProducts = '/api/products/random-multi-shops';
+  static const String productAll = '/api/products/all';
   static const String productOffers = '/api/products/offers';
   static const String productBestSellers = '/api/products/best-sellers';
   static const String productForYou = '/api/products/for-you';

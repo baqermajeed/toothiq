@@ -4,7 +4,7 @@ const { ORDER_STATUS } = require('../config/constants');
 const { badRequest, conflict, notFound } = require('../utils/errors');
 const productService = require('./productService');
 
-const PRODUCT_SECTIONS = new Set(['best_sellers', 'for_you', 'new']);
+const PRODUCT_SECTIONS = new Set(['all', 'offers', 'best_sellers', 'for_you', 'new']);
 const SHOP_SECTIONS = new Set(['top_rated']);
 const PRODUCT_POPULATE = [
   { path: 'shopId', select: 'name isOpen' },
@@ -198,23 +198,45 @@ async function productsByOrderedIds(ids, skip, limit) {
     .map((doc) => productService.mapProductForCatalog(doc));
 }
 
+async function listHomeAll(opts = {}) {
+  const { page, limit } = parsePage(opts);
+  const visibleShopIds = await productService.getVisibleShopIds();
+  const pins = await loadActivePins('all');
+  const pinItems = await mapPinnedProducts(pins, visibleShopIds);
+  const exclude = pinItems.map((item) => toId(item._id || item.id));
+  return mergePaged({
+    pinItems,
+    page,
+    limit,
+    countAuto: () => productService.countShuffledCatalog({ excludeIds: exclude }),
+    fetchAuto: (skip, take) =>
+      productService.listShuffledCatalog({ skip, limit: take, excludeIds: exclude }),
+  });
+}
+
 async function listOffers(opts = {}) {
-  const { page, limit, skip } = parsePage(opts);
-  const { query } = await visibleProductQuery([]);
+  const { page, limit } = parsePage(opts);
+  const visibleShopIds = await productService.getVisibleShopIds();
+  const pins = await loadActivePins('offers');
+  const pinItems = await mapPinnedProducts(pins, visibleShopIds);
+  const exclude = pinItems.map((item) => toId(item._id || item.id));
+  const { query } = await visibleProductQuery(exclude);
   productService.applyActiveOfferFilter(query, true);
-  const [docs, total] = await Promise.all([
-    Product.find(query)
-      .populate(PRODUCT_POPULATE)
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Product.countDocuments(query),
-  ]);
-  return {
-    items: docs.map((doc) => productService.mapProductForCatalog(doc)),
-    pagination: { page, limit, total },
-  };
+  return mergePaged({
+    pinItems,
+    page,
+    limit,
+    countAuto: () => Product.countDocuments(query),
+    fetchAuto: async (skip, take) => {
+      const docs = await Product.find(query)
+        .populate(PRODUCT_POPULATE)
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(take)
+        .lean();
+      return docs.map((doc) => productService.mapProductForCatalog(doc));
+    },
+  });
 }
 
 async function listNew(opts = {}) {
@@ -247,87 +269,48 @@ async function listBestSellers(opts = {}) {
   });
 }
 
-function collectIdsFromOrder(order, orderedProductIds, shopIds) {
-  if (order.shopId) shopIds.add(String(order.shopId));
-  for (const item of order.items || []) {
-    if (item.productId) orderedProductIds.push(String(item.productId));
-  }
-  for (const portion of order.shopPortions || []) {
-    if (portion.shopId) shopIds.add(String(portion.shopId));
-    for (const item of portion.items || []) {
-      if (item.productId) orderedProductIds.push(String(item.productId));
-    }
-  }
-}
-
-async function personalizedProductIds(userId, visibleShopIds, excludeSet) {
+async function purchasedProductIds(userId, visibleShopIds, excludeSet) {
   if (!userId) return [];
   const orders = await Order.find({
     customerId: userId,
     status: ORDER_STATUS.DELIVERED,
   })
     .sort({ createdAt: -1 })
-    .limit(40)
-    .select('items.productId shopId shopPortions.shopId shopPortions.items.productId')
+    .select('items.productId shopPortions.items.productId')
     .lean();
 
-  const orderedProductIds = [];
-  const shopIds = new Set();
+  const seen = new Set();
+  const ids = [];
   for (const order of orders) {
-    collectIdsFromOrder(order, orderedProductIds, shopIds);
+    const fromOrder = [];
+    for (const item of order.items || []) {
+      if (item.productId) fromOrder.push(String(item.productId));
+    }
+    for (const portion of order.shopPortions || []) {
+      for (const item of portion.items || []) {
+        if (item.productId) fromOrder.push(String(item.productId));
+      }
+    }
+    for (const id of fromOrder) {
+      if (!id || seen.has(id) || excludeSet.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
   }
-  if (!orderedProductIds.length && !shopIds.size) return [];
+  if (!ids.length) return [];
 
-  const bought = await Product.find({
-    _id: {
-      $in: orderedProductIds
-        .filter((id) => mongoose.Types.ObjectId.isValid(id))
-        .map((id) => new mongoose.Types.ObjectId(id)),
-    },
-  })
-    .select('categoryId brandId shopId')
-    .lean();
-
-  const categoryIds = [...new Set(bought.map((p) => p.categoryId).filter(Boolean).map(String))];
-  const brandIds = [...new Set(bought.map((p) => p.brandId).filter(Boolean).map(String))];
-  bought.forEach((p) => {
-    if (p.shopId) shopIds.add(String(p.shopId));
-  });
-
-  const or = [];
-  if (shopIds.size) {
-    or.push({
-      shopId: { $in: [...shopIds].map((id) => new mongoose.Types.ObjectId(id)) },
-    });
-  }
-  if (categoryIds.length) {
-    or.push({
-      categoryId: { $in: categoryIds.map((id) => new mongoose.Types.ObjectId(id)) },
-    });
-  }
-  if (brandIds.length) {
-    or.push({
-      brandId: { $in: brandIds.map((id) => new mongoose.Types.ObjectId(id)) },
-    });
-  }
-  if (!or.length) return [];
-
-  const skipIds = [...excludeSet, ...orderedProductIds];
-  const query = {
+  const objectIds = ids
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  const available = await Product.find({
+    _id: { $in: objectIds },
     isAvailable: true,
     shopId: { $in: visibleShopIds },
-    $or: or,
-  };
-  if (skipIds.length) {
-    query._id = {
-      $nin: skipIds
-        .filter((id) => mongoose.Types.ObjectId.isValid(id))
-        .map((id) => new mongoose.Types.ObjectId(id)),
-    };
-  }
-
-  const docs = await Product.find(query).select('_id').sort({ createdAt: -1 }).limit(400).lean();
-  return docs.map((doc) => String(doc._id));
+  })
+    .select('_id')
+    .lean();
+  const availableSet = new Set(available.map((doc) => String(doc._id)));
+  return ids.filter((id) => availableSet.has(id));
 }
 
 async function listForYou(opts = {}) {
@@ -336,16 +319,7 @@ async function listForYou(opts = {}) {
   const pins = await loadActivePins('for_you');
   const pinItems = await mapPinnedProducts(pins, visibleShopIds);
   const exclude = idSet(pinItems.map((item) => toId(item._id || item.id)));
-  let ranked = await personalizedProductIds(opts.userId, visibleShopIds, exclude);
-  if (!ranked.length) {
-    return mergePaged({
-      pinItems,
-      page,
-      limit,
-      countAuto: () => countNewestAuto([...exclude]),
-      fetchAuto: (skip, take) => listNewestAuto([...exclude], skip, take),
-    });
-  }
+  const ranked = await purchasedProductIds(opts.userId, visibleShopIds, exclude);
   return mergePaged({
     pinItems,
     page,
@@ -462,6 +436,7 @@ module.exports = {
   PRODUCT_SECTIONS,
   SHOP_SECTIONS,
   listOffers,
+  listHomeAll,
   listNew,
   listBestSellers,
   listForYou,

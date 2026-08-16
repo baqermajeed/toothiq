@@ -3,6 +3,8 @@ import { ApiError, assetUrl } from '../lib/api'
 import { adminApi } from '../api/admin'
 
 const SECTIONS = [
+  { id: 'all', label: 'الكل', itemType: 'product' as const },
+  { id: 'offers', label: 'العروض', itemType: 'product' as const },
   { id: 'best_sellers', label: 'الأكثر مبيعاً', itemType: 'product' as const },
   { id: 'for_you', label: 'خصيصاً لك', itemType: 'product' as const },
   { id: 'new', label: 'الجديد', itemType: 'product' as const },

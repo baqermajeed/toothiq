@@ -5,6 +5,7 @@ const { optionalAuthenticate } = require('../middlewares/auth');
 
 const router = express.Router();
 
+router.get('/all', optionalAuthenticate, homeFeedController.all);
 router.get('/offers', optionalAuthenticate, homeFeedController.offers);
 router.get('/best-sellers', optionalAuthenticate, homeFeedController.bestSellers);
 router.get('/for-you', optionalAuthenticate, homeFeedController.forYou);

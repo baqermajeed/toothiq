@@ -268,7 +268,7 @@ class HomeController extends GetxController {
   }) {
     switch (tab) {
       case HomeFeedTab.all:
-        return _productService.fetchProductsPaginated(page: page, limit: _pageSize);
+        return _productService.fetchHomeAll(page: page, limit: _pageSize);
       case HomeFeedTab.offers:
         return _productService.fetchOffers(page: page, limit: _pageSize);
       case HomeFeedTab.bestSellers:

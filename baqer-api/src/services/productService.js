@@ -472,6 +472,82 @@ const PRODUCT_POPULATE = [
   { path: 'brandId', select: 'nameAr' },
 ];
 
+async function buildVisibleCatalogQuery({ excludeIds = [], hasOffer = false } = {}) {
+  const visibleShopIds = await getVisibleShopIds();
+  const query = { isAvailable: true, shopId: { $in: visibleShopIds } };
+  applyActiveOfferFilter(query, hasOffer === true);
+  const objectExclude = (excludeIds || [])
+    .filter((id) => id != null && mongoose.Types.ObjectId.isValid(String(id)))
+    .map((id) => new mongoose.Types.ObjectId(String(id)));
+  if (objectExclude.length) query._id = { $nin: objectExclude };
+  return { query, visibleShopIds };
+}
+
+async function listShuffledCatalog({ skip = 0, limit = 12, excludeIds = [], hasOffer = false } = {}) {
+  const { query } = await buildVisibleCatalogQuery({ excludeIds, hasOffer });
+  const skipNum = Math.max(0, Number(skip) || 0);
+  const limitNum = Math.max(1, Number(limit) || 12);
+  const dayKey = catalogDayKey();
+  const pipeline = [
+    { $match: query },
+    {
+      $addFields: {
+        _dailyShuffle: {
+          $toHashedIndexKey: {
+            $concat: [{ $toString: '$_id' }, '|', dayKey],
+          },
+        },
+      },
+    },
+    { $sort: { _dailyShuffle: 1, _id: 1 } },
+    { $skip: skipNum },
+    { $limit: limitNum },
+    {
+      $lookup: {
+        from: 'shops',
+        localField: 'shopId',
+        foreignField: '_id',
+        as: 'shopDoc',
+      },
+    },
+    {
+      $lookup: {
+        from: 'productcategories',
+        localField: 'productCategoryId',
+        foreignField: '_id',
+        as: 'categoryDoc',
+      },
+    },
+    {
+      $addFields: {
+        shopName: { $arrayElemAt: ['$shopDoc.name', 0] },
+        categoryName: { $arrayElemAt: ['$categoryDoc.nameAr', 0] },
+        shopIsOpen: {
+          $ifNull: [{ $arrayElemAt: ['$shopDoc.isOpen', 0] }, true],
+        },
+      },
+    },
+    {
+      $project: {
+        shopDoc: 0,
+        categoryDoc: 0,
+        _dailyShuffle: 0,
+      },
+    },
+  ];
+  const rawItems = await Product.aggregate(pipeline).option({ allowDiskUse: true });
+  return rawItems.map((p) => mapProductForCatalog({
+    ...p,
+    shopId: { _id: p.shopId, name: p.shopName, isOpen: p.shopIsOpen },
+    productCategoryId: p.productCategoryId ? { _id: p.productCategoryId, nameAr: p.categoryName } : undefined,
+  }));
+}
+
+async function countShuffledCatalog({ excludeIds = [], hasOffer = false } = {}) {
+  const { query } = await buildVisibleCatalogQuery({ excludeIds, hasOffer });
+  return Product.countDocuments(query);
+}
+
 /**
  * جلب منتجات من كل المحلات مع pagination (دون الاعتماد على shopId).
  * الترتيب ثابت طوال اليوم (توقيت بغداد) ويتغيّر كل 24 ساعة. صفحات التحميل متتابعة بدون تكرار.
@@ -1160,6 +1236,8 @@ module.exports = {
   listMissingImagesByShop,
   listRandomFromMultipleShops,
   mapProductForCatalog,
+  listShuffledCatalog,
+  countShuffledCatalog,
   expandAdminCategoryMatch,
   getVisibleShopIds,
 };
