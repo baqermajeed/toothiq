@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../core/api/api_exception.dart';
+import '../core/utils/image_url.dart';
 import '../model/product_model.dart';
 import '../model/store_model.dart';
 import '../bindings/checkout_binding.dart';
@@ -19,16 +21,16 @@ class ProductDetailsController extends GetxController {
   final ShopService _shopService = Get.find<ShopService>();
   final FavoritesService _favoritesService = Get.find<FavoritesService>();
 
-  late final Rx<ProductModel> currentProduct;
+  final currentProduct = Rxn<ProductModel>();
   final quantity = 1.obs;
   final selectedImageIndex = 0.obs;
   late final RxBool isFavorite;
   final isLoading = false.obs;
-  /// أول تحميل للتفاصيل — يمنع وميض صورة واحدة ثم ظهور باقي الصور.
   final isHydratingDetail = false.obs;
   final loadError = RxnString();
 
-  ProductModel get product => currentProduct.value;
+  ProductModel get product => currentProduct.value ?? _initialProduct;
+  bool get isReady => currentProduct.value != null;
 
   bool get showGalleryLoading =>
       isHydratingDetail.value && product.images.length <= 1;
@@ -36,19 +38,21 @@ class ProductDetailsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    currentProduct = _initialProduct.obs;
     isFavorite = _favoritesService.isFavorite(_initialProduct.id).obs;
     loadProductDetail();
   }
 
   Future<void> loadProductDetail() async {
-    final shopId = currentProduct.value.shopId?.trim() ?? '';
-    final productId = currentProduct.value.id.trim();
-    if (shopId.isEmpty || productId.isEmpty) return;
+    final source = currentProduct.value ?? _initialProduct;
+    final shopId = source.shopId?.trim() ?? '';
+    final productId = source.id.trim();
+    if (shopId.isEmpty || productId.isEmpty) {
+      currentProduct.value = _initialProduct;
+      return;
+    }
 
-    final shouldHoldGallery = currentProduct.value.images.length <= 1;
     isLoading.value = true;
-    if (shouldHoldGallery) {
+    if (currentProduct.value == null) {
       isHydratingDetail.value = true;
     }
     loadError.value = null;
@@ -56,13 +60,13 @@ class ProductDetailsController extends GetxController {
       final fresh = await _shopService.fetchShopProduct(
         shopId: shopId,
         productId: productId,
-        shopName: currentProduct.value.storeName,
+        shopName: source.storeName,
       );
-      currentProduct.value = _favoritesService
-          .applyFavoriteState([fresh])
-          .first;
-      isFavorite.value = currentProduct.value.isFavorite;
-      if (selectedImageIndex.value >= currentProduct.value.images.length) {
+      final ready = _favoritesService.applyFavoriteState([fresh]).first;
+      await _precacheProductImages(ready);
+      currentProduct.value = ready;
+      isFavorite.value = ready.isFavorite;
+      if (selectedImageIndex.value >= ready.images.length) {
         selectedImageIndex.value = 0;
       }
     } on ApiException catch (error) {
@@ -73,6 +77,35 @@ class ProductDetailsController extends GetxController {
       isLoading.value = false;
       isHydratingDetail.value = false;
     }
+  }
+
+  Future<void> _precacheProductImages(ProductModel item) async {
+    await WidgetsBinding.instance.endOfFrame;
+    final context = Get.overlayContext ?? Get.context;
+    if (context == null) return;
+
+    final sources = <String>{
+      item.imageAsset,
+      ...item.images.take(6),
+    };
+    await Future.wait(
+      sources.map(
+        (source) => _precacheSource(context, source).timeout(
+          const Duration(milliseconds: 1800),
+          onTimeout: () {},
+        ),
+      ),
+    );
+  }
+
+  Future<void> _precacheSource(BuildContext context, String raw) async {
+    final source = ImageUrl.resolve(raw);
+    try {
+      final ImageProvider provider = ImageUrl.isNetwork(source)
+          ? NetworkImage(source)
+          : AssetImage(source);
+      await precacheImage(provider, context);
+    } catch (_) {}
   }
 
   @override
@@ -93,11 +126,11 @@ class ProductDetailsController extends GetxController {
   }
 
   Future<void> toggleFavorite() async {
-    final isFavoriteNow = await _favoritesService.toggle(currentProduct.value);
+    final current = currentProduct.value;
+    if (current == null) return;
+    final isFavoriteNow = await _favoritesService.toggle(current);
     isFavorite.value = isFavoriteNow;
-    currentProduct.value = currentProduct.value.copyWith(
-      isFavorite: isFavoriteNow,
-    );
+    currentProduct.value = current.copyWith(isFavorite: isFavoriteNow);
   }
 
   void addToCart() {
@@ -120,7 +153,7 @@ class ProductDetailsController extends GetxController {
   }
 
   void openStorePage() {
-    final current = currentProduct.value;
+    final current = currentProduct.value ?? _initialProduct;
     final shopId = current.shopId?.trim() ?? '';
     if (shopId.isEmpty) {
       AppToast.show(

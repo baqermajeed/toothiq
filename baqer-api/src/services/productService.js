@@ -1,7 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const { Product, ProductCategory, Shop, Category, ProductSubcategory, ProductBrand } = require('../models');
+const { Product, ProductCategory, Shop, Category, ProductSubcategory, ProductBrand, Order } = require('../models');
+const { ORDER_STATUS } = require('../config/constants');
 const { badRequest } = require('../utils/errors');
 const { notFound, forbidden } = require('../utils/errors');
 
@@ -248,6 +249,137 @@ async function listByShop(shopId, opts = {}) {
     .sort(sort)
     .lean();
   return rawProducts.map((p) => mapProductWithCategory(p));
+}
+
+/**
+ * أعلى المنتجات مبيعاً داخل متجر معيّن حسب كمية القطع في الطلبات غير الملغاة.
+ * يشمل قيد الانتظار والتجهيز والتوصيل.
+ * @param {string} shopId
+ * @param {{ limit?: number }} opts
+ */
+async function listBestSellersByShop(shopId, opts = {}) {
+  if (!mongoose.Types.ObjectId.isValid(String(shopId))) return [];
+  const shopObjectId = new mongoose.Types.ObjectId(String(shopId));
+  const shopIdStr = String(shopObjectId);
+  const limit = Math.min(20, Math.max(1, Number(opts.limit) || 10));
+
+  const rows = await Order.aggregate([
+    {
+      $match: {
+        status: { $nin: [ORDER_STATUS.CANCELED, ORDER_STATUS.POSTPONED] },
+        $or: [
+          { shopId: shopObjectId },
+          { shopId: shopIdStr },
+          { 'shopPortions.shopId': shopObjectId },
+          { 'shopPortions.shopId': shopIdStr },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        lineItems: {
+          $concatArrays: [
+            {
+              $cond: [
+                {
+                  $eq: [
+                    { $toString: { $ifNull: ['$shopId', ''] } },
+                    shopIdStr,
+                  ],
+                },
+                { $ifNull: ['$items', []] },
+                [],
+              ],
+            },
+            {
+              $reduce: {
+                input: {
+                  $filter: {
+                    input: { $ifNull: ['$shopPortions', []] },
+                    as: 'portion',
+                    cond: {
+                      $eq: [{ $toString: '$$portion.shopId' }, shopIdStr],
+                    },
+                  },
+                },
+                initialValue: [],
+                in: {
+                  $concatArrays: ['$$value', { $ifNull: ['$$this.items', []] }],
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+    { $unwind: '$lineItems' },
+    {
+      $addFields: {
+        productId: {
+          $switch: {
+            branches: [
+              {
+                case: { $eq: [{ $type: '$lineItems.productId' }, 'objectId'] },
+                then: '$lineItems.productId',
+              },
+              {
+                case: { $eq: [{ $type: '$lineItems.productId' }, 'string'] },
+                then: {
+                  $convert: {
+                    input: '$lineItems.productId',
+                    to: 'objectId',
+                    onError: null,
+                    onNull: null,
+                  },
+                },
+              },
+              {
+                case: { $eq: [{ $type: '$lineItems.productId' }, 'object'] },
+                then: {
+                  $convert: {
+                    input: {
+                      $ifNull: [
+                        '$lineItems.productId._id',
+                        '$lineItems.productId',
+                      ],
+                    },
+                    to: 'objectId',
+                    onError: null,
+                    onNull: null,
+                  },
+                },
+              },
+            ],
+            default: null,
+          },
+        },
+        quantity: { $ifNull: ['$lineItems.quantity', 1] },
+      },
+    },
+    { $match: { productId: { $ne: null } } },
+    { $group: { _id: '$productId', sold: { $sum: '$quantity' } } },
+    { $match: { sold: { $gt: 0 } } },
+    { $sort: { sold: -1 } },
+    { $limit: 50 },
+  ]);
+
+  const orderedIds = rows.map((row) => row._id).filter(Boolean);
+  if (!orderedIds.length) return [];
+
+  const docs = await Product.find({
+    _id: { $in: orderedIds },
+    shopId: shopObjectId,
+    isAvailable: true,
+  })
+    .populate(PRODUCT_POPULATE)
+    .lean();
+
+  const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
+  return orderedIds
+    .map((id) => byId.get(String(id)))
+    .filter(Boolean)
+    .slice(0, limit)
+    .map((doc) => mapProductWithCategory(doc));
 }
 
 async function getVisibleShopIds() {
@@ -1217,6 +1349,7 @@ async function copyProductsFromShop(targetShopId, sourceShopId, productIds, user
 
 module.exports = {
   listByShop,
+  listBestSellersByShop,
   listAll,
   listCatalogProducts,
   create,

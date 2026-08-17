@@ -163,6 +163,24 @@ class ApiClient {
         .toList(growable: false);
   }
 
+  Future<List<ShopProduct>> getShopProductBestSellers(
+    String shopId, {
+    int limit = 10,
+  }) async {
+    final data = await _getSuccessData(
+      ApiEndpoints.shopProductBestSellers(shopId),
+      queryParameters: {'limit': limit},
+    );
+    final items = data is List
+        ? data
+        : (data is Map<String, dynamic> ? data['items'] : null);
+    if (items is! List) return [];
+    return items
+        .whereType<Map<String, dynamic>>()
+        .map(ShopProduct.fromApi)
+        .toList(growable: false);
+  }
+
   Future<ShopProduct> createShopProduct({
     required String shopId,
     required ShopProduct product,

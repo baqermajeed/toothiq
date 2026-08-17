@@ -32,31 +32,23 @@ class ProductDetailsPage extends StatelessWidget {
         backgroundColor: _ProductDetailsBottomBar.barGreen,
         appBar: _ProductDetailsAppBar(controller: ctrl),
         body: Obx(() {
-          final product = ctrl.product;
-
-          if (ctrl.isLoading.value && product.name.isEmpty) {
+          if (!ctrl.isReady) {
+            if (ctrl.loadError.value != null) {
+              return ColoredBox(
+                color: AppColors.background,
+                child: AppErrorState(
+                  message: ctrl.loadError.value!,
+                  onRetry: () => ctrl.loadProductDetail(),
+                ),
+              );
+            }
             return const ColoredBox(
               color: AppColors.background,
               child: AppLoadingState(),
             );
           }
 
-          if (ctrl.loadError.value != null && product.name.isEmpty) {
-            return ColoredBox(
-              color: AppColors.background,
-              child: AppErrorState(
-                message: ctrl.loadError.value!,
-                onRetry: () => ctrl.loadProductDetail(),
-              ),
-            );
-          }
-
-          if (product.name.isEmpty) {
-            return const ColoredBox(
-              color: AppColors.background,
-              child: AppEmptyState(title: 'المنتج غير متوفر'),
-            );
-          }
+          final product = ctrl.product;
 
           return Stack(
             fit: StackFit.expand,

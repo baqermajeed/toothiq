@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../service_layer/services/preferences_storage.dart';
 import '../utils/storage_keys.dart';
 import '../core/api/api_exception.dart';
+import '../core/utils/image_url.dart';
 import '../model/brand_model.dart';
 import '../model/category_model.dart';
 import '../model/product_model.dart';
@@ -29,6 +30,7 @@ class StoreDetailController extends GetxController {
   final selectedTabIndex = 0.obs;
   final searchQuery = ''.obs;
   final products = <ProductModel>[].obs;
+  final popularProducts = <ProductModel>[].obs;
   final offerProducts = <ProductModel>[].obs;
   final categories = <CategoryModel>[].obs;
   final filteredCategories = <CategoryModel>[].obs;
@@ -43,11 +45,12 @@ class StoreDetailController extends GetxController {
   final loadError = RxnString();
   final isSubmittingReview = false.obs;
   static const int _productsPageSize = 20;
+  static const int _popularLimit = 10;
 
   static const tabs = [
     'المنتجات',
     'الأقسام',
-    'تقييم المتجر',
+    'التقييم',
     'عن المتجر',
   ];
 
@@ -69,11 +72,11 @@ class StoreDetailController extends GetxController {
   ];
 
   StoreModel get viewStore => currentStore.value ?? store;
+  bool get hasLoadedStore => currentStore.value != null;
 
   @override
   void onInit() {
     super.onInit();
-    currentStore.value = store;
     loadStoreData();
     searchController.addListener(_onSearchChanged);
   }
@@ -81,9 +84,11 @@ class StoreDetailController extends GetxController {
   void _loadAboutInfo([StoreModel? source]) {
     final target = source ?? viewStore;
     final storage = PreferencesStorage.instance;
-    aboutDescription.value =
-        storage.getString(StorageKeys.storeAbout(target.id)) ??
-        target.aboutDescription;
+    final stored = storage.getString(StorageKeys.storeAbout(target.id)) ?? '';
+    aboutDescription.value = stored.isNotEmpty &&
+            stored != StoreModel.defaultAboutDescription
+        ? stored
+        : target.aboutDescription.trim();
   }
 
   void _onSearchChanged() {
@@ -118,8 +123,6 @@ class StoreDetailController extends GetxController {
         .toList();
   }
 
-  List<ProductModel> get popularProducts => filteredProducts.take(4).toList();
-
   @override
   void onClose() {
     searchController.dispose();
@@ -145,22 +148,70 @@ class StoreDetailController extends GetxController {
     loadError.value = null;
     try {
       final storeId = store.id;
-      final results = await Future.wait([
-        _shopService.getShopById(storeId),
-        _shopService.fetchShopProductCategories(storeId, grouped: false),
-        _shopService.fetchShopReviews(storeId),
+      final shopName = store.name;
+      late StoreModel updatedStore;
+      late List<ShopCategoryModel> shopCategories;
+      late List<StoreReviewModel> shopReviews;
+      late ({List<ProductModel> items, bool hasNextPage, int page})
+          productsPage;
+      var loadedOffers = <ProductModel>[];
+      var loadedPopular = <ProductModel>[];
+
+      await Future.wait([
+        _shopService.getShopById(storeId).then((value) => updatedStore = value),
+        _shopService
+            .fetchShopProductCategories(storeId, grouped: false)
+            .then((value) => shopCategories = value),
+        _shopService
+            .fetchShopReviews(storeId)
+            .then((value) => shopReviews = value),
+        _shopService
+            .fetchShopProductsPaginated(
+              shopId: storeId,
+              shopName: shopName,
+              page: 1,
+              limit: _productsPageSize,
+            )
+            .then((result) {
+          productsPage = (
+            items: result.items,
+            hasNextPage: result.hasNextPage,
+            page: result.page,
+          );
+        }),
+        () async {
+          try {
+            final offersResult =
+                await _shopService.fetchShopProductsPaginated(
+              shopId: storeId,
+              shopName: shopName,
+              page: 1,
+              limit: 10,
+              hasOffer: true,
+            );
+            loadedOffers =
+                _favoritesService.applyFavoriteState(offersResult.items);
+          } catch (_) {
+            loadedOffers = const [];
+          }
+        }(),
+        () async {
+          try {
+            final popular = await _shopService.fetchShopBestSellers(
+              shopId: storeId,
+              shopName: shopName,
+              limit: _popularLimit,
+            );
+            loadedPopular = _favoritesService.applyFavoriteState(popular);
+          } catch (_) {
+            loadedPopular = const [];
+          }
+        }(),
       ]);
 
-      final updatedStore = results[0] as StoreModel;
-      currentStore.value = updatedStore;
-      await _loadProductsFirstPage();
-      await _loadOfferProducts();
-
-      final shopCategories = results[1] as List<ShopCategoryModel>;
+      final loadedProducts =
+          _favoritesService.applyFavoriteState(productsPage.items);
       final categoryCards = _mapCategories(shopCategories);
-      categories.assignAll(categoryCards);
-      filteredCategories.assignAll(categoryCards);
-
       final mappedBrands = await _shopService.fetchShopBrands(
         categoryIds: shopCategories
             .map((c) => c.parentCategoryId)
@@ -168,67 +219,100 @@ class StoreDetailController extends GetxController {
             .where((id) => id.isNotEmpty)
             .toSet()
             .toList(growable: false),
-        products: products,
+        products: loadedProducts,
         shopCategories: shopCategories,
       );
+
+      var readyStore = updatedStore;
+      if (readyStore.rating <= 0 && shopReviews.isNotEmpty) {
+        final total = shopReviews.fold<int>(0, (sum, item) => sum + item.rating);
+        readyStore = readyStore.copyWith(
+          rating: total / shopReviews.length,
+        );
+      }
+
+      await _precacheStoreVisuals(
+        readyStore,
+        [...loadedPopular, ...loadedOffers, ...loadedProducts],
+      );
+
+      products.assignAll(loadedProducts);
+      hasNextProductsPage.value = productsPage.hasNextPage;
+      currentProductsPage.value = productsPage.page;
+      offerProducts.assignAll(loadedOffers);
+      popularProducts.assignAll(loadedPopular);
+      categories.assignAll(categoryCards);
+      filteredCategories.assignAll(categoryCards);
       brands.assignAll(mappedBrands);
       filteredBrands.assignAll(mappedBrands);
-
-      reviews.assignAll(results[2] as List<StoreReviewModel>);
-      _loadAboutInfo(updatedStore);
+      reviews.assignAll(shopReviews);
+      _loadAboutInfo(readyStore);
+      currentStore.value = readyStore;
     } on ApiException catch (error) {
       loadError.value = error.message;
-      products.clear();
-      offerProducts.clear();
-      categories.clear();
-      filteredCategories.clear();
-      brands.clear();
-      filteredBrands.clear();
-      reviews.clear();
-      hasNextProductsPage.value = false;
+      if (currentStore.value == null) {
+        products.clear();
+        offerProducts.clear();
+        popularProducts.clear();
+        categories.clear();
+        filteredCategories.clear();
+        brands.clear();
+        filteredBrands.clear();
+        reviews.clear();
+        hasNextProductsPage.value = false;
+      }
     } catch (_) {
       loadError.value = 'تعذر تحميل بيانات المتجر';
-      products.clear();
-      offerProducts.clear();
-      categories.clear();
-      filteredCategories.clear();
-      brands.clear();
-      filteredBrands.clear();
-      reviews.clear();
-      hasNextProductsPage.value = false;
+      if (currentStore.value == null) {
+        products.clear();
+        offerProducts.clear();
+        popularProducts.clear();
+        categories.clear();
+        filteredCategories.clear();
+        brands.clear();
+        filteredBrands.clear();
+        reviews.clear();
+        hasNextProductsPage.value = false;
+      }
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> _loadProductsFirstPage() async {
-    currentProductsPage.value = 1;
-    final result = await _shopService.fetchShopProductsPaginated(
-      shopId: store.id,
-      shopName: store.name,
-      page: 1,
-      limit: _productsPageSize,
+  Future<void> _precacheStoreVisuals(
+    StoreModel shop,
+    List<ProductModel> items,
+  ) async {
+    await WidgetsBinding.instance.endOfFrame;
+    final context = Get.overlayContext ?? Get.context;
+    if (context == null) return;
+
+    final sources = <String>{
+      shop.logoAsset,
+      ...items.take(8).map((item) => item.imageAsset),
+    };
+
+    await Future.wait(
+      sources.map(
+        (source) => _precacheSource(context, source).timeout(
+          const Duration(milliseconds: 1800),
+          onTimeout: () {},
+        ),
+      ),
     );
-    products.assignAll(_favoritesService.applyFavoriteState(result.items));
-    hasNextProductsPage.value = result.hasNextPage;
-    currentProductsPage.value = result.page;
   }
 
-  Future<void> _loadOfferProducts() async {
+  Future<void> _precacheSource(BuildContext context, String raw) async {
+    final source = ImageUrl.resolve(
+      raw,
+      fallback: StoreModel.defaultLogoAsset,
+    );
     try {
-      final result = await _shopService.fetchShopProductsPaginated(
-        shopId: store.id,
-        shopName: store.name,
-        page: 1,
-        limit: 10,
-        hasOffer: true,
-      );
-      offerProducts.assignAll(
-        _favoritesService.applyFavoriteState(result.items),
-      );
-    } catch (_) {
-      offerProducts.clear();
-    }
+      final ImageProvider provider = ImageUrl.isNetwork(source)
+          ? NetworkImage(source)
+          : AssetImage(source);
+      await precacheImage(provider, context);
+    } catch (_) {}
   }
 
   Future<void> loadMoreProducts() async {
@@ -352,6 +436,12 @@ class StoreDetailController extends GetxController {
       offerProducts[offerIdx] =
           offerProducts[offerIdx].copyWith(isFavorite: isFavorite);
       offerProducts.refresh();
+    }
+    final popularIdx = popularProducts.indexWhere((p) => p.id == productId);
+    if (popularIdx != -1) {
+      popularProducts[popularIdx] =
+          popularProducts[popularIdx].copyWith(isFavorite: isFavorite);
+      popularProducts.refresh();
     }
   }
 }

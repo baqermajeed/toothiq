@@ -112,6 +112,10 @@ export const adminApi = {
         method: 'POST',
         body: form,
       }),
+    shopBestSellers: (shopId: string, limit = 10) =>
+      apiFetch<{ items?: Record<string, unknown>[] }>(
+        `/api/shops/${shopId}/products/best-sellers?limit=${limit}`,
+      ),
     patch: (shopId: string, productId: string, body: Record<string, unknown>) =>
       apiFetch<Record<string, unknown>>(`/api/shops/${shopId}/products/${productId}`, {
         method: 'PATCH',

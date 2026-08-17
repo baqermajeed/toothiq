@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -20,6 +22,7 @@ class SearchFilterRow extends StatelessWidget {
   final double? height;
   final EdgeInsetsGeometry? padding;
   final bool centerTextVertically;
+  final bool frosted;
 
   const SearchFilterRow({
     super.key,
@@ -34,6 +37,7 @@ class SearchFilterRow extends StatelessWidget {
     this.height,
     this.padding,
     this.centerTextVertically = false,
+    this.frosted = false,
   });
 
   @override
@@ -41,21 +45,8 @@ class SearchFilterRow extends StatelessWidget {
     const designShadow = Color(0x61659AB9); // 38%
     const filterColor = Color(0xFF16929E);
     final barHeight = height ?? 53.72.h;
-    final searchField = Container(
-      height: barHeight,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(21.89.r),
-        border: Border.all(color: AppColors.searchBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: designShadow,
-            blurRadius: 3.98,
-            offset: Offset(0, 0),
-          ),
-        ],
-      ),
-      child: Row(
+    final radius = BorderRadius.circular(21.89.r);
+    final fieldRow = Row(
         textDirection: TextDirection.ltr,
         children: [
           if (showFilter)
@@ -113,7 +104,7 @@ class SearchFilterRow extends StatelessWidget {
                 fontFamily: 'Expo Arabic',
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: frosted ? Colors.white : AppColors.textPrimary,
                 height: centerTextVertically ? 1 : null,
               ),
               decoration: InputDecoration(
@@ -123,7 +114,9 @@ class SearchFilterRow extends StatelessWidget {
                   fontFamily: 'Expo Arabic',
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+                  color: frosted
+                      ? Colors.white.withValues(alpha: 0.82)
+                      : AppColors.textSecondary,
                   height: centerTextVertically ? 1 : null,
                 ),
                 border: InputBorder.none,
@@ -142,18 +135,63 @@ class SearchFilterRow extends StatelessWidget {
                   child: SizedBox(
                     width: 22.w,
                     height: 22.w,
-                    child: Image.asset(
-                      _searchIconAsset,
-                      fit: BoxFit.contain,
-                    ),
+                    child: frosted
+                        ? ColorFiltered(
+                            colorFilter: const ColorFilter.mode(
+                              Colors.white,
+                              BlendMode.srcIn,
+                            ),
+                            child: Image.asset(
+                              _searchIconAsset,
+                              fit: BoxFit.contain,
+                            ),
+                          )
+                        : Image.asset(
+                            _searchIconAsset,
+                            fit: BoxFit.contain,
+                          ),
                   ),
                 ),
               ),
             ),
           ),
         ],
-      ),
     );
+
+    final searchField = frosted
+        ? ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.48),
+                  ),
+                ),
+                child: fieldRow,
+              ),
+            ),
+          )
+        : Container(
+            height: barHeight,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: radius,
+              border: Border.all(color: AppColors.searchBorder),
+              boxShadow: const [
+                BoxShadow(
+                  color: designShadow,
+                  blurRadius: 3.98,
+                  offset: Offset(0, 0),
+                ),
+              ],
+            ),
+            child: fieldRow,
+          );
 
     return Padding(
       padding: padding ?? EdgeInsets.symmetric(horizontal: 20.w),

@@ -11,6 +11,8 @@ class ApiEndpoints {
   static const String catalogCategories = '/api/catalog/categories';
   static String shop(String id) => '/api/shops/$id';
   static String shopProducts(String shopId) => '/api/shops/$shopId/products';
+  static String shopProductBestSellers(String shopId) =>
+      '/api/shops/$shopId/products/best-sellers';
   static String shopProduct(String shopId, String id) =>
       '/api/shops/$shopId/products/$id';
   static String shopProductCategories(String shopId) =>

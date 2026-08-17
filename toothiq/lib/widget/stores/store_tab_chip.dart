@@ -22,10 +22,10 @@ class StoreTabChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 22.w, vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 5.h),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.productStore : Colors.white,
-          borderRadius: BorderRadius.circular(24.r),
+          borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
             color: isSelected
                 ? AppColors.productStore

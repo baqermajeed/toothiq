@@ -46,6 +46,8 @@ class ApiEndpoints {
   static String shop(String id) => '/api/shops/$id';
   static String shopReviews(String id) => '/api/shops/$id/reviews';
   static String shopProducts(String shopId) => '/api/shops/$shopId/products';
+  static String shopProductBestSellers(String shopId) =>
+      '/api/shops/$shopId/products/best-sellers';
   static String shopProductCategories(String shopId) =>
       '/api/shops/$shopId/product-categories';
   static String shopProduct(String shopId, String id) =>

@@ -42,6 +42,10 @@ class ShopService {
     return _api.getShopProducts(shopId);
   }
 
+  Future<List<ShopProduct>> fetchBestSellers(String shopId, {int limit = 10}) {
+    return _api.getShopProductBestSellers(shopId, limit: limit);
+  }
+
   Future<ShopProduct> createProduct({
     required String shopId,
     required ShopProduct product,

@@ -281,6 +281,26 @@ async function list(req, res, next) {
   }
 }
 
+async function listBestSellers(req, res, next) {
+  try {
+    const shop = await Shop.findById(req.params.shopId).select('isHidden ownerId').lean();
+    if (!shop) {
+      return res.json({ success: true, data: { items: [] } });
+    }
+    const isAdmin = Array.isArray(req.userRoles) && req.userRoles.includes('admin');
+    const ownerIdStr = shop.ownerId && shop.ownerId.toString();
+    const isOwner = ownerIdStr && req.userId && ownerIdStr === req.userId.toString();
+    if (shop.isHidden && !isAdmin && !isOwner) {
+      return res.json({ success: true, data: { items: [] } });
+    }
+    const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 10));
+    const items = await productService.listBestSellersByShop(req.params.shopId, { limit });
+    res.json({ success: true, data: { items } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function create(req, res, next) {
   try {
     const body = parseProductBody(req.body);
@@ -646,6 +666,7 @@ async function copyFromShop(req, res, next) {
 module.exports = {
   list,
   listMissingImages,
+  listBestSellers,
   listAll,
   create,
   bulkCreate,

@@ -8,16 +8,20 @@ import '../my_text.dart';
 
 class StoreAboutTabContent extends StatelessWidget {
   final StoreDetailController controller;
+  final bool embedInParentScroll;
 
-  const StoreAboutTabContent({super.key, required this.controller});
+  const StoreAboutTabContent({
+    super.key,
+    required this.controller,
+    this.embedInParentScroll = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final description = controller.aboutDescription.value;
+      final description = controller.aboutDescription.value.trim();
 
-      return SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+      final content = Padding(
         padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 24.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -31,7 +35,7 @@ class StoreAboutTabContent extends StatelessWidget {
             ),
             SizedBox(height: 14.h),
             MyText(
-              description,
+              description.isEmpty ? 'لا يوجد وصف لهذا المتجر حالياً' : description,
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
@@ -40,6 +44,13 @@ class StoreAboutTabContent extends StatelessWidget {
             ),
           ],
         ),
+      );
+
+      if (embedInParentScroll) return content;
+
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: content,
       );
     });
   }

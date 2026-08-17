@@ -80,6 +80,7 @@ class ProductCardWidget extends StatelessWidget {
                             width: double.infinity,
                             height: double.infinity,
                             errorIcon: Icons.medical_services_outlined,
+                            showLoadingIndicator: false,
                           ),
                         ),
                       ),

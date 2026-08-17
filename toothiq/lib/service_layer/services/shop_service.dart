@@ -94,6 +94,18 @@ class ShopService {
     );
   }
 
+  Future<List<ProductModel>> fetchShopBestSellers({
+    required String shopId,
+    required String shopName,
+    int limit = 10,
+  }) {
+    return _api.getShopProductBestSellers(
+      shopId: shopId,
+      shopName: shopName,
+      limit: limit,
+    );
+  }
+
   Future<List<ShopCategoryModel>> fetchShopProductCategories(
     String shopId, {
     bool grouped = true,

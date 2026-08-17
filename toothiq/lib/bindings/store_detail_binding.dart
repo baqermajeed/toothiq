@@ -14,8 +14,7 @@ class StoreDetailBinding extends Bindings {
     if (!Get.isRegistered<HomeController>()) {
       Get.put(HomeController(), permanent: true);
     }
-    Get.lazyPut<StoreDetailController>(
-      () => StoreDetailController(store: store),
-    );
+    Get.delete<StoreDetailController>(force: true);
+    Get.put<StoreDetailController>(StoreDetailController(store: store));
   }
 }

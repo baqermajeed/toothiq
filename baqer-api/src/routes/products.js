@@ -10,6 +10,12 @@ const router = express.Router({ mergeParams: true });
 router.get('/', optionalAuthenticate, productController.list);
 
 router.get(
+  '/best-sellers',
+  optionalAuthenticate,
+  productController.listBestSellers
+);
+
+router.get(
   '/missing-images',
   authenticate,
   requireRoles('shop', 'admin'),

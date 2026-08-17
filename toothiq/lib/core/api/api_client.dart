@@ -605,6 +605,31 @@ class ApiClient {
     );
   }
 
+  Future<List<ProductModel>> getShopProductBestSellers({
+    required String shopId,
+    required String shopName,
+    int limit = 10,
+  }) async {
+    final data = await _getSuccessData(
+      ApiEndpoints.shopProductBestSellers(shopId),
+      queryParameters: {'limit': limit},
+    );
+    final items = (data is List)
+        ? data
+        : (data is Map<String, dynamic> ? data['items'] : null);
+    if (items is! List) return const [];
+    return items
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (item) => ProductModel.fromShopJson(
+            item,
+            shopId: shopId,
+            shopName: shopName,
+          ),
+        )
+        .toList(growable: false);
+  }
+
   Future<List<ShopCategoryModel>> getShopProductCategories(
     String shopId, {
     bool grouped = false,

@@ -10,6 +10,9 @@ class AppImage extends StatelessWidget {
   final double? width;
   final double? height;
   final IconData errorIcon;
+  final String? fallback;
+  final Color? placeholderColor;
+  final bool showLoadingIndicator;
 
   const AppImage({
     super.key,
@@ -18,11 +21,17 @@ class AppImage extends StatelessWidget {
     this.width,
     this.height,
     this.errorIcon = Icons.image_outlined,
+    this.fallback,
+    this.placeholderColor,
+    this.showLoadingIndicator = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final resolved = ImageUrl.resolve(source);
+    final resolved = ImageUrl.resolve(
+      source,
+      fallback: fallback ?? ImageUrl.productPlaceholder,
+    );
 
     if (ImageUrl.isNetwork(resolved)) {
       return Image.network(
@@ -30,10 +39,11 @@ class AppImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) => _placeholder(),
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return _placeholder(showLoader: true);
+          return _loadingPlaceholder();
         },
       );
     }
@@ -43,23 +53,34 @@ class AppImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) => _placeholder(),
     );
   }
 
-  Widget _placeholder({bool showLoader = false}) {
+  Widget _loadingPlaceholder() {
     return Container(
       width: width,
       height: height,
-      color: AppColors.cardPlaceholder,
+      color: placeholderColor ?? AppColors.cardPlaceholder,
       alignment: Alignment.center,
-      child: showLoader
+      child: showLoadingIndicator
           ? SizedBox(
               width: 24.w,
               height: 24.w,
               child: const CircularProgressIndicator(strokeWidth: 2),
             )
-          : Icon(errorIcon, size: 40.sp, color: AppColors.textLight),
+          : null,
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      width: width,
+      height: height,
+      color: placeholderColor ?? AppColors.cardPlaceholder,
+      alignment: Alignment.center,
+      child: Icon(errorIcon, size: 40.sp, color: AppColors.textLight),
     );
   }
 }

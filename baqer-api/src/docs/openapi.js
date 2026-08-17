@@ -454,6 +454,18 @@ const spec = {
         responses: { 201: { description: 'Created' }, 403: { description: 'Forbidden' } },
       },
     },
+    '/api/shops/{shopId}/products/best-sellers': {
+      get: {
+        summary: 'Top selling products in a shop',
+        description: 'Ranks products by sold quantity from non-canceled shop orders. Default limit 10.',
+        tags: ['Products'],
+        parameters: [
+          { name: 'shopId', in: 'path', required: true },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 } },
+        ],
+        responses: { 200: { description: 'OK' } },
+      },
+    },
     '/api/shops/{shopId}/products/{id}': {
       get: { summary: 'Get product', tags: ['Products'], parameters: [{ name: 'shopId', in: 'path' }, { name: 'id', in: 'path' }], responses: { 200: { description: 'OK' }, 404: { description: 'Not found' } } },
       patch: {
