@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../core/utils/image_url.dart';
 import '../utils/app_colors.dart';
+import 'common/skeleton.dart';
 
 class AppImage extends StatelessWidget {
   final String source;
@@ -13,6 +14,7 @@ class AppImage extends StatelessWidget {
   final String? fallback;
   final Color? placeholderColor;
   final bool showLoadingIndicator;
+  final Widget? errorWidget;
 
   const AppImage({
     super.key,
@@ -24,6 +26,7 @@ class AppImage extends StatelessWidget {
     this.fallback,
     this.placeholderColor,
     this.showLoadingIndicator = true,
+    this.errorWidget,
   });
 
   @override
@@ -32,55 +35,71 @@ class AppImage extends StatelessWidget {
       source,
       fallback: fallback ?? ImageUrl.productPlaceholder,
     );
+    final imageWidth = width == double.infinity ? null : width;
+    final imageHeight = height == double.infinity ? null : height;
 
-    if (ImageUrl.isNetwork(resolved)) {
-      return Image.network(
-        resolved,
-        width: width,
-        height: height,
-        fit: fit,
-        gaplessPlayback: true,
-        errorBuilder: (context, error, stackTrace) => _placeholder(),
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _loadingPlaceholder();
-        },
-      );
-    }
+    final image = ImageUrl.isNetwork(resolved)
+        ? Image.network(
+            resolved,
+            width: imageWidth,
+            height: imageHeight,
+            fit: fit,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+            frameBuilder: _frameBuilder,
+          )
+        : Image.asset(
+            resolved,
+            width: imageWidth,
+            height: imageHeight,
+            fit: fit,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+            frameBuilder: _frameBuilder,
+          );
 
-    return Image.asset(
-      resolved,
+    return SizedBox(
       width: width,
       height: height,
-      fit: fit,
-      gaplessPlayback: true,
-      errorBuilder: (context, error, stackTrace) => _placeholder(),
+      child: image,
     );
   }
 
-  Widget _loadingPlaceholder() {
-    return Container(
-      width: width,
-      height: height,
-      color: placeholderColor ?? AppColors.cardPlaceholder,
-      alignment: Alignment.center,
-      child: showLoadingIndicator
-          ? SizedBox(
-              width: 24.w,
-              height: 24.w,
-              child: const CircularProgressIndicator(strokeWidth: 2),
-            )
-          : null,
+  Widget _frameBuilder(
+    BuildContext context,
+    Widget child,
+    int? frame,
+    bool wasSynchronouslyLoaded,
+  ) {
+    if (wasSynchronouslyLoaded) {
+      return SizedBox.expand(child: child);
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: placeholderColor ?? SkeletonStyle.base),
+        if (frame == null)
+          Positioned.fill(child: ImageShimmer(color: placeholderColor)),
+        Positioned.fill(
+          child: AnimatedOpacity(
+            opacity: frame == null ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: child,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _placeholder() {
-    return Container(
-      width: width,
-      height: height,
-      color: placeholderColor ?? AppColors.cardPlaceholder,
-      alignment: Alignment.center,
-      child: Icon(errorIcon, size: 40.sp, color: AppColors.textLight),
-    );
+    return errorWidget ??
+        ColoredBox(
+          color: placeholderColor ?? AppColors.cardPlaceholder,
+          child: Center(
+            child: Icon(errorIcon, size: 40.sp, color: AppColors.textLight),
+          ),
+        );
   }
 }

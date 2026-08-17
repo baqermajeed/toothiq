@@ -25,6 +25,10 @@ class OrderService {
     return _api.getDriverOrders(tab: tab);
   }
 
+  Future<PartnerOrder> fetchDriverOrder(String orderId) {
+    return _api.getDriverOrderById(orderId);
+  }
+
   Future<PartnerOrder> acceptDriverOrder(String orderId) {
     return _api.acceptDriverOrder(orderId);
   }

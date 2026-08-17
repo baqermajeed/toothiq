@@ -5,6 +5,7 @@ import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
 import '../service_layer/services/auth_service.dart';
 import '../service_layer/services/driver_tracking_socket_service.dart';
+import '../service_layer/services/notification_service.dart';
 import '../service_layer/services/order_service.dart';
 import '../service_layer/services/preferences_storage.dart';
 import '../service_layer/services/product_stock_cache.dart';
@@ -28,6 +29,7 @@ class AppBinding extends Bindings {
       permanent: true,
     );
     Get.put(AuthService(Get.find<ApiClient>()), permanent: true);
+    Get.put(NotificationService(), permanent: true);
     Get.put(OrderService(Get.find<ApiClient>()), permanent: true);
     Get.put(ShopService(Get.find<ApiClient>()), permanent: true);
     Get.put(
@@ -44,6 +46,7 @@ class AppBinding extends Bindings {
         preferences: Get.find<PreferencesStorage>(),
         authService: Get.find<AuthService>(),
         shopService: Get.find<ShopService>(),
+        notificationService: Get.find<NotificationService>(),
       ),
       permanent: true,
     );

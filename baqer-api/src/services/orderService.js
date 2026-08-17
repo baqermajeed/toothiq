@@ -4,7 +4,10 @@ const { ORDER_STATUS } = require('../config/constants');
 const { notFound, forbidden, badRequest } = require('../utils/errors');
 const discountCodeService = require('./discountCodeService');
 const { notifyOrderStatusChange } = require('../utils/telegram');
-const { notifyCustomerOrderStatusChange } = require('../utils/fcmNotifications');
+const {
+  notifyCustomerOrderStatusChange,
+  notifyDriversNewOrderAvailable,
+} = require('../utils/fcmNotifications');
 const driverReviewService = require('./driverReviewService');
 
 /** يُرجع السعر الفعلي للمنتج: سعر العرض إن كان نشطاً، وإلا السعر العادي. */
@@ -734,6 +737,7 @@ async function updateStatus(orderId, userId, roles, payload) {
   );
   if (previousStatus !== updates.status) {
     notifyCustomerOrderStatusChange(updatedOrder, updates.status);
+    notifyDriversNewOrderAvailable(updatedOrder, previousStatus);
   }
   return attachVoiceCallIds(updatedOrder);
 }

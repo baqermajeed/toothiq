@@ -19,6 +19,7 @@ import '../../widget/home/home_scroll_metrics.dart';
 import '../../widget/home/products_grid_widget.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/search_filter_row.dart';
 import '../../widget/stores/store_card_widget.dart';
 import '../../widget/my_text.dart';
@@ -94,7 +95,7 @@ class _HomePageState extends State<HomePage> {
               if (home.isLoading.value && home.products.isEmpty) {
                 return Padding(
                   padding: EdgeInsets.only(top: topInset),
-                  child: const AppLoadingState(),
+                  child: const HomePageSkeleton(),
                 );
               }
 
@@ -173,9 +174,8 @@ class _HomePageState extends State<HomePage> {
                       if (home.feedLoading.value &&
                           home.products.isEmpty &&
                           home.shops.isEmpty)
-                        Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24.h),
-                          child: const AppLoadingState(),
+                        HomeFeedSkeleton(
+                          showStores: home.selectedFeed.value.showsShops,
                         )
                       else if (home.selectedFeed.value.showsShops)
                         home.shops.isEmpty

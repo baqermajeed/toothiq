@@ -9,15 +9,18 @@ import '../../utils/app_colors.dart';
 import '../../widget/app_image.dart';
 import '../../widget/cart/cart_icon.dart';
 import '../../widget/home/offer_glass_badge.dart';
+import '../../widget/home/popular_glass_badge.dart';
 import '../../view/product/product_details_page.dart';
 
 /// كارد المنتج — مطابق لتصميم Frame_427321508
 class ProductCardWidget extends StatelessWidget {
   final ProductModel product;
+  final bool showPopularBadge;
 
   const ProductCardWidget({
     super.key,
     required this.product,
+    this.showPopularBadge = false,
   });
 
   static const double _cardRadius = 24;
@@ -49,6 +52,7 @@ class ProductCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final favorites = Get.find<FavoritesService>();
+    final imageActionTop = 6.w + _imageHeight.h - 32.w - 8.h;
 
     final card = Material(
       color: Colors.white,
@@ -164,9 +168,19 @@ class ProductCardWidget extends StatelessWidget {
                   ? OfferGlassBadge(label: product.offerBadgeLabel)
                   : const SizedBox.shrink(),
             ),
+            if (showPopularBadge)
+              Positioned(
+                right: 16.w,
+                top: imageActionTop,
+                height: 32.w,
+                child: const Align(
+                  alignment: Alignment.center,
+                  child: PopularGlassBadge(),
+                ),
+              ),
             Positioned(
               left: 16.w,
-              top: 6.w + _imageHeight.h - 32.w - 8.h,
+              top: imageActionTop,
               child: Obx(() {
                 // الاشتراك في قائمة المفضلة ليُحدَّث شكل القلب فوراً
                 favorites.favoriteProducts.length;

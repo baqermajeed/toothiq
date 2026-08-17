@@ -7,7 +7,7 @@ import '../../model/search_filter_options_model.dart';
 import '../../service_layer/services/search_filter_options_service.dart';
 import '../../utils/app_colors.dart';
 import '../../view/search/search_results_page.dart';
-import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/my_text.dart';
 
 class SearchFilterPage extends StatefulWidget {
@@ -223,7 +223,7 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
                 ),
               Expanded(
                 child: _loading
-                    ? const AppLoadingState()
+                    ? const FilterPageSkeleton()
                     : SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 24.h),

@@ -7,6 +7,7 @@ import '../../controller/section_detail_controller.dart';
 import '../../model/category_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/home/category_chip_widget.dart';
 import '../../widget/search_filter_row.dart';
 import '../../widget/section/brand_card_widget.dart';
@@ -45,7 +46,7 @@ class SectionDetailPage extends StatelessWidget {
         appBar: SectionAppBar(title: category.name),
         body: Obx(() {
           if (ctrl.showFullScreenLoading) {
-            return const AppLoadingState();
+            return const ProductGridSkeleton();
           }
 
           if (ctrl.loadError.value != null && ctrl.sectionProducts.isEmpty) {

@@ -9,6 +9,7 @@ import '../../utils/app_colors.dart';
 import '../../view/search/search_filter_page.dart';
 import '../../view/stores/store_detail_page.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/home/product_card_widget.dart';
 import '../../widget/my_text.dart';
 import '../../widget/search/search_results_bar.dart';
@@ -108,7 +109,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
               Expanded(
                 child: Obx(() {
                   if (search.loading.value) {
-                    return const AppLoadingState();
+                    return const SearchResultsSkeleton();
                   }
 
                   if (search.loadError.value != null &&

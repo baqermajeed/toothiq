@@ -8,6 +8,7 @@ import '../../controller/orders_controller.dart';
 import '../../model/order_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/orders/driver_rating_card.dart';
 import '../../widget/orders/order_detail_app_bar.dart';
 import '../../widget/orders/order_detail_bottom_bar.dart';
@@ -44,7 +45,7 @@ class OrderDetailPage extends StatelessWidget {
         }),
         body: Obx(() {
           if (ctrl.isLoading.value && ctrl.detail.value == null) {
-            return const AppLoadingState();
+            return const OrderDetailSkeleton();
           }
 
           if (ctrl.loadError.value != null && ctrl.detail.value == null) {
@@ -56,7 +57,7 @@ class OrderDetailPage extends StatelessWidget {
 
           final d = ctrl.detail.value;
           if (d == null) {
-            return const AppLoadingState();
+            return const OrderDetailSkeleton();
           }
 
           return RefreshIndicator(

@@ -74,6 +74,18 @@ class ApiClient {
     return UserModel.fromJson(data);
   }
 
+  Future<void> updateFcmToken(String? token) async {
+    try {
+      await _patchSuccessData(
+        ApiEndpoints.currentUser,
+        body: {'fcmToken': token},
+      );
+      if (kDebugMode) debugPrint('[FCM] token saved on server');
+    } catch (error) {
+      if (kDebugMode) debugPrint('[FCM] token save failed: $error');
+    }
+  }
+
   // ─── Shops ───────────────────────────────────────────────────────────────
 
   Future<ShopProfile> getShop(String shopId) async {
@@ -532,6 +544,14 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(PartnerOrder.fromApi)
         .toList(growable: false);
+  }
+
+  Future<PartnerOrder> getDriverOrderById(String orderId) async {
+    final data = await _getSuccessData(ApiEndpoints.driverOrder(orderId));
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('رد تفاصيل طلب السائق غير صالح');
+    }
+    return PartnerOrder.fromApi(data);
   }
 
   Future<PartnerOrder> acceptDriverOrder(String orderId) async {

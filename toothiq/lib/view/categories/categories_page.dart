@@ -7,6 +7,7 @@ import '../../utils/app_colors.dart';
 import '../../widget/app_bottom_navigation.dart';
 import '../../widget/categories/category_card_widget.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/search_filter_row.dart';
 
@@ -44,7 +45,7 @@ class CategoriesPage extends StatelessWidget {
               child: Obx(() {
                 if (categories.isLoading.value &&
                     categories.filteredCategories.isEmpty) {
-                  return const AppLoadingState();
+                  return const CategoriesGridSkeleton();
                 }
 
                 if (categories.loadError.value != null &&

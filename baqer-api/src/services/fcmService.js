@@ -38,7 +38,18 @@ function toDataStrings(data = {}) {
   );
 }
 
-async function sendToToken(token, { title = 'ToothIQ', body, data = {} }) {
+function androidPayload(androidChannelId) {
+  const android = { priority: 'high' };
+  if (androidChannelId) {
+    android.notification = {
+      channelId: androidChannelId,
+      sound: 'default',
+    };
+  }
+  return android;
+}
+
+async function sendToToken(token, { title = 'ToothIQ', body, data = {}, androidChannelId } = {}) {
   if (!token || typeof token !== 'string') return null;
   init();
   if (!initialized) {
@@ -50,7 +61,7 @@ async function sendToToken(token, { title = 'ToothIQ', body, data = {} }) {
       token,
       notification: { title, body },
       data: toDataStrings(data),
-      android: { priority: 'high' },
+      android: androidPayload(androidChannelId),
       apns: { payload: { aps: { sound: 'default' } } },
     });
   } catch (err) {
@@ -59,7 +70,7 @@ async function sendToToken(token, { title = 'ToothIQ', body, data = {} }) {
   }
 }
 
-async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
+async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {}, androidChannelId } = {}) {
   const valid = (tokens || []).filter((t) => t && typeof t === 'string');
   if (valid.length === 0) return { successCount: 0, failureCount: 0 };
   init();
@@ -72,7 +83,7 @@ async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
       tokens: valid,
       notification: { title, body },
       data: toDataStrings(data),
-      android: { priority: 'high' },
+      android: androidPayload(androidChannelId),
       apns: { payload: { aps: { sound: 'default' } } },
     });
     if (res.failureCount > 0) {
@@ -93,7 +104,7 @@ async function sendToTokens(tokens, { title = 'ToothIQ', body, data = {} }) {
   }
 }
 
-async function sendToTopic(topic, { title = 'ToothIQ', body, data = {} }) {
+async function sendToTopic(topic, { title = 'ToothIQ', body, data = {}, androidChannelId } = {}) {
   const name = String(topic || '').trim();
   if (!name) return null;
   init();
@@ -106,7 +117,7 @@ async function sendToTopic(topic, { title = 'ToothIQ', body, data = {} }) {
       topic: name,
       notification: { title, body },
       data: toDataStrings(data),
-      android: { priority: 'high' },
+      android: androidPayload(androidChannelId),
       apns: { payload: { aps: { sound: 'default' } } },
     });
     console.log('[FCM] sendToTopic ok', { topic: name, messageId: res });

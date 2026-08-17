@@ -6,6 +6,7 @@ import '../../controller/stores_controller.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/app_bottom_navigation.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/search_filter_row.dart';
 import '../../widget/stores/store_card_widget.dart';
@@ -42,7 +43,7 @@ class StoresPage extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (stores.isLoading.value && stores.filteredStores.isEmpty) {
-                  return const AppLoadingState();
+                  return const StoresListSkeleton();
                 }
 
                 if (stores.loadError.value != null &&
@@ -78,12 +79,10 @@ class StoresPage extends StatelessWidget {
                         SizedBox(height: 14.h),
                     itemBuilder: (context, index) {
                       if (index >= stores.filteredStores.length) {
-                        return const Center(
+                        return AppShimmer(
                           child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
+                            padding: EdgeInsets.symmetric(vertical: 4.h),
+                            child: const StoreCardSkeleton(),
                           ),
                         );
                       }

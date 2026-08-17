@@ -98,7 +98,10 @@ export function NotificationsPage() {
   return (
     <div>
       <h1 style={{ marginTop: 0 }}>إرسال إشعار</h1>
-      <p className="muted">إشعار لجميع العملاء — عند الضغط يفتح المنتج أو المتجر في التطبيق.</p>
+      <p className="muted">
+        إشعار لجميع العملاء — عند الضغط يفتح المنتج أو المتجر في تطبيق الزبون.
+        طلبات الزبائن الجديدة تُرسل تلقائياً لتطبيق التاجر، وبعد قبول المتجر تُرسل للسائقين.
+      </p>
       {err ? <div className="alert alert-error">{err}</div> : null}
       {msg ? <div className="alert alert-success">{msg}</div> : null}
 

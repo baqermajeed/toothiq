@@ -9,6 +9,7 @@ import '../../utils/app_colors.dart';
 import '../../widget/app_back_button.dart';
 import '../../widget/app_image.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/home/offer_glass_badge.dart';
 import '../../widget/my_text.dart';
 
@@ -44,7 +45,7 @@ class ProductDetailsPage extends StatelessWidget {
             }
             return const ColoredBox(
               color: AppColors.background,
-              child: AppLoadingState(),
+              child: ProductDetailsSkeleton(),
             );
           }
 
@@ -309,20 +310,7 @@ class _ProductGallerySection extends StatelessWidget {
         height: galleryHeight,
         child: Obx(() {
           if (controller.showGalleryLoading) {
-            return Container(
-              width: double.infinity,
-              height: galleryHeight,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(16.r),
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: AppColors.primary,
-                ),
-              ),
-            );
+            return ProductGallerySkeleton(height: galleryHeight);
           }
 
           final images = controller.product.images;

@@ -11,6 +11,7 @@ import '../model/search_filter_model.dart';
 import '../model/shop_category_model.dart';
 import '../model/store_model.dart';
 import '../core/api/api_exception.dart';
+import '../core/utils/image_precache.dart';
 import '../service_layer/services/banner_service.dart';
 import '../service_layer/services/brand_service.dart';
 import '../service_layer/services/category_service.dart';
@@ -102,8 +103,47 @@ class HomeController extends GetxController {
         hasNextPage.value = false;
       }
     } finally {
+      await _precacheHomeImages();
       isLoading.value = false;
     }
+  }
+
+  Future<void> _precacheHomeImages() async {
+    var context = Get.context;
+    if (context == null) {
+      await Future<void>.delayed(Duration.zero);
+      context = Get.context;
+    }
+    final ctx = context;
+    if (ctx == null || !ctx.mounted) return;
+    await ImagePrecache.urls(ctx, [
+      ...banners.map((banner) => banner.imageUrl),
+      ...categories
+          .where((category) => category.hasIconImage)
+          .take(8)
+          .map((category) => category.iconUrl),
+      ...brands
+          .where((brand) => brand.hasImage)
+          .take(4)
+          .map((brand) => brand.imageUrl),
+      ...products.take(6).map((product) => product.imageAsset),
+    ]);
+  }
+
+  Future<void> _precacheFeedImages(HomeFeedTab tab) async {
+    final cache = _feedCaches[tab];
+    if (cache == null) return;
+    if (tab.showsShops) {
+      await ImagePrecache.urls(
+        Get.context,
+        cache.shops.take(4).map((shop) => shop.logoAsset),
+      );
+      return;
+    }
+    await ImagePrecache.urls(
+      Get.context,
+      cache.products.take(6).map((product) => product.imageAsset),
+    );
   }
 
   Future<List<BrandModel>> _fetchBrandsSafely() async {
@@ -154,6 +194,7 @@ class HomeController extends GetxController {
     hasNextPage.value = false;
     currentPage.value = 1;
     await _refreshTab(tab, silent: false);
+    _precacheFeedImages(tab);
   }
 
   void _applyCacheToUi(HomeFeedTab tab) {

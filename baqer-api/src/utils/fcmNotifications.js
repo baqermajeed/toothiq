@@ -1,9 +1,10 @@
 const fcmService = require('../services/fcmService');
 const notificationService = require('../services/notificationService');
-const { User } = require('../models');
-const { ORDER_STATUS } = require('../config/constants');
+const { User, Shop } = require('../models');
+const { ORDER_STATUS, ROLES } = require('../config/constants');
 
 const APP_TITLE = 'ToothIQ';
+const PARTNER_ANDROID_CHANNEL = 'toothiq_partner_notifications';
 
 const STATUS_PAYLOAD = {
   [ORDER_STATUS.ACCEPTED]: {
@@ -121,7 +122,7 @@ function notifyCustomerOrderStatusChange(order, newStatus) {
         type: payload.type,
       });
 
-      const user = await User.findById(customerId).select('fcmTokens').lean();
+      const user = await User.findById(customerId).select('+fcmTokens').lean();
       const tokens = user?.fcmTokens || [];
       if (tokens.length === 0) {
         console.warn('[Notify] no FCM tokens for user', String(customerId));
@@ -170,6 +171,200 @@ function notifyCustomerOrderPostponed(order) {
   notifyCustomerOrderStatusChange(order, ORDER_STATUS.POSTPONED);
 }
 
+const DRIVER_AVAILABLE_STATUSES = new Set([
+  ORDER_STATUS.ACCEPTED,
+  ORDER_STATUS.PREPARING,
+  ORDER_STATUS.ON_THE_WAY,
+]);
+
+function resolveId(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'object') {
+    return raw._id || raw.id || null;
+  }
+  return raw;
+}
+
+function collectShopIds(order) {
+  const ids = new Set();
+  const shopId = resolveId(order?.shopId);
+  if (shopId) ids.add(String(shopId));
+  for (const portion of order?.shopPortions || []) {
+    const id = resolveId(portion?.shopId);
+    if (id) ids.add(String(id));
+  }
+  return [...ids];
+}
+
+function orderLabel(order) {
+  const number = order?.orderNumber != null ? String(order.orderNumber) : '';
+  return number ? `#${number}` : '';
+}
+
+async function sendToUserIds(userIds, { title, body, type, orderId, data = {}, androidChannelId } = {}) {
+  const unique = [
+    ...new Set(
+      (userIds || [])
+        .map((id) => (id != null ? String(id) : ''))
+        .filter(Boolean)
+    ),
+  ];
+  if (unique.length === 0) return;
+
+  await Promise.allSettled(
+    unique.map((userId) =>
+      notificationService.createForUser({
+        userId,
+        title,
+        body,
+        type,
+        orderId,
+        data,
+      })
+    )
+  );
+
+  const users = await User.find({ _id: { $in: unique } })
+    .select('_id +fcmTokens')
+    .lean();
+  const tokens = [];
+  for (const user of users) {
+    for (const token of user.fcmTokens || []) {
+      if (token) tokens.push(token);
+    }
+  }
+  if (tokens.length === 0) {
+    console.warn('[Notify] no FCM tokens for users', { type, count: unique.length });
+    return;
+  }
+  const result = await fcmService.sendToTokens(tokens, {
+    title,
+    body,
+    data,
+    androidChannelId,
+  });
+  console.log('[Notify] FCM users', {
+    type,
+    orderId,
+    users: unique.length,
+    tokens: tokens.length,
+    ...result,
+  });
+}
+
+/**
+ * إشعار أصحاب المتاجر بوصول طلب جديد.
+ */
+function notifyShopOwnersNewOrder(order) {
+  const orderId = resolveOrderId(order);
+  if (!orderId) return;
+
+  Promise.resolve()
+    .then(async () => {
+      const shopIds = collectShopIds(order);
+      if (shopIds.length === 0) return;
+
+      const shops = await Shop.find({ _id: { $in: shopIds } })
+        .select('ownerId')
+        .lean();
+      const ownerIds = shops
+        .map((shop) => resolveId(shop.ownerId))
+        .filter(Boolean);
+
+      if (ownerIds.length === 0) {
+        console.warn('[Notify] shop new order: no owners', { orderId, shopIds });
+        return;
+      }
+
+      console.log('[Notify] shop new order', {
+        orderId,
+        shopIds,
+        owners: ownerIds.map(String),
+      });
+
+      const label = orderLabel(order);
+      const title = APP_TITLE;
+      const body = label
+        ? `لديك طلب جديد ${label} بانتظار القبول`
+        : 'لديك طلب جديد بانتظار القبول';
+      const data = { type: 'shop_new_order', orderId, role: 'shop' };
+
+      await sendToUserIds(ownerIds, {
+        title,
+        body,
+        type: 'shop_new_order',
+        orderId,
+        data,
+        androidChannelId: PARTNER_ANDROID_CHANNEL,
+      });
+
+      await Promise.allSettled(
+        shopIds.map((shopId) =>
+          fcmService.sendToTopic(`shop_${shopId}`, {
+            title,
+            body,
+            data,
+            androidChannelId: PARTNER_ANDROID_CHANNEL,
+          })
+        )
+      );
+    })
+    .catch((err) =>
+      console.error('[Notify] notifyShopOwnersNewOrder:', err.message)
+    );
+}
+
+/**
+ * إشعار السائقين عندما يصبح الطلب جاهزاً للتوصيل (أول دخول لمجموعة القبول).
+ */
+function notifyDriversNewOrderAvailable(order, previousStatus) {
+  const orderId = resolveOrderId(order);
+  const status = String(order?.status || '').trim();
+  const driverId = resolveId(order?.driverId);
+  const prev = String(previousStatus || '').trim();
+
+  if (!orderId || driverId) return;
+  if (!DRIVER_AVAILABLE_STATUSES.has(status)) return;
+  if (DRIVER_AVAILABLE_STATUSES.has(prev)) return;
+
+  Promise.resolve()
+    .then(async () => {
+      const drivers = await User.find({
+        isActive: { $ne: false },
+        roles: ROLES.DRIVER,
+      })
+        .select('_id +fcmTokens')
+        .lean();
+      const driverIds = drivers.map((d) => d._id);
+
+      const label = orderLabel(order);
+      const title = APP_TITLE;
+      const body = label
+        ? `طلب جديد ${label} جاهز للتوصيل`
+        : 'طلب جديد جاهز للتوصيل';
+      const data = { type: 'driver_new_order', orderId, role: 'driver' };
+
+      await sendToUserIds(driverIds, {
+        title,
+        body,
+        type: 'driver_new_order',
+        orderId,
+        data,
+        androidChannelId: PARTNER_ANDROID_CHANNEL,
+      });
+
+      await fcmService.sendToTopic('all_drivers', {
+        title,
+        body,
+        data,
+        androidChannelId: PARTNER_ANDROID_CHANNEL,
+      });
+    })
+    .catch((err) =>
+      console.error('[Notify] notifyDriversNewOrderAvailable:', err.message)
+    );
+}
+
 module.exports = {
   notifyCustomerOrderStatusChange,
   notifyCustomerOrderAccepted,
@@ -178,4 +373,6 @@ module.exports = {
   notifyCustomerOrderDelivered,
   notifyCustomerOrderCanceled,
   notifyCustomerOrderPostponed,
+  notifyShopOwnersNewOrder,
+  notifyDriversNewOrderAvailable,
 };

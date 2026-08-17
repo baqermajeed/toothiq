@@ -8,6 +8,7 @@ import '../../controller/shop_catalog_controller.dart';
 import '../../controller/shop_orders_controller.dart';
 import '../../controller/shop_products_controller.dart';
 import '../../controller/shop_profile_controller.dart';
+import '../../core/navigation/partner_notification_router.dart';
 import '../../service_layer/services/order_service.dart';
 import '../../service_layer/services/product_stock_cache.dart';
 import '../../service_layer/services/shop_service.dart';
@@ -48,6 +49,10 @@ class ShopMainPage extends StatelessWidget {
     Get.put(
       ShopCatalogController(shopService: shopService, session: session),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PartnerNotificationRouter.consumePending();
+    });
 
     const pages = [
       ShopHomePage(),

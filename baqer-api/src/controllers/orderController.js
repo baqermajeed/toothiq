@@ -7,6 +7,7 @@ const {
 const { notifyNewOrder } = require('../utils/telegram');
 const { ORDER_STATUS } = require('../config/constants');
 const { notifyDriversNewOrder: emitDriverNewOrder } = require('../socket');
+const { notifyShopOwnersNewOrder } = require('../utils/fcmNotifications');
 
 async function list(req, res, next) {
   try {
@@ -38,6 +39,7 @@ async function create(req, res, next) {
   try {
     const order = await orderService.create(req.userId, req.body);
     notifyShopNewOrder(order);
+    notifyShopOwnersNewOrder(order);
     notifyNewOrder(order).catch((err) => console.error('[Telegram] notifyNewOrder:', err?.message));
     res.status(201).json({ success: true, data: order });
   } catch (err) {
@@ -49,6 +51,7 @@ async function createVoiceOrder(req, res, next) {
   try {
     const order = await orderService.createVoiceOrder(req.userId, req.body);
     notifyShopNewOrder(order);
+    notifyShopOwnersNewOrder(order);
     notifyNewOrder(order).catch((err) => console.error('[Telegram] notifyNewOrder:', err?.message));
     res.status(201).json({ success: true, data: order });
   } catch (err) {

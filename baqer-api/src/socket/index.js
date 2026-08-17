@@ -145,8 +145,11 @@ function setupSocketIO(server) {
     // انضمام صاحب المحل إلى غرفة محله لاستقبال طلبات جديدة
     if (socket.userRoles && Array.isArray(socket.userRoles) && socket.userRoles.includes('shop')) {
       try {
-        const shop = await Shop.findOne({ ownerId: socket.userId }).lean();
-        if (shop && shop._id) {
+        const shops = await Shop.find({ ownerId: socket.userId }).select('_id').lean();
+        if (!shops.length) {
+          console.warn('[Socket] صاحب محل بلا متجر:', socket.userId?.toString());
+        }
+        for (const shop of shops) {
           const room = shopRoomName(shop._id.toString());
           socket.join(room);
           console.log('[Socket] انضمام صاحب محل إلى الغرفة:', room);

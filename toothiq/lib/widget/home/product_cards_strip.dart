@@ -7,8 +7,13 @@ import 'product_card_widget.dart';
 /// شريط أفقي بنفس كارد ومقاس الصفحة الرئيسية.
 class ProductCardsStrip extends StatelessWidget {
   final List<ProductModel> products;
+  final bool showPopularBadge;
 
-  const ProductCardsStrip({super.key, required this.products});
+  const ProductCardsStrip({
+    super.key,
+    required this.products,
+    this.showPopularBadge = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +31,10 @@ class ProductCardsStrip extends StatelessWidget {
         itemBuilder: (context, index) {
           return SizedBox(
             width: ProductCardWidget.cardWidthFor(context),
-            child: ProductCardWidget(product: products[index]),
+            child: ProductCardWidget(
+              product: products[index],
+              showPopularBadge: showPopularBadge,
+            ),
           );
         },
       ),

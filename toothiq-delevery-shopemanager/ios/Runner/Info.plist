@@ -51,6 +51,11 @@
 	<string>يحتاج التطبيق لموقعك لمشاركة مسار التوصيل مع العميل.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>يحتاج التطبيق لموقعك لمشاركة مسار التوصيل مع العميل.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>whatsapp</string>

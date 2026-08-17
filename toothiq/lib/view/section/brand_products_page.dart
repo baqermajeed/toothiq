@@ -9,6 +9,7 @@ import '../../model/brand_model.dart';
 import '../../model/product_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/search_filter_row.dart';
 import '../../widget/section/section_app_bar.dart';
 import '../../widget/section/section_products_grid.dart';
@@ -45,7 +46,7 @@ class BrandProductsPage extends GetView<BrandProductsController> {
         appBar: SectionAppBar(title: controller.brand.name),
         body: Obx(() {
           if (controller.isLoading.value && controller.allProducts.isEmpty) {
-            return const AppLoadingState();
+            return const ProductGridSkeleton();
           }
 
           if (controller.loadError.value != null &&

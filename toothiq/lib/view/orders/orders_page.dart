@@ -6,6 +6,7 @@ import '../../controller/orders_controller.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/app_bottom_navigation.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/main_app_bar.dart';
 import '../../widget/orders/order_card_widget.dart';
 import '../../widget/search_filter_row.dart';
@@ -46,6 +47,9 @@ class OrdersPage extends StatelessWidget {
                 child: Obx(() {
                   final count = orders.filteredOrders.length;
                   if (count == 0) {
+                    if (orders.isLoading.value) {
+                      return const OrdersListSkeleton();
+                    }
                     return LayoutBuilder(
                       builder: (context, constraints) {
                         return ListView(
@@ -60,9 +64,7 @@ class OrdersPage extends StatelessWidget {
                           children: [
                             SizedBox(
                               height: constraints.maxHeight * 0.55,
-                              child: orders.isLoading.value
-                                  ? const AppLoadingState()
-                                  : orders.loadError.value != null
+                              child: orders.loadError.value != null
                                   ? AppErrorState(
                                       message: orders.loadError.value!,
                                       onRetry: () => orders.refresh(),
@@ -89,12 +91,10 @@ class OrdersPage extends StatelessWidget {
                         SizedBox(height: 10.h),
                     itemBuilder: (context, index) {
                       if (index >= count) {
-                        return const Center(
+                        return AppShimmer(
                           child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
+                            padding: EdgeInsets.symmetric(vertical: 4.h),
+                            child: const OrderCardSkeleton(),
                           ),
                         );
                       }

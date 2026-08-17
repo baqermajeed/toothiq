@@ -3,19 +3,19 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../utils/app_colors.dart';
 import '../my_text.dart';
+import 'skeleton.dart';
 
 class AppLoadingState extends StatelessWidget {
-  const AppLoadingState({super.key, this.padding});
+  const AppLoadingState({super.key, this.padding, this.child});
 
   final EdgeInsetsGeometry? padding;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
-    final spinner = const Center(
-      child: CircularProgressIndicator(color: AppColors.primary),
-    );
-    if (padding == null) return spinner;
-    return Padding(padding: padding!, child: spinner);
+    final content = child ?? const ProductGridSkeleton();
+    if (padding == null) return content;
+    return Padding(padding: padding!, child: content);
   }
 }
 
@@ -126,10 +126,7 @@ class AppLoadMoreFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: 12.h),
-        child: const AppLoadingState(),
-      );
+      return const LoadMoreSkeleton();
     }
     if (!hasNextPage) return const SizedBox.shrink();
     return Padding(

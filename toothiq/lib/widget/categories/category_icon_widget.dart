@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../core/utils/image_url.dart';
 import '../../model/category_model.dart';
+import '../app_image.dart';
 
 class CategoryIconWidget extends StatelessWidget {
   const CategoryIconWidget({
@@ -17,35 +17,17 @@ class CategoryIconWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconSize = size ?? 56.w;
+    final fallback = _fallbackIcon(iconSize);
 
-    if (category.hasIconImage) {
-      return Image.network(
-        ImageUrl.resolve(category.iconUrl),
-        width: iconSize,
-        height: iconSize,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => _fallbackIcon(iconSize),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return SizedBox(
-            width: iconSize,
-            height: iconSize,
-            child: Center(
-              child: SizedBox(
-                width: iconSize * 0.4,
-                height: iconSize * 0.4,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: category.iconColor,
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    }
+    if (!category.hasIconImage) return fallback;
 
-    return _fallbackIcon(iconSize);
+    return AppImage(
+      source: category.iconUrl!,
+      width: iconSize,
+      height: iconSize,
+      fit: BoxFit.contain,
+      errorWidget: fallback,
+    );
   }
 
   Widget _fallbackIcon(double iconSize) {

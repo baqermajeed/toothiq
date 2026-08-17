@@ -13,6 +13,7 @@ import '../../widget/basket/order_picker_field.dart';
 import '../../widget/basket/payment_method_tile.dart';
 import '../../widget/cart/cart_icon.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../settings/saved_addresses_page.dart';
 
 /// طلب منتج — مطابق لتصميم Figma
@@ -33,7 +34,7 @@ class NewOrderPage extends GetView<CheckoutController> {
         appBar: const BasketAppBar(title: 'طلب منتج'),
         body: Obx(() {
           if (controller.isInitializing.value) {
-            return const AppLoadingState();
+            return const CheckoutFormSkeleton();
           }
 
           if (controller.loadError.value != null) {

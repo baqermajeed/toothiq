@@ -9,6 +9,7 @@ import '../../service_layer/services/notification_inbox_service.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/app_back_button.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/notifications/notification_card_widget.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -69,7 +70,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   child: Obx(() {
                     if (controller.isLoading.value &&
                         controller.notifications.isEmpty) {
-                      return const AppLoadingState();
+                      return const NotificationsListSkeleton();
                     }
 
                     if (controller.loadError.value != null &&

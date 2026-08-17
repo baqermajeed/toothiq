@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../controller/driver_orders_controller.dart';
 import '../../controller/main_tab_controller.dart';
+import '../../core/navigation/partner_notification_router.dart';
 import '../../service_layer/services/driver_tracking_socket_service.dart';
 import '../../service_layer/services/order_service.dart';
 import '../../utils/app_colors.dart';
@@ -28,6 +29,10 @@ class DriverMainPage extends StatelessWidget {
         socketService: Get.find<DriverTrackingSocketService>(),
       ),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PartnerNotificationRouter.consumePending();
+    });
 
     const pages = [
       DriverOrdersPage(),

@@ -11,6 +11,7 @@ import '../../controller/store_detail_controller.dart';
 import '../../model/store_model.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/common/async_state_widgets.dart';
+import '../../widget/common/skeleton.dart';
 import '../../widget/app_back_button.dart';
 import '../../widget/categories/category_card_widget.dart';
 import '../../widget/home/product_cards_strip.dart';
@@ -126,7 +127,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                                 message: error,
                                 onRetry: () => controller.refresh(),
                               )
-                            : const AppLoadingState(),
+                            : const StoreDetailSkeleton(),
                       ),
                     ],
                   );
@@ -271,6 +272,12 @@ class _ProductsTabContent extends StatelessWidget {
       final popularProducts = controller.popularProducts.toList(growable: false);
       final offerProducts = controller.offerProducts.toList(growable: false);
       if (products.isEmpty) {
+        if (controller.isLoading.value) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: ProductGridSkeleton(itemCount: 4, shrinkWrap: true),
+          );
+        }
         return Padding(
           padding: EdgeInsets.symmetric(vertical: 48.h, horizontal: 24.w),
           child: MyText(
@@ -317,7 +324,10 @@ class _ProductsTabContent extends StatelessWidget {
               ),
             ),
             SizedBox(height: 14.h),
-            ProductCardsStrip(products: popularProducts),
+            ProductCardsStrip(
+              products: popularProducts,
+              showPopularBadge: true,
+            ),
             SizedBox(height: 10.h),
           ],
           Padding(
@@ -361,6 +371,15 @@ class _SectionsTabContent extends StatelessWidget {
     return Obx(() {
       final categories = controller.filteredCategories;
       if (categories.isEmpty) {
+        if (controller.isLoading.value) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+            child: const CategoriesGridSkeleton(
+              itemCount: 8,
+              shrinkWrap: true,
+            ),
+          );
+        }
         return Padding(
           padding: EdgeInsets.symmetric(vertical: 48.h, horizontal: 24.w),
           child: MyText(
