@@ -4,6 +4,7 @@ import { adminApi } from '../api/admin'
 import {
   SYSTEM_FIELDS,
   guessMapping,
+  parseIraqiPrice,
   parseSpreadsheet,
   rowHasAnyValue,
   type SystemFieldKey,
@@ -111,7 +112,7 @@ export function ExcelImportPage() {
     const items = rows.map((row, index) => ({
       row: headerRowNumber + index + 1,
       name: cell(row, 'name'),
-      price: cell(row, 'price'),
+      price: parseIraqiPrice(cell(row, 'price')),
       description: cell(row, 'description'),
       categoryName: cell(row, 'categoryName'),
       brandName: cell(row, 'brandName'),
