@@ -600,7 +600,13 @@ class ApiClient {
     DioException error,
     ErrorInterceptorHandler handler,
   ) async {
-    if (error.response?.statusCode == 401) {
+    final path = error.requestOptions.path;
+    final isAuthPublic = path.contains('/auth/login') ||
+        path.contains('/auth/refresh') ||
+        path.contains('/auth/register') ||
+        path.contains('/auth/guest-register');
+
+    if (error.response?.statusCode == 401 && !isAuthPublic) {
       await _tokenStorage.clearTokens();
       if (_onSessionExpired != null) {
         await _onSessionExpired();
@@ -782,11 +788,22 @@ class ApiClient {
       final errorBody = body['error'];
       if (body['success'] == false && errorBody is Map<String, dynamic>) {
         return ApiException(
-          errorBody['message']?.toString() ?? 'حدث خطأ غير متوقع',
+          _messageForStatus(
+            statusCode,
+            errorBody['message']?.toString() ?? 'حدث خطأ غير متوقع',
+          ),
           code: errorBody['code']?.toString(),
           statusCode: statusCode,
         );
       }
+    }
+
+    if (statusCode == 429) {
+      return const ApiException(
+        'محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى.',
+        code: 'TOO_MANY_REQUESTS',
+        statusCode: 429,
+      );
     }
 
     switch (error.type) {
@@ -802,5 +819,12 @@ class ApiClient {
           statusCode: statusCode,
         );
     }
+  }
+
+  String _messageForStatus(int? statusCode, String fallback) {
+    if (statusCode == 429) {
+      return 'محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى.';
+    }
+    return fallback;
   }
 }

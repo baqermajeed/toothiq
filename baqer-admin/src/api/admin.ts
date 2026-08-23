@@ -121,6 +121,26 @@ export const adminApi = {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
+    importMapped: (
+      shopId: string,
+      body: {
+        productCategoryId?: string
+        items: Record<string, unknown>[]
+      },
+    ) =>
+      apiFetch<{
+        createdCount: number
+        failedCount: number
+        created: { _id: string; name: string }[]
+        failed: { row: number; name: string; reason: string }[]
+      }>(`/api/shops/${shopId}/products/import`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    shopSections: (shopId: string) =>
+      apiFetch<Record<string, unknown>[]>(
+        `/api/shops/${shopId}/product-categories?activeOnly=false`,
+      ),
   },
   categories: {
     list: () => apiFetch<Record<string, unknown>[]>('/api/admin/categories'),

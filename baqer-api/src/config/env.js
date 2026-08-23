@@ -30,9 +30,9 @@ module.exports = {
   rateLimit: {
     enabled: boolEnv('RATE_LIMIT_ENABLED', true),
     windowMs: numEnv('RATE_LIMIT_WINDOW_MS', 900000),
-    max: numEnv('RATE_LIMIT_MAX', 300),
+    max: numEnv('RATE_LIMIT_MAX', 1000),
     authWindowMs: numEnv('RATE_LIMIT_AUTH_WINDOW_MS', 900000),
-    authMax: numEnv('RATE_LIMIT_AUTH_MAX', 15),
+    authMax: numEnv('RATE_LIMIT_AUTH_MAX', 20),
   },
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',

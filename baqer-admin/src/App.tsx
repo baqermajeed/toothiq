@@ -9,6 +9,7 @@ import { ShopsPage } from './pages/ShopsPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { ProductsPage } from './pages/ProductsPage'
+import { ExcelImportPage } from './pages/ExcelImportPage'
 import { CategoriesPage } from './pages/CategoriesPage'
 import { DiscountCodesPage } from './pages/DiscountCodesPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="orders" element={<OrdersPage />} />
         <Route path="orders/:id" element={<OrderDetailPage />} />
         <Route path="products" element={<ProductsPage />} />
+        <Route path="products/excel-import" element={<ExcelImportPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="discount-codes" element={<DiscountCodesPage />} />
         <Route path="banners" element={<BannersPage />} />

@@ -2,7 +2,7 @@ const express = require('express');
 const productController = require('../controllers/productController');
 const { authenticate, optionalAuthenticate, requireRoles } = require('../middlewares/auth');
 const { validateParams } = require('../middlewares/validate');
-const { shopIdAndIdParams } = require('../validators/common');
+const { shopIdAndIdParams, objectIdParam } = require('../validators/common');
 const uploadProductImage = require('../middlewares/uploadProductImage');
 
 const router = express.Router({ mergeParams: true });
@@ -34,6 +34,14 @@ router.post(
   authenticate,
   requireRoles('shop', 'admin'),
   productController.bulkCreateWithCategories
+);
+
+router.post(
+  '/import',
+  authenticate,
+  requireRoles('shop', 'admin'),
+  validateParams(objectIdParam('shopId')),
+  productController.importMapped
 );
 
 router.post(

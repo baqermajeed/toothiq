@@ -88,6 +88,7 @@ class ShopHomePage extends StatelessWidget {
                           value: '${orders.pendingCount}',
                           gradient: const [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
                           iconColor: AppColors.orderStatusPendingText,
+                          pulseWarning: orders.pendingCount > 0,
                           onTap: () => tabs.changeTab(1),
                         ),
                       ),
@@ -243,13 +244,14 @@ class ShopHomePage extends StatelessWidget {
   }
 }
 
-class _DashboardStat extends StatelessWidget {
+class _DashboardStat extends StatefulWidget {
   const _DashboardStat({
     required this.icon,
     required this.title,
     required this.value,
     required this.gradient,
     required this.iconColor,
+    this.pulseWarning = false,
     this.onTap,
   });
 
@@ -258,54 +260,138 @@ class _DashboardStat extends StatelessWidget {
   final String value;
   final List<Color> gradient;
   final Color iconColor;
+  final bool pulseWarning;
   final VoidCallback? onTap;
 
   @override
+  State<_DashboardStat> createState() => _DashboardStatState();
+}
+
+class _DashboardStatState extends State<_DashboardStat>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  late final Animation<double> _curve;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _curve = CurvedAnimation(parent: _pulse, curve: Curves.easeInOut);
+    if (widget.pulseWarning) {
+      _pulse.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _DashboardStat oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.pulseWarning && !_pulse.isAnimating) {
+      _pulse.repeat(reverse: true);
+    } else if (!widget.pulseWarning && _pulse.isAnimating) {
+      _pulse
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
+    if (!widget.pulseWarning) {
+      return _buildCard(0);
+    }
+
+    return AnimatedBuilder(
+      animation: _curve,
+      builder: (context, _) => _buildCard(_curve.value),
+    );
+  }
+
+  Widget _buildCard(double t) {
+    final warning = widget.pulseWarning;
+    return DecoratedBox(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18.r),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: gradient,
-            ),
-            borderRadius: BorderRadius.circular(18.r),
-            boxShadow: [
-              BoxShadow(
-                color: iconColor.withValues(alpha: 0.12),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 22.sp),
+        boxShadow: warning
+            ? [
+                BoxShadow(
+                  color: AppColors.warning.withValues(alpha: 0.28 + 0.48 * t),
+                  blurRadius: 10 + 20 * t,
+                  spreadRadius: 0.5 + 3.8 * t,
                 ),
-                SizedBox(height: 12.h),
-                MyText(value, fontSize: 24.sp, color: iconColor),
-                SizedBox(height: 2.h),
-                MyText(
-                  title,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w600,
-                  color: iconColor.withValues(alpha: 0.85),
+                BoxShadow(
+                  color: widget.iconColor.withValues(alpha: 0.18 + 0.35 * t),
+                  blurRadius: 6 + 10 * t,
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: widget.iconColor.withValues(alpha: 0.12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(18.r),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: widget.gradient,
+              ),
+              borderRadius: BorderRadius.circular(18.r),
+              border: warning
+                  ? Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.4 + 0.55 * t),
+                      width: 1.5 + t,
+                    )
+                  : null,
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      color: widget.iconColor,
+                      size: 22.sp,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  MyText(
+                    widget.value,
+                    fontSize: 24.sp,
+                    color: widget.iconColor,
+                  ),
+                  SizedBox(height: 2.h),
+                  MyText(
+                    widget.title,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                    color: widget.iconColor.withValues(alpha: 0.85),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

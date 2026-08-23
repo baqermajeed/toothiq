@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { joiOptionalObjectId } = require('./common');
 
 function offerPriceRule() {
   return Joi.number()
@@ -82,4 +83,29 @@ function validateCopyFromShopBody(body) {
   return copyFromShopBodySchema.validate(body, { abortEarly: false });
 }
 
-module.exports = { validateCreateProduct, validateUpdateProduct, validateBulkBody, validateCopyFromShopBody };
+const importMappedItemSchema = Joi.object({
+  row: Joi.number().integer().min(1).optional(),
+  name: Joi.string().trim().allow('').max(200),
+  price: Joi.alternatives().try(Joi.number(), Joi.string().allow(''), Joi.any().allow(null)),
+  description: Joi.string().trim().allow(''),
+  categoryName: Joi.string().trim().allow(''),
+  brandName: Joi.string().trim().allow(''),
+  expiryDate: Joi.any().optional(),
+}).unknown(true);
+
+const importMappedBodySchema = Joi.object({
+  productCategoryId: joiOptionalObjectId(),
+  items: Joi.array().items(importMappedItemSchema).min(1).max(2000).required(),
+});
+
+function validateImportMappedBody(body) {
+  return importMappedBodySchema.validate(body, { abortEarly: false });
+}
+
+module.exports = {
+  validateCreateProduct,
+  validateUpdateProduct,
+  validateBulkBody,
+  validateCopyFromShopBody,
+  validateImportMappedBody,
+};

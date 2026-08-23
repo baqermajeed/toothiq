@@ -55,8 +55,8 @@ const corsOriginsList = env.corsOrigins
   : [];
 const corsOptions = corsOriginsList.length > 0 ? { origin: corsOriginsList } : {};
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 app.use(rateLimiter.general);
 app.use('/api/governorates', governoratesRoutes);

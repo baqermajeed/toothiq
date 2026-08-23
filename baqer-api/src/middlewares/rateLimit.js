@@ -1,24 +1,58 @@
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const { verifyAccess } = require('../utils/tokens');
 
 const noOp = (req, res, next) => next();
 
+function clientIp(req) {
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function digitsPhone(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 /**
- * مفتاح الـ rate limit: للمستخدمين المصادقين نستخدم userId، وإلا نستخدم IP.
- * هذا يمنع ثغرة "شخص واحد ينفذ طلبات كثيرة فيحظر كل من يشاركه نفس الـ IP".
+ * للمستخدمين المصادقين (أو بتوكن منتهٍ) نستخدم userId حتى لا يتشارك الجميع نفس الـ IP
+ * خلف Nginx / NAT. بدون توكن نستخدم IP.
  */
 function generalKeyGenerator(req) {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
     try {
-      const decoded = verifyAccess(authHeader.slice(7));
+      const decoded = verifyAccess(token);
       if (decoded && decoded.userId) return `user:${decoded.userId}`;
     } catch (_) {
-      // توكن منتهي أو غير صالح — نستخدم IP
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.userId) return `user:${decoded.userId}`;
     }
   }
-  return req.ip || 'unknown';
+  return `ip:${clientIp(req)}`;
+}
+
+function skipGeneral(req) {
+  const url = (req.originalUrl || req.url || '').split('?')[0];
+  return (
+    url === '/health' ||
+    url.startsWith('/uploads') ||
+    url.startsWith('/api-docs') ||
+    url.startsWith('/api/auth')
+  );
+}
+
+/**
+ * تسجيل الدخول يُحسب حسب رقم الهاتف حتى لا حظر مكتب/شبكة كاملة بسبب IP مشترك.
+ */
+function authKeyGenerator(req) {
+  const phone = digitsPhone(req.body && req.body.phone);
+  if (phone.length >= 10) return `auth:phone:${phone}`;
+  return `auth:ip:${clientIp(req)}`;
+}
+
+function skipAuth(req) {
+  return req.path === '/logout' || req.method === 'OPTIONS';
 }
 
 const general = env.rateLimit.enabled
@@ -26,9 +60,17 @@ const general = env.rateLimit.enabled
       windowMs: env.rateLimit.windowMs,
       max: env.rateLimit.max,
       keyGenerator: generalKeyGenerator,
-      message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests' } },
+      skip: skipGeneral,
+      message: {
+        success: false,
+        error: {
+          code: 'TOO_MANY_REQUESTS',
+          message: 'طلبات كثيرة، حاول بعد قليل',
+        },
+      },
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
     })
   : noOp;
 
@@ -36,9 +78,19 @@ const auth = env.rateLimit.enabled
   ? rateLimit({
       windowMs: env.rateLimit.authWindowMs,
       max: env.rateLimit.authMax,
-      message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many login attempts' } },
+      keyGenerator: authKeyGenerator,
+      skip: skipAuth,
+      skipSuccessfulRequests: true,
+      message: {
+        success: false,
+        error: {
+          code: 'TOO_MANY_ATTEMPTS',
+          message: 'محاولات دخول كثيرة، انتظر قليلاً ثم حاول مجدداً',
+        },
+      },
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
     })
   : noOp;
 

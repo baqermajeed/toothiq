@@ -1,6 +1,7 @@
 const productService = require('../services/productService');
 const productCategoryService = require('../services/productCategoryService');
-const { validateCreateProduct, validateUpdateProduct, validateBulkBody, validateCopyFromShopBody } = require('../validators/products');
+const productImportService = require('../services/productImportService');
+const { validateCreateProduct, validateUpdateProduct, validateBulkBody, validateCopyFromShopBody, validateImportMappedBody } = require('../validators/products');
 const { badRequest, notFound, forbidden } = require('../utils/errors');
 const { Shop } = require('../models');
 
@@ -644,6 +645,26 @@ async function listRandomMultiShops(req, res, next) {
   }
 }
 
+async function importMapped(req, res, next) {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { error, value } = validateImportMappedBody(body);
+    if (error) {
+      const message = error.details ? error.details.map((d) => d.message).join('; ') : error.message;
+      return next(badRequest(message || 'بيانات الاستيراد غير صالحة', 'VALIDATION_ERROR'));
+    }
+    const result = await productImportService.importMappedProducts(
+      req.params.shopId,
+      req.userId,
+      req.userRoles || [],
+      value
+    );
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function copyFromShop(req, res, next) {
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -671,6 +692,7 @@ module.exports = {
   create,
   bulkCreate,
   bulkCreateWithCategories,
+  importMapped,
   copyFromShop,
   getById,
   getRecommendations,

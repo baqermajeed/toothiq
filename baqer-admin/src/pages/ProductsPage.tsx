@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { ApiError, assetUrl } from '../lib/api'
 import { adminApi, type Paginated } from '../api/admin'
 
@@ -232,6 +233,9 @@ export function ProductsPage() {
         <button type="button" className="btn btn-primary" onClick={() => setShowCreate(true)}>
           + إضافة منتج
         </button>
+        <Link className="btn" to="/products/excel-import">
+          إضافة من أكسل
+        </Link>
       </div>
       <div className="card">
         <div className="row">
