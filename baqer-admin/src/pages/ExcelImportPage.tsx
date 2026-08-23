@@ -26,6 +26,7 @@ export function ExcelImportPage() {
   const [shopId, setShopId] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [fileName, setFileName] = useState('')
+  const [headerRowNumber, setHeaderRowNumber] = useState(1)
   const [columns, setColumns] = useState<string[]>([])
   const [rows, setRows] = useState<Record<string, string>[]>([])
   const [mapping, setMapping] = useState<Record<SystemFieldKey, string>>(emptyMapping)
@@ -56,6 +57,7 @@ export function ExcelImportPage() {
     setMsg('')
     setFailed([])
     setFileName('')
+    setHeaderRowNumber(1)
     setColumns([])
     setRows([])
     setMapping(emptyMapping)
@@ -69,6 +71,7 @@ export function ExcelImportPage() {
         return
       }
       setFileName(file.name)
+      setHeaderRowNumber(parsed.headerRowNumber)
       setColumns(parsed.columns)
       setRows(filled)
       setMapping(guessMapping(parsed.columns))
@@ -106,7 +109,7 @@ export function ExcelImportPage() {
     }
 
     const items = rows.map((row, index) => ({
-      row: index + 2,
+      row: headerRowNumber + index + 1,
       name: cell(row, 'name'),
       price: cell(row, 'price'),
       description: cell(row, 'description'),
@@ -163,7 +166,7 @@ export function ExcelImportPage() {
           />
           {fileName ? (
             <div className="muted" style={{ marginTop: 6 }}>
-              {fileName} — {rows.length} صف
+              {fileName} — {rows.length} صف (عناوين الأعمدة من الصف {headerRowNumber})
             </div>
           ) : null}
         </div>
